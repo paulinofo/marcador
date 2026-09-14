@@ -1,0 +1,1370 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Golf</title>
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect fill='%2316181C' width='180' height='180'/%3E%3Ccircle cx='90' cy='90' r='70' fill='%237FB08A'/%3E%3Ccircle cx='90' cy='70' r='8' fill='%2316181C'/%3E%3Cpath d='M90 78 L85 120 Q90 125 95 120 Z' fill='%2316181C'/%3E%3C/svg%3E">
+<style>/* Sistema tomado de las apps anteriores de Paulino, no inventado: los nombres
+   son del dominio —tarjeta, tinta, latón, bandera, cal, verde por el green— y
+   la idea es una tarjeta de papel sobre un teléfono que se lee al sol. */
+:root{
+  --verde:#2B2E33; --verde-hondo:#16181C; --verde-linea:#3C4149;
+  --tarjeta:#F4EFE3; --tarjeta-linea:#DDD4C0;
+  --tinta:#1A1D19; --tinta-suave:#5C6459;
+  --laton:#C9A227; --bandera:#C0392B; --cal:#A8AEB8; --ok:#3E7D5A;
+  --r:10px;
+  --safe-t:env(safe-area-inset-top,0px);
+  --safe-b:env(safe-area-inset-bottom,0px);
+  --ui:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{background:var(--verde-hondo);color:var(--tarjeta);font-family:var(--ui);
+  font-size:17px;line-height:1.4;-webkit-font-smoothing:antialiased;
+  overscroll-behavior-y:none}
+button,input{font-family:inherit;font-size:17px}
+button{cursor:pointer;border:none;background:none;color:inherit}
+:focus-visible{outline:2px solid var(--laton);outline-offset:2px}
+
+#app{max-width:560px;margin:0 auto;padding:0 0 calc(var(--safe-b) + 82px)}
+
+/* ── Encabezado ─────────────────────────────────────────────── */
+.cabecera{position:sticky;top:0;z-index:30;background:var(--verde);
+  padding:calc(var(--safe-t) + 12px) 16px 12px;border-bottom:1px solid var(--verde-linea);
+  display:flex;align-items:center;justify-content:space-between;gap:10px}
+.cabecera .marca{font-weight:800;letter-spacing:-.01em;line-height:1.15;min-width:0;
+  text-align:left;padding:0;display:flex;flex-direction:column;gap:2px}
+.cabecera .titulo{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* El caret vive FUERA de .sub a propósito: si compartiera su contenedor,
+   text-overflow:ellipsis en un subtítulo largo se lo tragaría junto con el
+   texto recortado, y el usuario perdería la única señal de si el
+   desplegable de días está abierto o cerrado. */
+.cabecera .fila-sub{display:flex;align-items:center;gap:4px;min-width:0}
+.cabecera .sub{font-family:var(--mono);font-size:11px;letter-spacing:.06em;color:var(--laton);
+  font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.cabecera .caret{flex:0 0 auto;color:var(--laton);font-family:var(--mono);font-size:11px}
+.dias{background:var(--verde);border-bottom:1px solid var(--verde-linea);padding:6px 12px 10px;
+  display:flex;flex-direction:column;gap:6px}
+.dias .dia{display:flex;justify-content:space-between;align-items:center;gap:10px;
+  background:var(--verde-hondo);border:1px solid var(--verde-linea);border-radius:8px;
+  padding:10px 12px;text-align:left;min-width:0}
+.dias .dia b{flex:0 0 auto;white-space:nowrap}
+.dias .dia span{font-family:var(--mono);font-size:11px;color:var(--cal);letter-spacing:.04em;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.dias .dia.on{border-color:var(--laton)} .dias .dia.on b{color:var(--laton)}
+.chip{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;
+  border:1px solid var(--verde-linea);border-radius:999px;padding:4px 10px;color:var(--cal);
+  white-space:nowrap;flex:0 0 auto}
+.chip.vivo{color:var(--ok);border-color:var(--ok)}
+.chip.aviso{color:var(--laton);border-color:var(--laton)}
+
+/* ── Cuerpo ─────────────────────────────────────────────────── */
+.hoja{padding:16px}
+h1{font-size:30px;font-weight:800;letter-spacing:-.02em;margin:0 0 6px}
+h2{font-size:12px;font-family:var(--mono);letter-spacing:.12em;text-transform:uppercase;
+  color:var(--cal);font-weight:600;margin:24px 0 8px}
+.hoja > h2:first-child{margin-top:0}
+.guia{color:var(--cal);font-size:14px;margin:10px 0 0;line-height:1.5}
+.puerta{padding-top:40px}
+.enlace{color:var(--laton);text-decoration:underline;padding:0;font-size:14px}
+
+/* ── Paso de hoyo ───────────────────────────────────────────── */
+.paso{background:var(--tarjeta);border-radius:var(--r);padding:14px 12px;margin:0 0 10px;
+  display:grid;grid-template-columns:52px 1fr 52px;align-items:center;gap:10px;
+  color:var(--tinta)}
+.paso button{background:var(--verde);color:var(--tarjeta);border-radius:8px;
+  height:46px;font-size:22px;font-weight:700}
+.paso .centro{text-align:center}
+.paso .num{font-size:34px;font-weight:800;letter-spacing:-.02em;line-height:1;
+  font-variant-numeric:tabular-nums}
+.paso .de{font-size:15px;color:var(--tinta-suave);font-weight:600}
+.paso .datos{font-family:var(--mono);font-size:12px;letter-spacing:.08em;
+  color:var(--tinta-suave);margin-top:4px}
+
+/* ── Tarjeta de jugador ─────────────────────────────────────── */
+.jug{background:var(--tarjeta);color:var(--tinta);border-radius:var(--r);
+  padding:12px 14px;margin:0 0 8px;display:block}
+.jug-fila{display:flex;align-items:center;gap:10px}
+.jug .quien{flex:1 1 auto;min-width:0}
+.jug .nom{font-weight:700;font-size:18px;display:block;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.jug .meta{font-family:var(--mono);font-size:12px;color:var(--tinta-suave);
+  letter-spacing:.04em;margin-top:2px}
+.jug .pasos{display:flex;align-items:center;gap:8px;flex:0 0 auto}
+.jug .pasos button{background:var(--verde);color:var(--tarjeta);border-radius:8px;
+  width:46px;height:46px;font-size:24px;font-weight:700;line-height:1}
+.jug .marca{font-size:26px;font-weight:800;min-width:34px;text-align:center;
+  font-variant-numeric:tabular-nums}
+.jug .marca.vacio{color:var(--tarjeta-linea)}
+.chips{display:flex;gap:6px;margin-top:10px}
+.chip-pen{font-family:var(--mono);font-size:11px;letter-spacing:.04em;border:1px solid var(--tarjeta-linea);
+  border-radius:999px;padding:6px 10px;color:var(--tinta-suave);white-space:nowrap;min-height:30px}
+.chip-pen.on{border-color:var(--bandera);color:var(--bandera);font-weight:700}
+.ventaja{color:var(--bandera);letter-spacing:-1px;font-size:11px;vertical-align:2px}
+
+/* ── Fila oscura: torneos, libreta, bajas ───────────────────── */
+.fila{background:var(--verde);border-radius:var(--r);padding:12px 14px;margin:0 0 8px;
+  display:flex;justify-content:space-between;align-items:center;gap:12px}
+.fila .quien{flex:1 1 auto;min-width:0}
+.fila .nom{font-weight:700;display:block;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tenue{color:var(--cal);font-family:var(--mono);font-size:12px;letter-spacing:.04em}
+.fila .tenue{flex:0 0 auto}
+.fila .acciones{display:flex;align-items:center;gap:5px;flex:0 0 auto}
+.fila .acciones button{background:var(--verde-linea);color:var(--tarjeta);
+  border-radius:8px;min-width:44px;height:42px;padding:0 9px;font-size:14px;font-weight:600}
+.fila input.corto{margin:6px 0 0;padding:8px 10px;font-size:15px;max-width:180px}
+
+/* ── Controles ──────────────────────────────────────────────── */
+input{background:var(--verde);border:1px solid var(--verde-linea);border-radius:8px;
+  padding:12px;color:var(--tarjeta);width:100%;margin:0 0 8px}
+input::placeholder{color:var(--tinta-suave)}
+.btn{background:var(--laton);color:var(--verde-hondo);border-radius:9px;padding:15px;
+  width:100%;font-weight:700;margin:6px 0 0}
+.btn.sec{background:transparent;border:1px solid var(--verde-linea);color:var(--cal);
+  font-weight:600}
+
+/* ── Tablas ─────────────────────────────────────────────────── */
+.rejilla{overflow-x:auto;background:var(--tarjeta);border-radius:var(--r);padding:10px 12px}
+table{width:100%;border-collapse:collapse;font-size:13px;color:var(--tinta);
+  font-variant-numeric:tabular-nums}
+th{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--tinta-suave);font-weight:600}
+th,td{padding:7px 5px;text-align:center;border-bottom:1px solid var(--tarjeta-linea)}
+tr:last-child td{border-bottom:0}
+th:first-child,td:first-child{text-align:left;white-space:nowrap}
+td sup{color:var(--bandera);font-size:9px}
+tr.par td{color:var(--tinta-suave);font-family:var(--mono);font-size:12px}
+.nom-col{max-width:128px;overflow:hidden;text-overflow:ellipsis}
+.rejilla input{background:#fff;border:1px solid var(--tarjeta-linea);color:var(--tinta);
+  padding:8px;margin:0;text-align:center}
+.bloque{margin-top:10px}
+.bloque th:first-child{text-transform:uppercase}
+.pt-chip{display:inline-block;min-width:24px;padding:2px 6px;border-radius:6px;font-weight:700;
+  background:var(--tarjeta-linea);color:var(--tinta)}
+.pt-chip.bien{background:var(--ok);color:var(--tarjeta)}
+.pt-chip.mal{background:var(--bandera);color:var(--tarjeta)}
+
+/* ── Barra de pestañas ──────────────────────────────────────── */
+nav{position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--verde);
+  border-top:1px solid var(--verde-linea);display:flex;
+  padding:6px 8px calc(var(--safe-b) + 8px)}
+nav button{flex:1;border-radius:8px;padding:8px 2px;font-family:var(--mono);font-size:11px;
+  letter-spacing:.06em;text-transform:uppercase;color:var(--cal);font-weight:600}
+nav button::before{content:"";display:block;height:2px;border-radius:2px;
+  margin:0 auto 6px;width:22px;background:transparent}
+nav button.on{color:var(--laton)}
+nav button.on::before{background:var(--laton)}
+
+/* La navegación de hoyo dentro de Hoy no es la barra de pestañas. */
+.pasos-hoyo{display:flex;gap:8px;margin-top:12px}
+.pasos-hoyo button{flex:1;background:transparent;border:1px solid var(--verde-linea);
+  border-radius:9px;padding:13px;color:var(--cal);font-weight:600;font-size:15px}
+
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script type="module">const LLAVE = 'golf.v1'
+
+/* Sin prototipo: es el único mapa del proyecto que recibe llaves de afuera
+   (el tid de una liga o de un código) sin pasar por un selector. Con un
+   objeto literal, una liga `#t=__proto__.loquesea` haría que
+   `S.torneos['__proto__']` devolviera `Object.prototype`, y escribirle
+   encima -como hace unirseA- contaminaría el prototipo de toda la app. */
+function estadoInicial () {
+  return {
+    v: 1,
+    syncUrl: 'https://paulinofo.pythonanywhere.com',
+    /* Transporte 'v1': el servidor de PythonAnywhere que ya usan las apps
+       anteriores, con su token global embebido igual que en Santa Fe. Cuando
+       exista el servidor v2 (hechos con seq, clave por sala, códigos cortos)
+       basta cambiar estos dos campos: ver TRANSPORTES en sync.js. */
+    syncModo: 'v1',
+    syncToken: '9eb0b306ada4cdd025982f97f18c0da3',
+    torneos: Object.create(null),
+    activo: null,
+    gente: [],      // la libreta local: con quién has jugado. No se sincroniza.
+    vista: 'hoy'
+  }
+}
+const activo = (S) => (S.activo && S.torneos[S.activo]) || null
+
+/* Un almacén lleno o bloqueado (pestaña privada) no debe tumbar la app:
+   se pierde la persistencia, no la ronda que se está jugando. */
+function guardar (S, almacen) {
+  try { almacen.setItem(LLAVE, JSON.stringify(S)) } catch (e) {}
+}
+function cargar (almacen) {
+  try {
+    const t = almacen.getItem(LLAVE)
+    if (t) {
+      const S = Object.assign(estadoInicial(), JSON.parse(t))
+      // Rehidratación obligatoria: reconstruir torneos, h y ct sin prototipo.
+      // JSON.parse siempre devuelve objetos CON prototipo: el Object.create(null)
+      // de estadoInicial() no sobrevive el Object.assign de arriba, que
+      // reemplaza la llave `torneos` entera con la del almacén.
+      S.torneos = Object.assign(Object.create(null), S.torneos)
+      for (const T of Object.values(S.torneos)) {
+        T.h = Object.assign(Object.create(null), T.h)
+        T.ct = Object.assign(Object.create(null), T.ct)
+      }
+      return S
+    }
+  } catch (e) {}
+  return estadoInicial()
+}
+function recordarGente (S, nombre, idx) {
+  const i = S.gente.findIndex(g => g.n === nombre)
+  if (i >= 0) S.gente[i].i = idx
+  else S.gente.push({ n: nombre, i: idx })
+}
+
+/* Un hecho es {k, v, t}: llave, valor, sello. Gana el sello mayor.
+   Ésta es la ÚNICA puerta por la que entra dato al estado de un torneo:
+   lo que teclea el usuario y lo que baja del servidor pasan por aquí. */
+function torneoVacio () {
+  return { h: Object.create(null), ct: Object.create(null), pend: [], desde: 0 }
+}
+
+/* Aplica un hecho. Devuelve true si ganó. Un valor null vacía la llave
+   pero conserva su sello, para que un hecho anterior no la reviva. */
+function aplicar (T, k, v, t) {
+  if (t <= (T.ct[k] || 0)) return false
+  T.ct[k] = t
+  if (v === null) delete T.h[k]
+  else T.h[k] = v
+  return true
+}
+
+/* Lo que nace en este teléfono: se aplica y se encola para subir.
+   Si no se pasa sello, usa uno monótono para evitar colisiones en bucles síncronos. */
+function emitir (T, k, v, t) {
+  const sello = t === undefined ? Math.max(Date.now(), (T.ct[k] || 0) + 1) : t
+  if (!aplicar(T, k, v, sello)) return false
+  T.pend.push({ k, v, t: sello })
+  return true
+}
+
+/* Lo que baja del servidor: se aplica, pero NO se vuelve a encolar. */
+function fusionar (T, hechos) {
+  let n = 0
+  for (const { k, v, t } of hechos) if (aplicar(T, k, v, t)) n++
+  return n
+}
+
+/* Un mismo sello para varias llaves que cambian juntas: así dos hechos que
+   forman un par (el golpe y su castigo) nunca quedan con sellos cruzados
+   entre dos teléfonos. */
+function selloPara (T, ...llaves) {
+  return Math.max(Date.now(), ...llaves.map(k => (T.ct[k] || 0) + 1))
+}
+
+
+/* Sin l, o, 0 ni 1: el código corto se dicta en voz alta en el campo. */
+const ALFA = 'abcdefghijkmnpqrstuvwxyz23456789'
+function sortear (n = 10) {
+  const b = new Uint8Array(n)
+  crypto.getRandomValues(b)
+  let s = ''
+  for (const x of b) s += ALFA[x % ALFA.length]
+  return s
+}
+
+/* Un torneo se acuña en el teléfono, sin preguntarle a nadie: existe
+   completo desde el primer segundo, aunque no haya señal. Lo único que
+   necesita red es registrarse para obtener el código corto. */
+function nuevoTorneo ({ nombre, dias, ahora = Date.now() }) {
+  const T = torneoVacio()
+  T.tid = sortear(10)
+  T.clave = sortear(16)
+  T.codigo = null
+  T.yo = null
+  T.d = 0
+  T.hoyo = 0
+  /* El creador nunca "se une": pone sus propias fechas en Ajustes y sigue,
+     nunca recibe un torneo vacío esperando fecha ajena. Ya nace situado
+     -si no, en cuanto bajara CUALQUIER hecho de otro teléfono (sin
+     relación con fechas), sincronizar() vería !t.situado, saltarAHoy
+     encontraría el día de hoy y le arrastraría T.d/T.hoyo mientras revisa
+     otra ronda. unirseA (estado.js) es el único caso donde ese salto
+     diferido tiene sentido: se queda sin este campo. */
+  T.situado = true
+  emitir(T, 't.n', nombre, ahora)
+  emitir(T, 't.dias', dias, ahora)
+  emitir(T, 't.formato', 'stableford', ahora)
+  return T
+}
+function agregarJugador (T, nombre, idx, ahora = Date.now()) {
+  const jid = 'j' + sortear(8)
+  emitir(T, `j.${jid}.n`, nombre, ahora)
+  emitir(T, `j.${jid}.i`, idx, ahora)
+  return jid
+}
+const ligaDe = (T, base) => `${base}#t=${T.tid}.${T.clave}`
+
+/* El tid y la clave de una liga son entrada de afuera: quien construye o
+   modifica la URL a mano controla el contenido de estos dos grupos. Se
+   restringen al mismo alfabeto que sortear() -nunca `[^.]+`- para que un
+   valor como `__proto__` (o `constructor`, `toString`… todos con alguna
+   letra fuera de ALFA) sea rechazado en vez de llegar a torneos.js y de
+   ahí a S.torneos[tid], donde una liga hostil podía apuntar al prototipo. */
+const RE_LIGA = new RegExp(`^#t=([${ALFA}]+)\\.([${ALFA}]+)$`)
+function leerLiga (hash) {
+  const m = RE_LIGA.exec(hash || '')
+  return m ? { tid: m[1], clave: m[2] } : null
+}
+
+/* Las vistas leen el estado SOLO por aquí. Nadie toca T.h a mano. */
+const HOYOS = 18
+const golpe = (T, d, jid, h) => T.h[`s.${d}.${jid}.${h}`] ?? null
+const extra = (T, d, jid, h) => T.h[`x.${d}.${jid}.${h}`] ?? 0
+const par = (T, d, h) => T.h[`c.${d}.par.${h}`] ?? 4
+const si = (T, d, h) => T.h[`c.${d}.si.${h}`] ?? h + 1
+const indice = (T, jid) => T.h[`j.${jid}.i`] ?? 0
+const grupo = (T, d, jid) => T.h[`g.${d}.${jid}`] ?? 0
+const dias = (T) => T.h['t.dias'] ?? 1
+const nombre = (T) => T.h['t.n'] ?? 'Torneo'
+const campo = (T, d) => T.h[`c.${d}.n`] ?? ''
+const fecha = (T, d) => T.h[`c.${d}.iso`] ?? ''
+const salida = (T, d) => T.h[`c.${d}.salida`] ?? ''
+
+/* Un día está "vacío" si nadie ha emitido su par: entonces conviene ofrecer
+   copiar la ficha del día 1 en vez de teclear 36 números otra vez. Vive
+   aquí -no en la vista- porque lee T.ct, y nadie fuera de selectores.js
+   toca T.ct ni T.h. */
+const diaSinFicha = (T, d) => !Object.keys(T.ct).some(k => k.startsWith(`c.${d}.par.`))
+
+/* Regla de Santa Fe: tres o más palabras → las dos primeras; si no, la
+   primera. Es lo que cabe en un renglón de teléfono al sol. */
+function cortoAuto (nombreCompleto) {
+  const p = String(nombreCompleto ?? '').trim().split(/\s+/).filter(Boolean)
+  return p.length >= 3 ? p[0] + ' ' + p[1] : (p[0] || '')
+}
+function corto (T, jid) {
+  const escrito = String(T.h[`j.${jid}.c`] ?? '').trim()
+  return escrito || cortoAuto(T.h[`j.${jid}.n`] ?? '')
+}
+const cortoEscrito = (T, jid) => String(T.h[`j.${jid}.c`] ?? '').trim()
+
+function idsDeJugadores (T) {
+  const ids = new Set()
+  for (const k in T.h) {
+    const m = /^j\.([^.]+)\./.exec(k)
+    if (m) ids.add(m[1])
+  }
+  return [...ids]
+}
+
+/* El orden de alta es el sello del hecho que puso el nombre. Así el
+   renglón del grupo se dibuja siempre igual en todos los teléfonos,
+   sin guardar un campo de orden que habría que fusionar aparte. */
+function ordenarYMapear (T, ids) {
+  return ids
+    .sort((a, b) => (T.ct[`j.${a}.n`] ?? Infinity) - (T.ct[`j.${b}.n`] ?? Infinity))
+    .map(id => ({ id, n: T.h[`j.${id}.n`] ?? '', i: T.h[`j.${id}.i`] ?? 0, c: corto(T, id) }))
+}
+function jugadores (T) {
+  return ordenarYMapear(T, idsDeJugadores(T).filter(id => !T.h[`j.${id}.baja`]))
+}
+
+/* Borrar no existe: quitar a alguien solo pone j.<jid>.baja = 1. La vista
+   de roster necesita poder listarlos aparte para ofrecer reactivar -si no,
+   "reactivar" es una función que nadie puede alcanzar desde la interfaz. */
+function bajas (T) {
+  return ordenarYMapear(T, idsDeJugadores(T).filter(id => T.h[`j.${id}.baja`]))
+}
+function gruposDe (T, d) {
+  const por = new Map()
+  for (const j of jugadores(T)) {
+    const g = grupo(T, d, j.id)
+    if (!por.has(g)) por.set(g, [])
+    por.get(g).push(j.id)
+  }
+  return [...por.keys()].sort((a, b) => a - b).map(g => por.get(g))
+}
+
+/* El grupo del día en el que juega quien este teléfono dice ser. Local:
+   T.yo no viaja. null si no sé quién soy, si "solo miro", o si no estoy. */
+function miGrupo (T, d) {
+  if (!T.yo) return null
+  return gruposDe(T, d).find(g => g.includes(T.yo)) || null
+}
+
+
+const LOTE = 200
+const enVuelo = new Set()
+
+const raiz = (url) => url.replace(/\/+$/, '')
+
+/* Dos transportes, un mismo protocolo de hechos.
+
+   v2 es el servidor diseñado para esta app: hechos {k, v, t} con `seq` por
+   sala, clave por sala, códigos cortos. Todavía no existe.
+
+   v1 es el servidor de PythonAnywhere que ya usan las apps anteriores, tal
+   cual está. Sondeado el 14-sep-2026: guarda celdas {d, jid, h, v, t} y se
+   queda con el t mayor por (d, jid, h); acepta cualquier cadena en jid y
+   cualquier valor en v; ignora ?desde= y devuelve TODO en cada GET; un
+   token global en X-Torneo-Token. Es, en la práctica, un almacén
+   llave→valor con "gana el último", que es exactamente lo que un hecho
+   necesita: cada {k, v, t} viaja como {d:0, jid:k, h:0, v, t} y vuelve
+   igual. La sala es el tid del torneo. No sabe de códigos cortos ni de
+   claves por sala: registrar y resolverCodigo no tocan la red en v1.
+
+   Sin `modo` se asume v2: las opciones {url, buscar} de siempre siguen
+   valiendo tal cual. */
+const TRANSPORTES = {
+  v2: {
+    ruta: (url, T) => `${raiz(url)}/api/v2/sala/${encodeURIComponent(T.tid)}/hechos`,
+    cabeceras: (T) => ({ 'content-type': 'application/json', 'X-Sala-Clave': T.clave || '' }),
+    empacar: (hechos) => ({ hechos }),
+    desempacar: (json) => json.hechos || [],
+    marcaDeAgua: true,
+    codigos: true
+  },
+  v1: {
+    ruta: (url, T) => `${raiz(url)}/api/torneo/${encodeURIComponent(T.tid)}/scores`,
+    cabeceras: (T, token) => ({ 'content-type': 'application/json', 'X-Torneo-Token': token || '' }),
+    empacar: (hechos) => ({ celdas: hechos.map(({ k, v, t }) => ({ d: 0, jid: k, h: 0, v, t })) }),
+    desempacar: (json) => (json.celdas || []).map(c => ({ k: c.jid, v: c.v, t: c.t })),
+    marcaDeAgua: false,
+    codigos: false
+  }
+}
+const transporte = ({ modo } = {}) => TRANSPORTES[modo] || TRANSPORTES.v2
+
+/* Para que la interfaz sepa si ofrecer el código corto sin conocer los
+   detalles de cada transporte. */
+const sabeCodigos = (modo) => transporte({ modo }).codigos
+
+class ErrorClave extends Error {}
+
+function revisar (r) {
+  if (r.status === 401 || r.status === 403) throw new ErrorClave('clave')
+  if (!r.ok) throw new Error('http ' + r.status)
+}
+
+/* Sube la cola por lotes. Se lleva una copia de lo que va a subir y al
+   terminar quita SOLO esos: lo que se capturó mientras subía se queda
+   esperando el próximo ciclo en vez de perderse. Usa Set de identidades
+   para ser inmune a mutaciones concurrentes. */
+async function empujar (T, opciones) {
+  const { url, buscar, token } = opciones
+  const tr = transporte(opciones)
+  if (!T.pend.length) return 0
+  const cola = T.pend.slice()
+  for (let i = 0; i < cola.length; i += LOTE) {
+    const r = await buscar(tr.ruta(url, T), {
+      method: 'POST',
+      headers: tr.cabeceras(T, token),
+      body: JSON.stringify(tr.empacar(cola.slice(i, i + LOTE)))
+    })
+    revisar(r)
+  }
+  const subidos = new Set(cola)
+  T.pend = T.pend.filter(x => !subidos.has(x))
+  return cola.length
+}
+
+/* Pide solo lo posterior a la marca de agua. Con el roster, el campo y
+   los golpes en el mismo canal, bajarlo todo cada 1.8 s no escala.
+
+   La marca de agua avanza sobre `seq` —el entero monótono que asigna el
+   SERVIDOR por sala al recibir cada hecho— y nunca sobre `t`, el reloj del
+   teléfono que lo emitió. Avanzar sobre `t` vuelve invisibles para siempre
+   hechos ya guardados en el servidor en cuanto dos relojes se desfasan: un
+   teléfono adelantado unos segundos empuja la marca de agua de quien baja
+   sus hechos más allá de lo que emiten los demás con su propio reloj, más
+   lento. `t` se queda solo como desempate de la fusión, que es para lo
+   único que sirve.
+
+   Decisión sobre un servidor que no manda `seq` (v1, o un v2 viejo): NO se
+   usa `t` como respaldo — eso reintroduciría exactamente el bug de arriba.
+   Se prefiere no avanzar `desde` (se vuelve a bajar todo en cada ciclo,
+   como hace Santa Fe, y fusionar() es idempotente) a perder un hecho en
+   silencio. */
+async function jalar (T, opciones) {
+  const { url, buscar, token } = opciones
+  const tr = transporte(opciones)
+  const consulta = tr.marcaDeAgua ? `?desde=${T.desde || 0}` : ''
+  const r = await buscar(tr.ruta(url, T) + consulta, { headers: tr.cabeceras(T, token) })
+  revisar(r)
+  const hechos = tr.desempacar(await r.json())
+  const n = fusionar(T, hechos)
+  if (hechos.every(x => typeof x.seq === 'number')) {
+    for (const x of hechos) if (x.seq > T.desde) T.desde = x.seq
+  }
+  return n
+}
+
+/* El código corto ES una credencial: resuelve a la sala completa, con
+   clave. Si solo devolviera el tid, quien lo dicta en el campo no podría
+   entrar, que es justo para lo que existe. Seis caracteres del alfabeto
+   sin ambigüedades son ~10^9 combinaciones; el servidor lo limita por
+   intentos, no por longitud.
+
+   En un transporte sin códigos devuelve null sin tocar la red: el torneo
+   se queda sin código y la interfaz no lo ofrece. */
+async function registrar (T, opciones) {
+  const { url, buscar } = opciones
+  if (!transporte(opciones).codigos) return null
+  const r = await buscar(`${raiz(url)}/api/v2/sala`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ tid: T.tid, clave: T.clave })
+  })
+  revisar(r)
+  const { codigo } = await r.json()
+  if (typeof codigo !== 'string' || !codigo) throw new Error('código vacío o inválido')
+  T.codigo = codigo
+  return codigo
+}
+async function resolverCodigo (codigo, opciones) {
+  const { url, buscar } = opciones
+  if (!transporte(opciones).codigos) return null
+  const r = await buscar(`${raiz(url)}/api/v2/codigo/${encodeURIComponent(codigo)}`)
+  if (r.status === 404) return null
+  revisar(r)
+  const { tid, clave } = await r.json()
+  if (typeof tid !== 'string' || !tid || typeof clave !== 'string' || !clave) return null
+  return { tid, clave }
+}
+async function ciclo (T, opciones) {
+  if (enVuelo.has(T.tid)) return { subidos: 0, bajados: 0, estado: 'ocupado' }
+  enVuelo.add(T.tid)
+  try {
+    const subidos = await empujar(T, opciones)
+    const bajados = await jalar(T, opciones)
+    return { subidos, bajados, estado: 'en línea' }
+  } catch (e) {
+    return { subidos: 0, bajados: 0, estado: e instanceof ErrorClave ? 'clave inválida' : 'sin señal' }
+  } finally {
+    enVuelo.delete(T.tid)
+  }
+}
+
+
+
+
+
+/* Sin alias en los import: el armador borra la línea del `import` pero no
+   reescribe el alias, así que un `as` deja un identificador indefinido en
+   el HTML cosido. Escapa también la comilla simple: barato, y los atributos
+   no siempre llevan comillas dobles. */
+const esc = (s) => String(s ?? '')
+  .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+  .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;')
+function vistaArranque (S) {
+  const lista = Object.values(S.torneos)
+    .map(T => `<div class="fila" data-accion="abrirTorneo" data-tid="${esc(T.tid)}">
+        <div class="quien"><span class="nom">${esc(nombre(T))}</span></div>
+        <span class="tenue">${esc(dias(T))} ronda(s)</span>
+      </div>`).join('')
+  return `<div class="hoja">
+    <h1>Golf</h1>
+    <p class="guia">Marcador de torneos. Se crea aquí, se comparte con una liga y funciona sin señal.</p>
+    ${lista ? `<h2>Mis torneos</h2>${lista}` : ''}
+    <h2>${lista ? 'Otro torneo' : 'Empieza'}</h2>
+    <button class="btn" data-accion="irVista" data-vista="nuevo">Torneo nuevo</button>
+    <button class="btn sec" data-accion="irVista" data-vista="unirme">Unirme a uno</button>
+  </div>`
+}
+function vistaNuevo (S) {
+  return `<div class="hoja">
+    <h1>Torneo nuevo</h1>
+    <h2>Nombre</h2>
+    <input id="nomTorneo" placeholder="Santa Fe 2026">
+    <h2>Cuántas rondas</h2>
+    <input id="diasTorneo" inputmode="numeric" value="1">
+    <button class="btn" data-accion="crearDesdeForm">Crear</button>
+    <button class="btn sec" data-accion="irVista" data-vista="inicio">Cancelar</button>
+  </div>`
+}
+
+/* El código corto solo se ofrece si el transporte lo sabe resolver: con
+   el servidor v1 el campo sería un botón que nunca hace nada. */
+function vistaUnirme (S) {
+  const codigo = sabeCodigos(S.syncModo)
+    ? `<h2>O con el código que te dicten</h2>
+    <input id="codigoCorto" placeholder="k7m2pq" maxlength="6"
+      autocapitalize="none" autocorrect="off" spellcheck="false">
+    <button class="btn sec" data-accion="unirmeConCodigo">Unirme con el código</button>`
+    : ''
+  return `<div class="hoja">
+    <h1>Unirme</h1>
+    <h2>Con la liga que te mandaron</h2>
+    <input id="ligaPegada" placeholder="https://…#t=…">
+    <button class="btn" data-accion="unirmeConLigaPegada">Unirme con la liga</button>
+    ${codigo}
+    <button class="btn sec" data-accion="irVista" data-vista="inicio">Cancelar</button>
+  </div>`
+}
+function crearDesdeFormulario (S, { nombre, dias }) {
+  const T = nuevoTorneo({ nombre, dias })
+  S.torneos[T.tid] = T
+  S.activo = T.tid
+  return T
+}
+
+/* Se une VACÍO, a propósito: no emite ningún hecho. Si inventara el
+   nombre o los días, esos hechos llevarían un sello más nuevo que los
+   del creador y le pisarían el torneo al fusionar. */
+function unirseConLiga (S, hash) {
+  const datos = leerLiga(hash)
+  return datos ? unirseA(S, datos) : null
+}
+
+/* Mismo camino venga de una liga o de un código dictado en el campo. */
+function unirseA (S, datos) {
+  let T = S.torneos[datos.tid]
+  if (!T) {
+    T = torneoVacio()
+    T.tid = datos.tid
+    T.codigo = null
+    T.yo = null
+    T.d = 0
+    T.hoyo = 0
+    S.torneos[T.tid] = T
+  }
+  T.clave = datos.clave
+  S.activo = T.tid
+  return T
+}
+
+
+/* Cuántos golpes de ventaja caen en un hoyo, dado el hándicap de campo
+   del jugador (ch) y el índice de dificultad del hoyo (siHoyo).
+   Un ch negativo es un jugador "plus": devuelve golpes, y los devuelve
+   empezando por los hoyos MÁS FÁCILES. */
+function golpesEnHoyo (ch, siHoyo) {
+  if (ch === 0) return 0
+  if (ch < 0) {
+    const p = -ch
+    const result = -(Math.floor(p / 18) + (siHoyo > 18 - (p % 18) ? 1 : 0))
+    return result || 0
+  }
+  return Math.floor(ch / 18) + (siHoyo <= (ch % 18) ? 1 : 0)
+}
+const puntos = (neto, parHoyo) => Math.max(0, 2 - (neto - parHoyo))
+
+/* Un solo índice para todos los campos del torneo, redondeado. */
+const hcpCampo = (T, jid) => Math.round(indice(T, jid) || 0)
+function resumenRonda (T, d, jid) {
+  const ch = hcpCampo(T, jid)
+  let bruto = 0, neto = 0, pts = 0, jugados = 0
+  for (let h = 0; h < HOYOS; h++) {
+    const g = golpe(T, d, jid, h)
+    if (g === null) continue
+    jugados++
+    const n = g - golpesEnHoyo(ch, si(T, d, h))
+    bruto += g
+    neto += n
+    pts += puntos(n, par(T, d, h))
+  }
+  return { bruto, neto, pts, jugados, ch }
+}
+function resumenTotal (T, jid) {
+  const total = { bruto: 0, neto: 0, pts: 0, jugados: 0 }
+  const n = dias(T)
+  for (let d = 0; d < n; d++) {
+    const r = resumenRonda(T, d, jid)
+    total.bruto += r.bruto
+    total.neto += r.neto
+    total.pts += r.pts
+    total.jugados += r.jugados
+  }
+  return total
+}
+
+
+
+/* Portado de Santa Fe. Cada castigo es un CONTADOR de dos bits, porque en
+   un mismo hoyo se puede pegar más de una vez fuera o al agua: OB en los
+   bits 5-6 y hazard en los 7-8 (0 a 3 cada uno), y el bit 9 recuerda si fue
+   un castigo el que abrió el hoyo. Los bits 0-4 quedan libres.
+
+   Los golpes del castigo se EMITEN en s., no se derivan: el teléfono que
+   recibe el score ya lo trae sumado y no vuelve a sumar. Dos teléfonos
+   marcando el mismo OB tampoco lo cuentan doble: gana un hecho por llave. */
+const PENALES = [
+  { id: 'ob', desp: 5, golpes: 2, et: '⛔ OB' },
+  { id: 'hazard', desp: 7, golpes: 1, et: '💧 hazard' }
+]
+const TOPE_PENAL = 3
+const MASCARA_PENAL = 480          // bits 5-8: los dos contadores
+/* bit 9: si fue un castigo el que abrió el hoyo (ver ciclaPenal). Es
+   PEGAJOSO a propósito -no hay dónde más guardarlo- y no se limpia con una
+   corrección manual de golpe: castigo (abre el hoyo, ABRIO=1) → -1 con
+   cambiaGolpe (corrige el golpe, pero no toca ABRIO ni el contador) → el
+   mismo castigo otra vez hasta dar la vuelta (el contador vuelve a 0, y
+   como ABRIO seguía encendido, ciclaPenal vacía el hoyo entero) borra
+   también la corrección manual, no solo el castigo. Idéntico a la app de
+   referencia; se deja así a propósito en este hito. */
+const ABRIO = 512                   // bit 9
+const cuentaPenal = (x, desp) => (x >> desp) & 3
+function ciclaPenal (T, jid, penal) {
+  const d = T.d || 0, h = T.hoyo || 0
+  const x = extra(T, d, jid, h), g = golpe(T, d, jid, h)
+  const n = cuentaPenal(x, penal.desp), n2 = (n + 1) % (TOPE_PENAL + 1)
+  const dif = (n2 - n) * penal.golpes      // entran, o salen si dio la vuelta
+  let nx = (x & ~(3 << penal.desp)) | (n2 << penal.desp)
+  const ks = `s.${d}.${jid}.${h}`, kx = `x.${d}.${jid}.${h}`
+  /* Un sello COMPARTIDO para el par s./x.: sin esto, cada emitir toma el
+     suyo por separado (Math.max(Date.now(), ct[k]+1)), y dos teléfonos
+     ciclando castigos distintos casi al mismo tiempo pueden fusionar el s.
+     de uno con el x. del otro -golpes de OB con el chip de hazard
+     encendido. Con el mismo sello, el par siempre gana o pierde junto. */
+  const t = selloPara(T, ks, kx)
+  if (g === null) {                         // hoyo vacío: el castigo lo abre
+    nx |= ABRIO
+    emitir(T, ks, Math.min(15, par(T, d, h) + dif), t)
+  } else if (!(nx & MASCARA_PENAL) && (x & ABRIO)) {
+    emitir(T, ks, null, t); nx &= ~ABRIO    // se fue el último y él lo abrió: vacío otra vez
+  } else {
+    emitir(T, ks, Math.max(1, Math.min(15, g + dif)), t)
+  }
+  emitir(T, kx, nx, t)
+}
+
+
+
+
+
+
+/* Un hoyo vacío arranca en el par: en el campo casi nadie teclea un
+   número desde cero, tocan +/- a partir de lo esperado. */
+function cambiaGolpe (T, jid, delta) {
+  const h = T.hoyo || 0
+  const actual = golpe(T, T.d || 0, jid, h)
+  const base = actual === null ? par(T, T.d || 0, h) : actual
+  emitir(T, `s.${T.d || 0}.${jid}.${h}`, Math.max(1, base + delta))
+}
+
+/* Se llama abrirEnPar y no ponPar porque el armado cose todos los módulos
+   en un solo ámbito: dos declaraciones `ponPar` de nivel superior —ésta y la
+   de ajustes.js— reventarían el HTML con un SyntaxError. Todo nombre de
+   nivel superior tiene que ser único en el proyecto entero. */
+function abrirEnPar (T, jid) {
+  const h = T.hoyo || 0
+  emitir(T, `s.${T.d || 0}.${jid}.${h}`, par(T, T.d || 0, h))
+}
+
+/* Convención de Santa Fe: el guion se toca para anotar el par, el número
+   para borrar. Emitir null vacía la llave y conserva el sello.
+
+   x. antes que s.: con el sello COMPARTIDO (selloPara) el orden ya no
+   importa para la fusión -los dos hechos llevan el mismo sello t, así que
+   ganan o pierden juntos en cualquier teléfono sin importar en qué orden
+   lleguen-. El orden solo sigue importando aquí para que el último elemento
+   de T.pend sea el hecho s. (el que viaja con v=null), que es lo que mira
+   una prueba con pend.at(-1). */
+function borraHoyo (T, jid) {
+  const h = T.hoyo || 0
+  const ks = `s.${T.d || 0}.${jid}.${h}`, kx = `x.${T.d || 0}.${jid}.${h}`
+  const t = selloPara(T, ks, kx)
+  emitir(T, kx, 0, t)
+  emitir(T, ks, null, t)
+}
+function mueveHoyo (T, delta) {
+  T.hoyo = Math.max(0, Math.min(HOYOS - 1, (T.hoyo || 0) + delta))
+}
+
+/* Mi grupo si sé quién soy y estoy en uno; si no, todos. `T.todos` lo
+   conmuta desde el enlace de abajo. */
+function visiblesEnHoy (T) {
+  const todos = jugadores(T)
+  const mio = !T.todos && T.yo ? miGrupo(T, T.d || 0) : null
+  return mio ? todos.filter(j => mio.includes(j.id)) : todos
+}
+
+function chipsCastigo (T, d, jid, h) {
+  const x = extra(T, d, jid, h)
+  return `<div class="chips">${PENALES.map(p => {
+    const n = cuentaPenal(x, p.desp)
+    return `<button class="chip-pen${n ? ' on' : ''}" data-accion="castigo" data-jid="${esc(jid)}" data-penal="${p.id}">${p.et} +${p.golpes}${n > 1 ? ` ×${n}` : ''}</button>`
+  }).join('')}</div>`
+}
+
+/* El bloque de Santa Fe: por jugador, puntos de este hoyo y los que lleva
+   en la ronda. El chip del hoyo cuenta la historia de un vistazo: rojo con
+   cero, verde con tres o más. */
+function bloqueStableford (T, d, h, visibles) {
+  const filas = visibles.map(j => {
+    const g = golpe(T, d, j.id, h)
+    const ch = hcpCampo(T, j.id)
+    const pH = g === null ? null : puntos(g - golpesEnHoyo(ch, si(T, d, h)), par(T, d, h))
+    const clase = pH === null ? '' : (pH === 0 ? ' mal' : (pH >= 3 ? ' bien' : ''))
+    return `<tr><td>${esc(j.c)}</td>
+      <td>${pH === null ? '' : `<span class="pt-chip${clase}">${esc(String(pH))}</span>`}</td>
+      <td><b>${esc(String(resumenRonda(T, d, j.id).pts))}</b></td></tr>`
+  }).join('')
+  return `<div class="rejilla bloque"><table>
+    <tr><th colspan="3">STABLEFORD · HOYO ${h + 1} · RONDA</th></tr>${filas}</table></div>`
+}
+function vistaHoy (T) {
+  const d = T.d || 0
+  const h = T.hoyo || 0
+  const visibles = visiblesEnHoy(T)
+  /* El neto del hoyo se muestra junto al hándicap porque es el número con
+     el que se juega el stableford, y en la app anterior era lo primero que
+     se miraba después del golpe. */
+  const filas = visibles.map(j => {
+    const g = golpe(T, d, j.id, h)
+    const ch = hcpCampo(T, j.id)
+    const ventaja = golpesEnHoyo(ch, si(T, d, h))
+    const r = resumenRonda(T, d, j.id)
+    const neto = g === null ? null : g - ventaja
+    return `<div class="jug">
+      <div class="jug-fila">
+        <div class="quien">
+          <span class="nom">${esc(j.c)}${ventaja > 0 ? ` <span class="ventaja">${'▲'.repeat(Math.min(ventaja, 3))}</span>` : ''}</span>
+          <div class="meta">HCP ${esc(String(ch))}${neto === null ? '' : ` · neto ${esc(String(neto))}`} · ${esc(String(r.pts))} pts</div>
+        </div>
+        <div class="pasos">
+          <button data-accion="golpeMenos" data-jid="${esc(j.id)}" aria-label="un golpe menos">−</button>
+          <button class="marca${g === null ? ' vacio' : ''}" data-accion="${g === null ? 'ponerPar' : 'borrarHoyo'}" data-jid="${esc(j.id)}"
+            aria-label="${g === null ? 'anotar el par' : 'borrar el hoyo'}">${g === null ? '–' : esc(String(g))}</button>
+          <button data-accion="golpeMas" data-jid="${esc(j.id)}" aria-label="un golpe más">+</button>
+        </div>
+      </div>
+      ${chipsCastigo(T, d, j.id, h)}
+    </div>`
+  }).join('')
+
+  return `<div class="paso">
+      <button data-accion="hoyoMenos" aria-label="hoyo anterior">‹</button>
+      <div class="centro">
+        <span class="num">${h + 1}</span> <span class="de">/ ${HOYOS}</span>
+        <div class="datos">Hoyo ${h + 1} · par ${esc(String(par(T, d, h)))} · SI ${esc(String(si(T, d, h)))}</div>
+      </div>
+      <button data-accion="hoyoMas" aria-label="hoyo siguiente">›</button>
+    </div>
+    ${filas || '<p class="guia">Agrega jugadores en la pestaña Grupos.</p>'}
+    ${filas ? bloqueStableford(T, d, h, visibles) : ''}
+    ${filas ? '<p class="guia">Toca el guion para anotar el par, ajusta con − y +, y toca el número para borrar el hoyo.</p>' : ''}
+    ${T.yo && miGrupo(T, d) ? `<p class="guia"><button class="enlace" data-accion="verTodos">${T.todos ? 'Ver solo mi grupo' : 'Ver a todos'}</button></p>` : ''}`
+}
+
+function vistaTarjeta (T) {
+  const d = T.d || 0
+  const cab = Array.from({ length: HOYOS }, (_, h) => `<th>${h + 1}</th>`).join('')
+  const pares = Array.from({ length: HOYOS }, (_, h) => `<td>${esc(par(T, d, h))}</td>`).join('')
+  const filas = jugadores(T).map(j => {
+    const ch = hcpCampo(T, j.id)
+    const celdas = Array.from({ length: HOYOS }, (_, h) => {
+      const g = golpe(T, d, j.id, h)
+      const v = golpesEnHoyo(ch, si(T, d, h))
+      return `<td>${g === null ? '' : esc(g)}${v > 0 ? '<sup>▲</sup>' : ''}</td>`
+    }).join('')
+    const r = resumenRonda(T, d, j.id)
+    // r.pts está escapado pero sin prueba: pts siempre es numérico (Math.max garantiza número).
+    // Ningún payload de texto alcanza pts como cadena. El esc es red si resumenRonda cambia.
+    return `<tr><td class="nom-col">${esc(j.c)}</td>${celdas}<td><b>${esc(r.bruto)}</b></td><td><b>${esc(r.pts)}</b></td></tr>`
+  }).join('')
+
+  return `<h2>Tarjeta</h2>
+    <div class="rejilla">
+      <table>
+        <tr><th>Hoyo</th>${cab}<th>Tot</th><th>Pts</th></tr>
+        <tr class="par"><td>Par</td>${pares}<td></td><td></td></tr>
+        ${filas}
+      </table>
+    </div>`
+}
+
+
+
+
+/* Más puntos primero. Quien no ha capturado nada va al final: con cero
+   hoyos jugados tendría cero puntos y encabezaría la tabla al revés. */
+function posiciones (T) {
+  return jugadores(T)
+    .map(j => ({ id: j.id, n: j.c, ...resumenTotal(T, j.id) }))
+    .sort((a, b) => {
+      if (!a.jugados !== !b.jugados) return a.jugados ? -1 : 1
+      return b.pts - a.pts
+    })
+}
+function vistaTabla (T) {
+  // p.pts está escapado pero sin prueba: pts siempre es numérico (Math.max en cálculo).
+  // Ningún payload de texto alcanza pts como cadena. El esc es red si resumenTotal cambia.
+  const filas = posiciones(T).map((p, i) => `<tr>
+      <td>${i + 1}. ${esc(p.n)}</td>
+      <td>${p.jugados ? esc(p.bruto) : '–'}</td>
+      <td><b>${p.jugados ? esc(p.pts) : '–'}</b></td>
+    </tr>`).join('')
+  return `<h2>Posiciones</h2>
+    <div class="rejilla">
+      <table><tr><th>Jugador</th><th>Bruto</th><th>Puntos</th></tr>${filas}</table>
+    </div>`
+}
+
+function altaJugador (T, S, nombre, idx) {
+  const jid = agregarJugador(T, nombre, idx)
+  recordarGente(S, nombre, idx)
+  return jid
+}
+
+/* Borrar no existe: se marca la baja, y el hecho viaja para que los
+   demás teléfonos también lo oculten. Los golpes se quedan. */
+const bajaJugador = (T, jid) => emitir(T, `j.${jid}.baja`, 1)
+const reactivar = (T, jid) => emitir(T, `j.${jid}.baja`, 0)
+const moverAGrupo = (T, d, jid, g) => emitir(T, `g.${d}.${jid}`, g)
+const ponCorto = (T, jid, v) => emitir(T, `j.${jid}.c`, String(v ?? '').trim())
+function vistaRoster (T, S) {
+  const d = T.d || 0
+  const jug = jugadores(T)
+  /* min-width:0 deja que la columna del nombre se encoja por debajo de su
+     ancho de contenido (si no, un nombre largo empuja la fila entera fuera
+     de la pantalla). Eso por sí solo no basta: sin nowrap+ellipsis, el
+     texto sigue pintándose a su ancho real y se monta sobre los botones.
+     Se recorta con puntos suspensivos en vez de partirlo en dos renglones
+     porque el roster se lee al sol y de un vistazo: un nombre recortado
+     sigue siendo identificable, pero un renglón que cambia de alto según
+     el nombre rompe el ritmo de lectura y desplaza los botones de la fila
+     siguiente. */
+  const filas = jug.map(j => `<div class="fila">
+      <div class="quien"><span class="nom">${esc(j.n)}</span>
+        <div class="tenue">índice ${esc(j.i)} · grupo ${esc(grupo(T, d, j.id) + 1)}</div>
+        <input class="corto" value="${esc(cortoEscrito(T, j.id))}"
+          placeholder="${esc(cortoAuto(j.n))}" data-cambio="setCorto" data-jid="${esc(j.id)}"
+          aria-label="nombre corto"></div>
+      <div class="acciones">
+        <button data-accion="moverGrupo" data-jid="${esc(j.id)}" data-delta="-1" aria-label="grupo anterior">−</button>
+        <button data-accion="moverGrupo" data-jid="${esc(j.id)}" data-delta="1" aria-label="grupo siguiente">+</button>
+        <button data-accion="darBaja" data-jid="${esc(j.id)}">Quitar</button>
+      </div>
+    </div>`).join('')
+
+  const libreta = S.gente
+    .filter(g => !jug.some(j => j.n === g.n))
+    .map(g => `<div class="fila" data-accion="altaDesdeLibreta"
+         data-nombre="${esc(g.n)}" data-indice="${esc(g.i)}">
+        <div class="quien"><span class="nom">${esc(g.n)}</span></div>
+        <span class="tenue">${esc(g.i)} · agregar</span>
+      </div>`).join('')
+
+  /* Quitar no es destruir: el spec promete que los dados de baja se pueden
+     reactivar. Sin esta sección, "Quitar" en un toque equivocado a mitad
+     de la ronda borraba la tarjeta de alguien para siempre en la práctica:
+     "Agregar jugador" de nuevo acuña un jid nuevo, y los golpes ya
+     capturados con el jid viejo quedan huérfanos. */
+  const bajos = bajas(T)
+    .map(j => `<div class="fila">
+      <div class="quien"><span class="nom">${esc(j.n)}</span>
+        <div class="tenue">índice ${esc(j.i)} · de baja</div></div>
+      <div class="acciones">
+        <button data-accion="reactivarJugador" data-jid="${esc(j.id)}">Reactivar</button>
+      </div>
+    </div>`).join('')
+
+  return `<h2>Jugadores <span class="tenue">· ${esc(gruposDe(T, d).length)} grupo(s)</span></h2>
+    ${filas || '<p class="tenue">Todavía no hay jugadores.</p>'}
+    <h2>Agregar</h2>
+    <input id="nomNuevo" placeholder="nombre">
+    <input id="idxNuevo" placeholder="índice" inputmode="decimal">
+    <button class="btn" data-accion="altaNueva">Agregar jugador</button>
+    ${libreta ? `<h2 class="tenue">Ya jugaron contigo</h2>${libreta}` : ''}
+    ${bajos ? `<h2 class="tenue">Dados de baja</h2>${bajos}` : ''}`
+}
+
+const ponPar = (T, d, h, v) => emitir(T, `c.${d}.par.${h}`, parseInt(v, 10) || 4)
+const ponSi = (T, d, h, v) => emitir(T, `c.${d}.si.${h}`, parseInt(v, 10) || h + 1)
+const ponCampo = (T, d, v) => emitir(T, `c.${d}.n`, String(v))
+const ponFecha = (T, d, v) => emitir(T, `c.${d}.iso`, String(v ?? '').trim())
+const ponSalida = (T, d, v) => emitir(T, `c.${d}.salida`, String(v ?? '').trim())
+
+/* `base` entra como argumento y no se lee de `location` aquí dentro:
+   en Node no existe, y la prueba que pinta esta vista reventaría. */
+function vistaAjustes (T, S, base = '') {
+  const d = T.d || 0
+  const rejilla = Array.from({ length: HOYOS }, (_, h) => `<tr>
+      <td>${h + 1}</td>
+      <td><input value="${esc(par(T, d, h))}" inputmode="numeric"
+           data-cambio="setPar" data-hoyo="${h}" style="width:56px"></td>
+      <td><input value="${esc(si(T, d, h))}" inputmode="numeric"
+           data-cambio="setSi" data-hoyo="${h}" style="width:56px"></td>
+    </tr>`).join('')
+
+  /* El día está "vacío" si nadie ha emitido su par: entonces conviene
+     copiar la ficha del día 1 en vez de teclear 36 números otra vez. */
+  const vacio = d > 0 && diaSinFicha(T, d)
+
+  return `<h2>Día ${d + 1} de ${esc(dias(T))}</h2>
+    <p class="guia">Editas la ficha del día activo. Cambia de día tocando el nombre del torneo arriba.</p>
+    ${vacio ? `<button class="btn sec" data-accion="copiarFicha">Copiar la ficha del día 1</button>` : ''}
+    <h2>Fecha</h2>
+    <input value="${esc(fecha(T, d))}" placeholder="2026-09-12" inputmode="numeric" data-cambio="setFecha">
+    <h2>Salida</h2>
+    <input value="${esc(salida(T, d))}" placeholder="9:00 · por el 6" data-cambio="setSalida">
+    <h2>El campo</h2>
+    <input value="${esc(campo(T, d))}" placeholder="nombre del campo"
+      data-cambio="setCampo">
+    <div class="rejilla">
+      <table><tr><th>Hoyo</th><th>Par</th><th>SI</th></tr>${rejilla}</table>
+    </div>
+    <h2>Este teléfono</h2>
+    <div class="fila"><div class="quien"><span class="nom">${esc(T.yo ? (jugadores(T).find(j => j.id === T.yo)?.n ?? '—') : (T.yo === '' ? 'Solo miro' : 'Sin decir'))}</span></div>
+      <div class="acciones"><button data-accion="cambiarYo">Cambiar</button></div></div>
+    <h2>Invitar</h2>
+    <p class="guia" style="word-break:break-all">${esc(ligaDe(T, base))}</p>
+    <button class="btn" data-accion="compartirLiga">Compartir la liga</button>
+    ${T.codigo ? `<p class="guia">O dicta el código: <b>${esc(T.codigo)}</b></p>` : ''}`
+}
+
+
+
+/* La puerta de Santa Fe. `T.yo` es local: cada teléfono dice quién es y
+   nadie lo verifica — confianza entre amigos. "Solo miro" deja T.yo en
+   cadena vacía: contestado, distinto de null (no preguntado). */
+function vistaQuien (T) {
+  const botones = jugadores(T).map(j =>
+    `<button class="btn sec" data-accion="soyYo" data-jid="${esc(j.id)}">${esc(j.n)}</button>`).join('')
+  return `<div class="hoja puerta">
+    <h1>¿Quién eres?</h1>
+    <p class="guia">Para mostrarte tu grupo al capturar, en este teléfono.</p>
+    ${botones}
+    <button class="btn sec" data-accion="soyYo" data-jid="">Solo miro</button>
+  </div>`
+}
+
+
+
+
+/* Fecha LOCAL, nunca UTC: a las 23:30 en México, UTC ya cambió de día y
+   la app saltaría a la ronda equivocada. Es la misma cuenta que hacía
+   cargar() en Santa Fe. */
+function hoyISO (ahora = new Date()) {
+  const m = String(ahora.getMonth() + 1).padStart(2, '0')
+  const d = String(ahora.getDate()).padStart(2, '0')
+  return `${ahora.getFullYear()}-${m}-${d}`
+}
+function setDia (T, d) {
+  if (d < 0 || d >= dias(T)) return
+  T.d = d
+  T.hoyo = 0
+}
+
+/* Un hecho remoto fusionado puede bajar t.dias por debajo del día activo
+   -hoy solo alcanzable así, pero alcanzable-: T.d se queda apuntando a un
+   día que ya no existe y ni la cabecera ni Ajustes tienen uno que mostrar.
+   Se acota al último día real. */
+function acotarDia (T) {
+  if ((T.d || 0) >= dias(T)) {
+    T.d = dias(T) - 1
+    T.hoyo = 0
+  }
+}
+
+/* Devuelve true si encontró el día de hoy, false si no -sincronizar() lo usa
+   para saber si ya "situó" al torneo (punto B). setDia solo se llama cuando
+   el día de hoy es DISTINTO del activo: setDia siempre pone T.hoyo = 0, y
+   llamarlo aunque T.d ya fuera ese día resetea el hoyo capturado en cada
+   carga -el bug que este fix cierra: guardas el teléfono en el hoyo 7,
+   recargas, y apareces en el 1. */
+function saltarAHoy (T, iso = hoyISO()) {
+  acotarDia(T)
+  for (let d = 0; d < dias(T); d++) {
+    if (fecha(T, d) !== iso) continue
+    if ((T.d || 0) !== d) setDia(T, d)
+    return true
+  }
+  return false
+}
+
+/* Los torneos de un solo campo son la norma: la ficha del día 1 sirve para
+   el 2. Se emite hecho por hecho, para que viaje como cualquier captura.
+   Copia par, SI y campo -NO la salida: una salida heredada del día 1 se
+   pintaría en la cabecera y en el selector como si fuera la real del día
+   2, y casi nunca lo es (los horarios de salida cambian día a día aunque
+   el campo se repita). */
+function copiarFicha (T, de, a) {
+  for (let h = 0; h < HOYOS; h++) {
+    emitir(T, `c.${a}.par.${h}`, par(T, de, h))
+    emitir(T, `c.${a}.si.${h}`, si(T, de, h))
+  }
+  emitir(T, `c.${a}.n`, campo(T, de))
+}
+
+const etiquetaDia = (T, d) => [fecha(T, d), salida(T, d)].filter(Boolean).join(' · ')
+function vistaDias (T) {
+  const activo = T.d || 0
+  return `<div class="dias">${Array.from({ length: dias(T) }, (_, d) =>
+    `<button class="dia${d === activo ? ' on' : ''}" data-accion="setDia" data-dia="${d}">
+      <b>Día ${d + 1}</b><span>${esc(etiquetaDia(T, d)) || 'sin fecha'}</span>
+    </button>`).join('')}</div>`
+}
+
+const VISTAS = [
+  ['hoy', 'Hoy'], ['tarjeta', 'Tarjeta'], ['tabla', 'Tabla'], ['grupos', 'Grupos']
+]
+function cuerpo (S, base = '') {
+  /* Las pantallas de arranque van ANTES de mirar el torneo activo: se llega
+     a ellas tanto sin torneos como teniendo uno abierto. */
+  if (S.vista === 'nuevo') return vistaNuevo(S)
+  if (S.vista === 'unirme') return vistaUnirme(S)
+  const T = activo(S)
+  if (!T || S.vista === 'inicio') return vistaArranque(S)
+  /* La puerta se cruza solo al ir a Hoy: un torneo recién creado no tiene
+     jugadores, y que la pregunta salte a mitad de las altas en Grupos
+     sería abrupto. */
+  if (S.vista === 'hoy' && T.yo === null && jugadores(T).length > 0) return vistaQuien(T)
+  const pintores = {
+    hoy: () => vistaHoy(T),
+    tarjeta: () => vistaTarjeta(T),
+    tabla: () => vistaTabla(T),
+    grupos: () => vistaRoster(T, S),
+    ajustes: () => vistaAjustes(T, S, base)
+  }
+  const cual = pintores[S.vista] ? S.vista : 'hoy'
+  const TODAS = VISTAS.concat([['ajustes', 'Ajustes']])
+  const pestanas = TODAS.map(([k, et]) =>
+    `<button class="${cual === k ? 'on' : ''}" data-accion="irVista" data-vista="${k}">${et}</button>`).join('')
+  const d = T.d || 0
+  const sub = [`Día ${d + 1}`, fecha(T, d), salida(T, d)].filter(Boolean).join(' · ')
+  return `<div class="cabecera">
+      <button class="marca" data-accion="toggleDias" aria-expanded="${!!T.diasAbierto}">
+        <span class="titulo">${esc(nombre(T))}</span>
+        <span class="fila-sub">
+          <span class="sub">${esc(sub)}</span>
+          <span class="caret">${T.diasAbierto ? '▴' : '▾'}</span>
+        </span>
+      </button>
+      <span class="chip" id="chipSync">sin señal</span>
+    </div>
+    ${T.diasAbierto ? vistaDias(T) : ''}
+    <div class="hoja">${pintores[cual]()}</div>
+    <nav>${pestanas}</nav>`
+}
+function pintar (nodo, S, base = '') {
+  nodo.innerHTML = cuerpo(S, base)
+}
+
+
+
+
+
+
+
+
+
+
+
+
+const S = typeof localStorage !== 'undefined' ? cargar(localStorage) : estadoInicial()
+const T = () => activo(S)
+const base = location.origin + location.pathname
+const dibujar = () => pintar(document.getElementById('app'), S, base)
+const salvar = () => { guardar(S, localStorage); dibujar() }
+
+/* Una liga en la barra de direcciones gana sobre lo que hubiera abierto.
+   Fija la vista y guarda ANTES del replaceState: si el usuario había
+   tocado "Torneo nuevo" o "Unirme a uno" sin llenar el formulario, esa
+   vista quedó guardada al toque (irVista salva siempre), y sin este fix
+   `cuerpo()` seguiría mostrando ese formulario vacío aunque el torneo ya
+   esté unido en memoria. Y sin guardar aquí, el join vive solo en
+   memoria hasta que corra el ciclo de sync ~1.8s después: si cierran la
+   pestaña antes, se pierde por completo. */
+if (typeof location !== 'undefined' && location.hash) {
+  if (unirseConLiga(S, location.hash)) {
+    S.vista = 'hoy'
+    salvar()
+    history.replaceState(null, '', location.pathname)
+  }
+}
+
+/* Todo lo que sync.js necesita saber de la red viene del estado: la URL,
+   el transporte y su token. Un solo lugar para cambiarlo el día que se
+   emigre al servidor v2. */
+const red = () => ({ url: S.syncUrl, buscar: fetch.bind(globalThis), modo: S.syncModo, token: S.syncToken })
+
+/* Una sola puerta para los eventos de la interfaz. Las vistas NO llevan
+   manejadores en línea: emiten `data-accion` (clic) o `data-cambio`
+   (change) más los datos que la acción necesita en atributos `data-*`.
+   Así ningún dato viaja dentro de una cadena de JavaScript, que es
+   justo donde `esc` no alcanza a protegerlo — el navegador decodifica
+   las entidades del atributo ANTES de parsear el JS, así que escapar la
+   comilla no sirve de nada ahí. Y de paso, un apellido con apóstrofo
+   deja de romper la app. */
+const ACCIONES = {
+  irVista: d => { S.vista = d.vista; salvar() },
+  abrirTorneo: d => { S.activo = d.tid; S.vista = 'hoy'; saltarAHoy(T()); salvar() },
+  toggleDias: () => { T().diasAbierto = !T().diasAbierto; salvar() },
+  setDia: d => { const t = T(); setDia(t, Number(d.dia)); t.diasAbierto = false; salvar() },
+  soyYo: d => { T().yo = d.jid; salvar() },
+  cambiarYo: () => { T().yo = null; S.vista = 'hoy'; salvar() },
+  verTodos: () => { T().todos = !T().todos; salvar() },
+  ponerPar: d => { abrirEnPar(T(), d.jid); salvar(); programar() },
+  borrarHoyo: d => { borraHoyo(T(), d.jid); salvar(); programar() },
+  golpeMas: d => { cambiaGolpe(T(), d.jid, 1); salvar(); programar() },
+  golpeMenos: d => { cambiaGolpe(T(), d.jid, -1); salvar(); programar() },
+  castigo: d => {
+    const p = PENALES.find(x => x.id === d.penal)
+    if (p) { ciclaPenal(T(), d.jid, p); salvar(); programar() }
+  },
+  hoyoMas: () => { mueveHoyo(T(), 1); salvar() },
+  hoyoMenos: () => { mueveHoyo(T(), -1); salvar() },
+  altaNueva: () => {
+    const n = document.getElementById('nomNuevo').value.trim()
+    const i = parseFloat(document.getElementById('idxNuevo').value) || 0
+    if (n) { altaJugador(T(), S, n, i); salvar(); programar() }
+  },
+  altaDesdeLibreta: d => {
+    altaJugador(T(), S, d.nombre, parseFloat(d.indice) || 0); salvar(); programar()
+  },
+  darBaja: d => { bajaJugador(T(), d.jid); salvar(); programar() },
+  reactivarJugador: d => { reactivar(T(), d.jid); salvar(); programar() },
+  moverGrupo: d => {
+    const t = T(), dia = t.d || 0
+    moverAGrupo(t, dia, d.jid, Math.max(0, grupo(t, dia, d.jid) + Number(d.delta)))
+    salvar(); programar()
+  },
+  setPar: (d, el) => { ponPar(T(), T().d || 0, Number(d.hoyo), el.value); salvar(); programar() },
+  setSi: (d, el) => { ponSi(T(), T().d || 0, Number(d.hoyo), el.value); salvar(); programar() },
+  setCampo: (d, el) => { ponCampo(T(), T().d || 0, el.value); salvar(); programar() },
+  setFecha: (d, el) => { ponFecha(T(), T().d || 0, el.value); salvar(); programar() },
+  setSalida: (d, el) => { ponSalida(T(), T().d || 0, el.value); salvar(); programar() },
+  copiarFicha: () => { const t = T(); copiarFicha(t, 0, t.d || 0); salvar(); programar() },
+  setCorto: (d, el) => { ponCorto(T(), d.jid, el.value); salvar(); programar() },
+  /* Crear no necesita red: el torneo existe desde ya. El registro para
+     obtener el código corto se intenta aquí mismo, para tenerlo lo antes
+     posible; si falla (sin señal, típicamente en el estacionamiento del
+     campo) no pasa nada — sincronizar() lo vuelve a intentar en cada
+     ciclo mientras el torneo no tenga código. */
+  crearDesdeForm: async () => {
+    const nom = document.getElementById('nomTorneo').value.trim()
+    const dd = Math.max(1, parseInt(document.getElementById('diasTorneo').value, 10) || 1)
+    if (!nom) return
+    const t = crearDesdeFormulario(S, { nombre: nom, dias: dd })
+    S.vista = 'grupos'
+    salvar()
+    try {
+      await registrar(t, red())
+      salvar()
+    } catch (e) {}
+    programar()
+  },
+  unirmeConLigaPegada: () => {
+    const v = document.getElementById('ligaPegada').value.trim()
+    const hash = v.includes('#') ? v.slice(v.indexOf('#')) : v
+    if (unirseConLiga(S, hash)) { S.vista = 'hoy'; salvar(); programar() }
+  },
+  /* Sin señal es justo el caso normal en un campo: si resolverCodigo
+     truena, no dejamos la promesa rechazada sin capturar — el botón
+     simplemente no hace nada, igual que si el código no existiera. */
+  unirmeConCodigo: async () => {
+    const c = document.getElementById('codigoCorto').value.trim().toLowerCase()
+    if (!c) return
+    let sala
+    try {
+      sala = await resolverCodigo(c, red())
+    } catch (e) { return }
+    if (!sala) return
+    unirseA(S, sala)
+    S.vista = 'hoy'
+    salvar()
+    programar()
+  },
+  /* En un contexto no seguro (http, tal como el brief sugiere probar
+     desde el teléfono) ni share ni clipboard existen: el fallback
+     también puede tronar, así que va en su propio try/catch. */
+  compartirLiga: async () => {
+    const liga = ligaDe(T(), base)
+    try {
+      await navigator.share({ text: `Marcador de ${nombre(T())}: ${liga}` })
+    } catch (e) {
+      try { await navigator.clipboard.writeText(liga) } catch (e2) {}
+    }
+  }
+}
+
+/* Los clics van por `data-accion` y los cambios de input por `data-cambio`,
+   en espacios de nombres distintos a propósito: si compartieran uno, un
+   toque sobre un input dispararía su acción antes de que el usuario
+   escribiera nada. */
+function delegar (evento, atributo) {
+  document.addEventListener(evento, e => {
+    const el = e.target.closest(`[data-${atributo}]`)
+    if (!el) return
+    const f = ACCIONES[el.dataset[atributo]]
+    if (f) f(el.dataset, el)
+  })
+}
+delegar('click', 'accion')
+delegar('change', 'cambio')
+
+let temporizador = null
+const programar = () => {
+  clearTimeout(temporizador)
+  temporizador = setTimeout(sincronizar, 1800)
+}
+
+async function sincronizar () {
+  const t = T()
+  if (!t || !t.clave) return
+  const r = await ciclo(t, red())
+  guardar(S, localStorage)
+  /* Un hecho fusionado a media sesión puede bajar t.dias por debajo del
+     día activo: sin esto T.d se queda apuntando a un día que ya no existe
+     hasta el próximo repintado manual. */
+  if (r.bajados) acotarDia(t)
+  /* Quien se une por liga recibe un torneo VACÍO -sin fechas-: al unirse,
+     saltarAHoy no tiene a dónde saltar y T.d se queda en 0 aunque la ronda
+     real sea otra. Las fechas llegan con la primera bajada de hechos, así
+     que se reintenta aquí, en cada ciclo, hasta que de verdad encuentre el
+     día de hoy -una sola vez: t.situado (local, no viaja) evita que el
+     ciclo siga saltando después y le pise al usuario un cambio de día
+     manual. */
+  if (r.bajados && !t.situado && saltarAHoy(t)) t.situado = true
+  const chip = document.getElementById('chipSync')
+  if (chip) {
+    /* 'ocupado' no es un fallo de red -es la guardia de reentrancia de
+       ciclo()- así que no se pinta como "sin señal" ni como error: se
+       traduce a algo benigno. Los otros dos estados también se traducen
+       para que se entiendan sin conocer el nombre interno de la clave. */
+    const legible = {
+      'en línea': '● en vivo',
+      ocupado: '○ sincronizando…',
+      'sin señal': '○ sin señal',
+      'clave inválida': '○ liga no válida'
+    }
+    chip.textContent = legible[r.estado] || ('○ ' + r.estado)
+  }
+  /* Regla `tecleando` de Santa Fe: si bajó algo mientras el usuario escribe
+     en un input, repintar le borraría lo tecleado. El repintado llega con
+     su siguiente acción; el chip sí se actualiza arriba. */
+  const tecleando = document.activeElement && document.activeElement.tagName === 'INPUT'
+  if (r.bajados && !tecleando) dibujar()
+  /* Un torneo creado sin señal nace sin código: crearDesdeForm ya lo
+     intentó una vez y pudo fallar. Este es el "próximo ciclo" real donde
+     se reintenta -no hay otro-, en cada vuelta, hasta que el torneo tenga
+     uno. Va DESPUÉS de ciclo() y no antes: ciclo() sincroniza los golpes,
+     que importan más que el código corto, y antes de este orden un POST
+     de registrar() colgado -sin timeout- detenía la sincronización de
+     hechos con él, con programar() varado al final de la función: el
+     ciclo entero quedaba muerto hasta recargar la app. Tampoco se
+     reintenta si el ciclo acaba de devolver 'clave inválida' -ese
+     endpoint está limitado por intentos según el spec, y reintentar ahí
+     dispararía un 403 cada 1.8s para siempre. Un fallo aquí no debe
+     tumbar el ciclo de hechos: se ignora igual que en crearDesdeForm. */
+  if (!t.codigo && r.estado !== 'clave inválida') {
+    try {
+      // el guardar de arriba ya pasó: sin este, el código quedaría solo en memoria.
+      // En v1 registrar devuelve null sin tocar la red: no hay nada que guardar.
+      if (await registrar(t, red())) guardar(S, localStorage)
+    } catch (e) {}
+  }
+  programar()
+}
+
+if (T()) saltarAHoy(T())
+if (typeof document !== 'undefined') { dibujar(); programar() }
+</script>
+</body>
+</html>
