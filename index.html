@@ -510,7 +510,9 @@ const acotaDias = (v) => {
    sabe guardar. */
 const dias = (T) => acotaDias(T.h['t.dias'])
 const nombre = (T) => T.h['t.n'] ?? 'Torneo'
-const formato = (T) => String(T.h['t.formato'] ?? 'stableford')
+/* Hoyo por hoyo es lo que juegan de verdad: el torneo nace en match play
+   y el Stableford es una opción más, no el punto de partida. */
+const formato = (T) => String(T.h['t.formato'] ?? 'match')
 const campo = (T, d) => T.h[`c.${d}.n`] ?? ''
 const fecha = (T, d) => T.h[`c.${d}.iso`] ?? ''
 const salida = (T, d) => T.h[`c.${d}.salida`] ?? ''
@@ -743,7 +745,7 @@ function nuevoTorneo ({ nombre, dias, ahora = Date.now() }) {
   T.situado = true
   emitir(T, 't.n', nombre, ahora)
   emitir(T, 't.dias', acotaDias(dias), ahora)
-  emitir(T, 't.formato', 'stableford', ahora)
+  emitir(T, 't.formato', 'match', ahora)
   return T
 }
 function agregarJugador (T, nombre, idx, ahora = Date.now()) {
@@ -2198,6 +2200,10 @@ function evaluarPresiones (T, A, hasta) {
   return { lineas, vivo: { forma: 'presiones', pares } }
 }
 
+/* `nombre` es cómo se llama el juego y se lee entero en la cabecera y en
+   Ajustes. `etiqueta` es cómo cabe en la barra de pestañas, que a 390 px
+   reparte unos 55 px por pestaña: "Hoyo por hoyo" ahí se partía en dos
+   renglones y empujaba a Sliding fuera de la pantalla. */
 
 
 
@@ -2210,9 +2216,10 @@ function evaluarPresiones (T, A, hasta) {
 const HCP = { k: 'hcp', et: 'Hándicap', def: 'diferencia', opciones: [
   { v: 'diferencia', et: 'Por diferencia' }, { v: 'completo', et: 'Completo' }, { v: 'bruto', et: 'Bruto' }] }
 const JUEGOS = {
-  presiones: { nombre: 'Presiones', min: 2, max: 5, lados: false, alta: false, cfg: [], evaluar: evaluarPresiones },
+  presiones: { nombre: 'Presiones', etiqueta: 'Presiones', min: 2, max: 5, lados: false, alta: false, cfg: [], evaluar: evaluarPresiones },
   match: {
     nombre: 'Hoyo por hoyo',
+    etiqueta: 'Match',
     min: 2,
     max: 4,
     lados: true,
@@ -2223,6 +2230,7 @@ const JUEGOS = {
   },
   nassau: {
     nombre: 'Nassau',
+    etiqueta: 'Nassau',
     min: 2,
     max: 4,
     lados: true,
@@ -2234,6 +2242,7 @@ const JUEGOS = {
   },
   sixes: {
     nombre: 'Sixes 6-6-6',
+    etiqueta: 'Sixes',
     min: 4,
     max: 4,
     lados: false,
@@ -2246,6 +2255,7 @@ const JUEGOS = {
   },
   nines: {
     nombre: 'Nines 5-3-1',
+    etiqueta: 'Nines',
     min: 3,
     max: 3,
     lados: false,
@@ -2257,6 +2267,7 @@ const JUEGOS = {
   },
   onces: {
     nombre: 'Onces',
+    etiqueta: 'Onces',
     min: 2,
     max: 5,
     lados: false,
@@ -2804,8 +2815,8 @@ function vistaDias (T) {
    HTML y no lo suelta: Paulino publicó cinco veces y siguió viendo la
    versión vieja. Con esto la app se entera sola y ofrece pasar a la nueva,
    en vez de que cada quien tenga que adivinar cómo forzar a su iOS. */
-const VERSION = '2026-09-15·f250d71'
-const VERSION_DEL_ARMADO = '2026-09-15·f250d71'
+const VERSION = '2026-09-15·a835247'
+const VERSION_DEL_ARMADO = '2026-09-15·a835247'
 
 /* El nombre de la constante es el ancla que se busca en el HTML servido.
    Se escribe partido para que esta línea no se encuentre a sí misma. */
@@ -2856,10 +2867,14 @@ const ponPresOn = (T, v) => emitir(T, 't.pres.on', v ? 1 : 0)
 /* El tipo de juego del torneo. Presiones enciende su pestaña; cualquier
    otro la apaga -y si es uno del registro, enciende la suya-. La lista se
    arma desde el registro: un juego nuevo allá aparece aquí solo. */
-const JUEGOS_DEL_TORNEO = [['stableford', 'Stableford'], ['presiones', 'Presiones'],
-  ...Object.entries(JUEGOS).filter(([, j]) => j.alta).map(([k, j]) => [k, j.nombre])]
+/* Primero los juegos de apuesta, con Hoyo por hoyo a la cabeza porque es
+   el que juegan siempre y con el que nace el torneo. Stableford y
+   presiones van después: uno usa la Tabla y el otro su propia pestaña. */
+const JUEGOS_DEL_TORNEO = [
+  ...Object.entries(JUEGOS).filter(([, j]) => j.alta).map(([k, j]) => [k, j.nombre]),
+  ['stableford', 'Stableford'], ['presiones', 'Presiones']]
 function ponFormato (T, v) {
-  const f = JUEGOS_DEL_TORNEO.some(([k]) => k === v) ? v : 'stableford'
+  const f = JUEGOS_DEL_TORNEO.some(([k]) => k === v) ? v : 'match'
   emitir(T, 't.formato', f)
   emitir(T, 't.pres.on', f === 'presiones' ? 1 : 0)
 }
@@ -3431,7 +3446,7 @@ function cuerpo (S, base = '', versionNueva = null) {
   const seJuega = (k) => (k === 'presiones' ? presOn(T) : (k === 'juego' ? !!juegoDelTorneo : true))
   const cual = pintores[S.vista] && seJuega(S.vista) ? S.vista : 'hoy'
   const TODAS = VISTAS.filter(([k]) => seJuega(k))
-    .map(([k, et]) => [k, k === 'juego' ? juegoDelTorneo.nombre : et])
+    .map(([k, et]) => [k, k === 'juego' ? (juegoDelTorneo.etiqueta || juegoDelTorneo.nombre) : et])
     .concat([['ajustes', 'Ajustes']])
   const pestanas = TODAS.map(([k, et]) =>
     `<button class="${cual === k ? 'on' : ''}" data-accion="irVista" data-vista="${k}">${ICONOS[k] || ''}<span>${esc(et)}</span></button>`).join('')
