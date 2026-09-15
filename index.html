@@ -597,6 +597,10 @@ function miGrupo (T, d) {
    juego del torneo es presiones: «si es presiones habilitas la pestaña, si
    no, el juego que escogí» (Paulino, 14-sep). */
 const presOn = (T) => (T.h['t.pres.on'] ?? (formato(T) === 'presiones' ? 1 : 0)) !== 0
+/* La modalidad de presiones del torneo: individuales (uno contra uno,
+   como siempre), parejas 2v2, Mudo o Yo-Yo. Viaja como hecho: el grupo
+   entero juega la misma. */
+const presModo = (T) => String(T.h['t.pres.modo'] ?? 'ind')
 
 /* Un hecho de t.pres.* mal formado (texto, vacío, NaN) no debe tumbar el
    cálculo: cae al valor por omisión en vez de propagar NaN. */
@@ -1695,17 +1699,21 @@ function presionesMatch (T, d, a, b, hasta = 17) {
   return matchConSliding(T, d, a, b, hasta, slidingDe(T, d, a, b))
 }
 
-/* El match con el sliding ya resuelto (`sv`: + = a le da golpes a b).
-   Separado de presionesMatch para que el rodado, que viene arrastrando el
-   sliding de ese día, no lo mande a recalcular. */
-function matchConSliding (T, d, a, b, hasta, sv) {
+/* La escalera de presiones, sin saber CÓMO se decide cada hoyo. Eso lo
+   dice `resultadoDe(h)`: +1 si lo gana el lado A, −1 si lo pierde, 0 si
+   empatan, null si el hoyo todavía no cuenta. En las modalidades por
+   parejas devuelve hasta ±2, porque ahí el hoyo se decide con las dos
+   bolas —la mejor contra la mejor y la peor contra la peor— y cada
+   comparación vale un punto.
+
+   Las reglas de la escalera son las de Teezr: la primera presión no se
+   abre en el tee del 1, se abre en el primer hoyo que alguien gana; la
+   siguiente nace cuando la última abierta llega a `t.pres.al` arriba y
+   arranca en el hoyo siguiente desde cero; todas las abiertas se mueven a
+   la vez; y al cerrar, cada una con marcador distinto de cero paga su
+   monto entero, no la diferencia. */
+function escaleraPresiones (T, resultadoDe, hasta = 17) {
   const al = Math.max(1, presAl(T))
-  const neto = (jid, h) => {
-    const g = golpe(T, d, jid, h)
-    if (g === null) return null
-    const recibe = jid === a ? (sv < 0 ? -sv : 0) : (sv > 0 ? sv : 0)
-    return g - (recibe ? golpesEnHoyo(recibe, si(T, d, h)) : 0)
-  }
   const apuestas = []
   const porNueve = []
   for (const [ini, fin, nom] of NUEVES) {
@@ -1713,9 +1721,8 @@ function matchConSliding (T, d, a, b, hasta, sv) {
     apuestas.push(aps[0])
     let nPres = 0
     for (let h = ini; h <= Math.min(fin, hasta); h++) {
-      const na = neto(a, h), nb = neto(b, h)
-      if (na === null || nb === null) continue
-      const r = na < nb ? 1 : (na > nb ? -1 : 0)
+      const r = resultadoDe(h)
+      if (r === null) continue
       for (const ap of aps) if (h >= ap.ini) { ap.st += r; ap.hist[h] = ap.st }
       const nuevas = []
       for (const ap of aps) {
@@ -1736,6 +1743,23 @@ function matchConSliding (T, d, a, b, hasta, sv) {
   const salidaIda = apuestas[0]
   const carry = presCarry(T) && salidaIda.hist.slice(0, 9).every(v => v !== null) && salidaIda.st === 0
   return { apuestas, porNueve, unidades: porNueve[0] + porNueve[1], carry }
+}
+
+/* El match uno contra uno con el sliding ya resuelto (`sv`: + = a le da
+   golpes a b). Separado de presionesMatch para que el rodado, que viene
+   arrastrando el sliding de ese día, no lo mande a recalcular. */
+function matchConSliding (T, d, a, b, hasta, sv) {
+  const neto = (jid, h) => {
+    const g = golpe(T, d, jid, h)
+    if (g === null) return null
+    const recibe = jid === a ? (sv < 0 ? -sv : 0) : (sv > 0 ? sv : 0)
+    return g - (recibe ? golpesEnHoyo(recibe, si(T, d, h)) : 0)
+  }
+  return escaleraPresiones(T, (h) => {
+    const na = neto(a, h), nb = neto(b, h)
+    if (na === null || nb === null) return null
+    return na < nb ? 1 : (na > nb ? -1 : 0)
+  }, hasta)
 }
 
 const diaCapturado = (m) => m.apuestas.some(x => x.hist.some(v => v !== null))
@@ -1765,7 +1789,14 @@ function dineroDesglosado (T, d, a, b) {
 }
 
 function dineroConSliding (T, d, a, b, sv) {
-  const m = matchConSliding(T, d, a, b, 17, sv)
+  return dineroDeEscalera(T, matchConSliding(T, d, a, b, 17, sv))
+}
+
+/* Lo que vale una escalera ya corrida, venga de un uno contra uno o de un
+   partido por parejas. Con carry cada apuesta de la vuelta vale ida +
+   vuelta + bono y el tercer monto ya no se paga aparte; sin carry, el
+   tercero va por t.pres.match: 'mayoria' (Santa Fe) o 'suma' (Teezr). */
+function dineroDeEscalera (T, m) {
   const precioIda = presIda(T)
   const precioVuelta = m.carry ? presIda(T) + presVuelta(T) + presBono(T) : presVuelta(T)
   const ida = m.porNueve[0] * precioIda
@@ -2322,6 +2353,153 @@ function evaluarChicago (T, A, hasta = HOYOS - 1) {
 
 
 
+
+
+
+/* ============================================================
+   PRESIONES POR EQUIPOS · las tres modalidades de Teezr que no son
+   uno contra uno. La escalera de presiones es la misma de siempre
+   (src/presiones.js); lo único que cambia es CÓMO se decide cada
+   hoyo, y eso es lo que arma este archivo.
+
+   En las tres, el hoyo se decide con las DOS bolas del equipo: la
+   mejor contra la mejor y la peor contra la peor. Cada comparación
+   vale un punto, así que un hoyo va de −2 a +2 y las presiones se
+   abren más rápido que en el uno contra uno.
+
+     · parejas (4): dos equipos de dos, un solo partido.
+     · mudo (3): se añade un jugador de mentira que hace par en todos
+       los hoyos y nunca cobra ni paga. Cada real juega con él contra
+       los otros dos: tres partidos, uno por turno.
+     · yoyo (3): sin fantasma. El solitario usa su propio score dos
+       veces —su mejor bola y su peor bola son la misma—, y si es él
+       quien recibe ventaja, la recibe UNA sola vez: una de sus dos
+       bolas va en neto y la otra en bruto.
+
+   La ventaja sale del hándicap de cada quien contra el más bajo de la
+   mesa, como en todo lo demás de la app; dentro de una pareja eso deja
+   los golpes en el de hándicap más alto, que es lo que pide Teezr. El
+   sliding pactado a mano es cosa del uno contra uno y aquí no entra.
+   ============================================================ */
+const MODOS_PRESIONES = [
+  ['ind', 'Individuales', 2, 5],
+  ['parejas', 'Parejas 2 contra 2', 4, 4],
+  ['mudo', 'Mudo', 3, 3],
+  ['yoyo', 'Yo-Yo', 3, 3]
+]
+const modoCabe = (modo, n) => {
+  const m = MODOS_PRESIONES.find(x => x[0] === modo)
+  return !!m && n >= m[2] && n <= m[3]
+}
+const ventajaEnLaMesa = (T, mesa, jid) => {
+  const chs = mesa.map(j => hcpCampo(T, j))
+  return chs.length ? hcpCampo(T, jid) - Math.min(...chs) : 0
+}
+
+/* Una bola es lo que esa bola hizo en el hoyo h, ya en neto. */
+function bolaDeJugador (T, d, jid, ventaja) {
+  return (h) => {
+    const g = golpe(T, d, jid, h)
+    if (g === null) return null
+    return g - (ventaja ? golpesEnHoyo(ventaja, si(T, d, h)) : 0)
+  }
+}
+
+/* El Mudo hace par en todos los hoyos. No recibe ni da golpes: su
+   hándicap de campo es cero por definición, así que su bola es el par
+   tal cual. */
+const bolaDelMudo = (T, d) => (h) => par(T, d, h)
+
+/* El hoyo con las dos bolas. Si a un lado le falta una —alguien levantó
+   la bola—, la que quede cuenta como mejor y como peor: el compañero que
+   se retiró no ayuda, pero tampoco hunde el hoyo dos veces. */
+function resultadoDosBolas (bolasA, bolasB) {
+  return (h) => {
+    const a = bolasA.map(f => f(h)).filter(x => x !== null).sort((x, y) => x - y)
+    const b = bolasB.map(f => f(h)).filter(x => x !== null).sort((x, y) => x - y)
+    if (!a.length || !b.length) return null
+    const cmp = (x, y) => (x < y ? 1 : (x > y ? -1 : 0))
+    return cmp(a[0], b[0]) + cmp(a[a.length - 1], b[b.length - 1])
+  }
+}
+
+/* Los partidos que se juegan ese día en ese grupo, según la modalidad.
+   Cada uno lleva quiénes son de verdad en cada lado -los que pagan- y
+   las bolas con las que se decide el hoyo. */
+function partidosDePresiones (T, A, modo) {
+  const p = participantes(T, A)
+  if (!modoCabe(modo, p.length) || modo === 'ind') return []
+  const d = A.d
+  const bolaDe = (jid) => bolaDeJugador(T, d, jid, ventajaEnLaMesa(T, p, jid))
+
+  if (modo === 'parejas') {
+    const la = p.filter(j => ladoVisible(T, A, j) === 0)
+    const lb = p.filter(j => ladoVisible(T, A, j) === 1)
+    /* Bandos que no cuadran dos y dos no son un partido de parejas: se
+       parte el grupo por la mitad, en el orden del carrito, y la pantalla
+       lo dice. Es la misma regla que Hoyo por hoyo. */
+    const [ca, cb] = la.length === 2 && lb.length === 2 ? [la, lb] : [p.slice(0, 2), p.slice(2, 4)]
+    return [{
+      et: 'Parejas',
+      realesA: ca,
+      realesB: cb,
+      bolasA: ca.map(bolaDe),
+      bolasB: cb.map(bolaDe),
+      cuadran: la.length === 2 && lb.length === 2
+    }]
+  }
+
+  return p.map((jid, i) => {
+    const otros = p.filter((_, k) => k !== i)
+    const ventaja = ventajaEnLaMesa(T, p, jid)
+    const bolasA = modo === 'mudo'
+      ? [bolaDe(jid), bolaDelMudo(T, d)]
+      /* Yo-Yo: sus dos bolas son la suya. Si recibe ventaja, una va en
+         neto y la otra en bruto —la ventaja se aplica una sola vez—. */
+      : [bolaDeJugador(T, d, jid, ventaja), bolaDeJugador(T, d, jid, 0)]
+    return {
+      et: modo === 'mudo' ? 'Con el Mudo' : 'Yo-Yo',
+      realesA: [jid],
+      realesB: otros,
+      bolasA,
+      bolasB: otros.map(bolaDe),
+      cuadran: true
+    }
+  })
+}
+
+/* Cada quien liquida con cada rival del otro bando: así el dinero de la
+   mesa suma cero venga el partido de dos contra dos o de uno contra dos,
+   y nadie cobra por tres lados mientras paga por uno. */
+function lineasDePartido (realesA, realesB, total) {
+  const monto = Math.abs(Math.round(total))
+  if (!monto) return []
+  const lineas = []
+  for (const x of realesA) {
+    for (const y of realesB) {
+      if (total > 0) lineas.push({ de: y, a: x, monto, motivo: 'Presiones' })
+      else lineas.push({ de: x, a: y, monto, motivo: 'Presiones' })
+    }
+  }
+  return lineas
+}
+function evaluarPresionesEquipos (T, A, modo, hasta = HOYOS - 1) {
+  const partidos = partidosDePresiones(T, A, modo)
+  const lineas = []
+  const detalle = []
+  for (const pt of partidos) {
+    const m = escaleraPresiones(T, resultadoDosBolas(pt.bolasA, pt.bolasB), hasta)
+    const q = dineroDeEscalera(T, m)
+    if (q.capturado) lineas.push(...lineasDePartido(pt.realesA, pt.realesB, q.total))
+    detalle.push({ ...pt, m, q })
+  }
+  return { lineas, vivo: { forma: 'presiones-equipos', modo, partidos: detalle, al: Math.max(1, presAl(T)) } }
+}
+
+
+
+
+
 /* Presiones no se da de alta: mientras el torneo las juegue, el libro
    sintetiza una apuesta por grupo. Su id no es de sortear -no hay hechos
    `a.` detrás- y por eso lleva su propia forma. */
@@ -2332,6 +2510,11 @@ const apuestaPresiones = (d, grupo) => ({ id: idPresiones(grupo), tipo: 'presion
    cada duelo se convierte en una línea. */
 function evaluarPresiones (T, A, hasta) {
   const p = participantes(T, A)
+  /* Las modalidades por equipos tienen su propio motor. Si la elegida no
+     cabe en este grupo -parejas con tres, Mudo con cuatro- se juega el
+     uno contra uno de siempre en vez de dejar al grupo sin presiones. */
+  const modo = presModo(T)
+  if (modo !== 'ind' && modoCabe(modo, p.length)) return evaluarPresionesEquipos(T, A, modo, hasta)
   const lineas = []
   const pares = []
   for (let i = 0; i < p.length; i++) {
@@ -2999,8 +3182,8 @@ function vistaDias (T) {
    HTML y no lo suelta: Paulino publicó cinco veces y siguió viendo la
    versión vieja. Con esto la app se entera sola y ofrece pasar a la nueva,
    en vez de que cada quien tenga que adivinar cómo forzar a su iOS. */
-const VERSION = '2026-09-15·409dd2e'
-const VERSION_DEL_ARMADO = '2026-09-15·409dd2e'
+const VERSION = '2026-09-15·b0a122a'
+const VERSION_DEL_ARMADO = '2026-09-15·b0a122a'
 
 /* El nombre de la constante es el ancla que se busca en el HTML servido.
    Se escribe partido para que esta línea no se encuentre a sí misma. */
@@ -3068,6 +3251,7 @@ const ponPresBono = (T, v) => emitir(T, 't.pres.bono', Math.max(0, enteroO(v, 10
 const ponPresAl = (T, v) => emitir(T, 't.pres.al', Math.max(1, enteroO(v, 2)))
 const ponPresCarry = (T, v) => emitir(T, 't.pres.carry', v ? 1 : 0)
 const ponPresMatch = (T, v) => emitir(T, 't.pres.match', v === 'suma' ? 'suma' : 'mayoria')
+const ponPresModo = (T, v) => emitir(T, 't.pres.modo', MODOS_PRESIONES.some(([k]) => k === v) ? v : 'ind')
 
 /* Lo que se le puede ajustar al juego elegido. Vive en el TORNEO, no en
    una apuesta -hay un solo juego por torneo-, y por eso se lee y se
@@ -3146,6 +3330,10 @@ function vistaAjustes (T, S, base = '') {
     <p class="guia">Presiones enciende su pestaña; Stableford usa la Tabla; los demás abren la suya.</p>
     ${camposDelJuego(T)}
     ${presOn(T) ? `<h2>Presiones</h2>
+    <label class="cfg-juego"><span>Modalidad</span>
+      <select data-cambio="setPresModo">${MODOS_PRESIONES.map(([k, et]) =>
+        `<option value="${k}"${presModo(T) === k ? ' selected' : ''}>${et}</option>`).join('')}</select></label>
+    <p class="guia">Individuales es todos contra todos, uno contra uno. Parejas es de cuatro; Mudo y Yo-Yo son de tres, y son la forma de jugar presiones cuando falta el cuarto. En las tres, el hoyo se decide con las dos bolas del equipo.</p>
     <div class="pres-ajustes">
       <label>Ida $ <input value="${esc(presIda(T))}" inputmode="numeric" data-cambio="setPresIda"></label>
       <label>Vuelta $ <input value="${esc(presVuelta(T))}" inputmode="numeric" data-cambio="setPresVuelta"></label>
@@ -3185,6 +3373,8 @@ function vistaQuien (T) {
     <button class="btn sec" data-accion="soyYo" data-jid="">Solo miro</button>
   </div>`
 }
+
+
 
 
 
@@ -3248,38 +3438,30 @@ function acumulado (T, yo) {
       <tr><td class="nom-col"><b>Total</b></td><td class="tot ${claseSigno(q.gran)}">${esc(conSigno(q.gran))}</td></tr>
     </table></div>`
 }
-function vistaPresiones (T) {
-  if (!T.yo) {
-    return `<h2>Presiones</h2><p class="guia">Di quién eres para ver tus presiones.</p>
-      <button class="btn sec" data-accion="cambiarYo">Decir quién soy</button>`
-  }
-  const d = T.d || 0
-  const yo = T.yo
-  const g = miGrupo(T, d)
-  const rivales = g ? g.filter(id => id !== yo) : []
-  if (!rivales.length) return '<h2>Presiones</h2><p class="guia">No hay rivales en tu grupo.</p>'
-  const rival = rivales.includes(T.rival) ? T.rival : rivales[0]
-  const nomR = corto(T, rival)
 
-  const segm = rivales.map(id =>
-    `<button class="${id === rival ? 'on' : ''}" data-accion="setRival" data-rid="${esc(id)}">${esc(corto(T, id))}</button>`).join('')
-
+/* La cabecera de hoyos y la fila del par: las usan la vista de uno contra
+   uno y la de equipos, y son idénticas en las dos. */
+function cabezaDePresiones () {
   let cab = '<th>Hoyo</th>'
   for (let h = 0; h < 9; h++) cab += `<th>${h + 1}</th>`
   cab += '<th>OUT</th>'
   for (let h = 9; h < HOYOS; h++) cab += `<th>${h + 1}</th>`
-  cab += '<th>IN</th><th>TOT</th>'
+  return cab + '<th>IN</th><th>TOT</th>'
+}
+
+function filaDelPar (T, d) {
   let fp = '<td class="nom-col">Par</td>'
   for (let h = 0; h < 9; h++) fp += `<td>${esc(par(T, d, h))}</td>`
   fp += `<td class="tot">${esc(sumaPar(T, d, 0, 9))}</td>`
   for (let h = 9; h < HOYOS; h++) fp += `<td>${esc(par(T, d, h))}</td>`
-  fp += `<td class="tot">${esc(sumaPar(T, d, 9, 18))}</td><td class="tot">${esc(sumaPar(T, d, 0, 18))}</td>`
+  return fp + `<td class="tot">${esc(sumaPar(T, d, 9, 18))}</td><td class="tot">${esc(sumaPar(T, d, 0, 18))}</td>`
+}
 
-  const m = presionesMatch(T, d, yo, rival)
+/* La tabla de la escalera: un renglón por apuesta, la ida a la izquierda y
+   la vuelta a la derecha, con lo que vale cada una al final. */
+function tablaDeEscalera (m, ida, vuelta) {
   const idaAps = m.apuestas.filter(x => x.fin === 8)
   const vtaAps = m.apuestas.filter(x => x.fin === 17)
-  const q = dineroDesglosado(T, d, yo, rival)
-  const ida = q.precioIda, vuelta = q.precioVuelta
   let filasP = ''
   for (let k = 0; k < Math.max(idaAps.length, vtaAps.length); k++) {
     const a = idaAps[k], b = vtaAps[k]
@@ -3292,6 +3474,81 @@ function vistaPresiones (T) {
     f += `<td class="tot ${claseSigno(u)}">${u === 0 ? '—' : esc(conSigno(u))}</td>`
     filasP += `<tr>${f}</tr>`
   }
+  return filasP
+}
+
+/* Las modalidades por equipos: en vez de elegir rival, se ven los partidos
+   que se están jugando en la mesa. En Mudo y en Yo-Yo son tres —cada quien
+   contra los otros dos por turnos— y tú sales en los tres. */
+function vistaPresionesEquipos (T, d, yo, modo) {
+  const gi = gruposDe(T, d).findIndex(g => g.includes(yo))
+  const A = apuestaPresiones(d, gi)
+  const { partidos } = evaluarPresionesEquipos(T, A, modo, HOYOS - 1).vivo
+  const nombre = (MODOS_PRESIONES.find(x => x[0] === modo) || [, modo])[1]
+  const cab = cabezaDePresiones()
+  const fp = filaDelPar(T, d)
+  const nombres = (l, conMudo) => l.map(j => esc(corto(T, j))).concat(conMudo ? ['el Mudo'] : []).join(' y ')
+
+  let mio = 0
+  const bloques = partidos.map(pt => {
+    const dinero = pt.q.capturado ? pt.q.total : 0
+    /* Lo que te toca a TI de ese partido: cada quien liquida con cada
+       rival del otro bando, así que el solitario cobra o paga dos veces. */
+    const tuyo = pt.realesA.includes(yo)
+      ? dinero * pt.realesB.length
+      : (pt.realesB.includes(yo) ? -dinero * pt.realesA.length : 0)
+    mio += tuyo
+    const conMudo = modo === 'mudo'
+    const doble = modo === 'yoyo' && pt.realesA.includes(yo)
+    const enJuego = pt.realesA.concat(pt.realesB)
+    return `<h2>${nombres(pt.realesA, conMudo)} contra ${nombres(pt.realesB, false)}</h2>
+      ${doble ? '<p class="guia">Tu score cuenta dos veces: una bola en neto y la otra en bruto.</p>' : ''}
+      ${conMudo ? '<p class="guia">La bola del Mudo es el renglón del par: hace par en los dieciocho y nunca cobra ni paga.</p>' : ''}
+      <div class="rejilla"><table>
+        <tr>${cab}</tr>
+        <tr class="par">${fp}</tr>
+        ${enJuego.map(j => filaGolpes(T, d, j)).join('')}
+      </table></div>
+      <div class="rejilla bloque"><table>
+        <tr>${cab}</tr>
+        ${tablaDeEscalera(pt.m, pt.q.precioIda, pt.q.precioVuelta)}
+      </table></div>
+      <p class="veredicto ${claseSigno(tuyo)}">${tuyo === 0 ? 'Tablas' : (tuyo > 0 ? `Ganas ${esc(tuyo)}` : `Pierdes ${esc(-tuyo)}`)}</p>`
+  }).join('')
+
+  const torcidos = partidos.some(pt => pt.cuadran === false)
+  return `<h2>Presiones · ${esc(nombre)}</h2>
+    <p class="guia">El hoyo se decide con las dos bolas del equipo: la mejor contra la mejor y la peor contra la peor. Cada comparación vale un punto, así que un hoyo va de −2 a +2 y las presiones se abren más rápido.</p>
+    ${torcidos ? '<p class="guia">Los bandos no están marcados dos y dos, así que se partió el grupo por la mitad. Se cambian tocando a cada quien en la pestaña del juego.</p>' : ''}
+    ${bloques}
+    <p class="veredicto ${claseSigno(mio)}">${mio === 0 ? 'Hoy vas parejo' : (mio > 0 ? `Hoy vas +${esc(mio)}` : `Hoy vas ${esc(mio)}`)}</p>
+    <p class="guia">La modalidad se cambia en Ajustes. El sliding que se pacta a mano es cosa del uno contra uno; aquí las ventajas salen del hándicap de cada quien.</p>`
+}
+function vistaPresiones (T) {
+  if (!T.yo) {
+    return `<h2>Presiones</h2><p class="guia">Di quién eres para ver tus presiones.</p>
+      <button class="btn sec" data-accion="cambiarYo">Decir quién soy</button>`
+  }
+  const d = T.d || 0
+  const yo = T.yo
+  const g = miGrupo(T, d)
+  const rivales = g ? g.filter(id => id !== yo) : []
+  if (!rivales.length) return '<h2>Presiones</h2><p class="guia">No hay rivales en tu grupo.</p>'
+  const modo = presModo(T)
+  if (modo !== 'ind' && modoCabe(modo, g.length)) return vistaPresionesEquipos(T, d, yo, modo)
+  const rival = rivales.includes(T.rival) ? T.rival : rivales[0]
+  const nomR = corto(T, rival)
+
+  const segm = rivales.map(id =>
+    `<button class="${id === rival ? 'on' : ''}" data-accion="setRival" data-rid="${esc(id)}">${esc(corto(T, id))}</button>`).join('')
+
+  const cab = cabezaDePresiones()
+  const fp = filaDelPar(T, d)
+
+  const m = presionesMatch(T, d, yo, rival)
+  const q = dineroDesglosado(T, d, yo, rival)
+  const ida = q.precioIda, vuelta = q.precioVuelta
+  const filasP = tablaDeEscalera(m, ida, vuelta)
   const dIda = q.ida, dVta = q.vuelta
   let fd = '<td class="nom-col">Dinero</td>'
   for (let h = 0; h < 9; h++) fd += '<td></td>'
@@ -4178,6 +4435,7 @@ const ACCIONES = {
   setPresAl: (d, el) => { ponPresAl(T(), el.value); salvar(); programar() },
   setPresCarry: (d, el) => { ponPresCarry(T(), el.checked); salvar(); programar() },
   setPresMatch: (d, el) => { ponPresMatch(T(), el.value); salvar(); programar() },
+  setPresModo: (d, el) => { ponPresModo(T(), el.value); salvar(); programar() },
   unirmeConLigaPegada: () => {
     const v = document.getElementById('ligaPegada').value.trim()
     const hash = v.includes('#') ? v.slice(v.indexOf('#')) : v
