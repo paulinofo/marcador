@@ -4,9 +4,15 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Golf Poli">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>Golf</title>
-<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect fill='%2316181C' width='180' height='180'/%3E%3Ccircle cx='90' cy='90' r='70' fill='%237FB08A'/%3E%3Ccircle cx='90' cy='70' r='8' fill='%2316181C'/%3E%3Cpath d='M90 78 L85 120 Q90 125 95 120 Z' fill='%2316181C'/%3E%3C/svg%3E">
+<title>Golf Poli</title>
+<!-- iOS no acepta SVG para el icono de la pantalla de inicio: tiene que ser PNG.
+     `icono.png` viaja junto al HTML (el armado lo deja en dist/); el mismo PNG va
+     incrustado abajo para la pestaña del navegador y para cuando la app se abre
+     como archivo suelto, sin nada al lado. -->
+<link rel="apple-touch-icon" sizes="180x180" href="icono.png">
+<link rel="icon" type="image/png" href="data:image/png;base64,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">
 <style>/* Sistema tomado de las apps anteriores de Paulino, no inventado. La paleta
    es la del Invitacional Acapulco -petróleo en vez del grafito de Santa Fe-,
    elegida por él el 15-sep-2026; el resto de los tokens son idénticos en las
@@ -352,6 +358,7 @@ function estadoInicial () {
     activo: null,
     gente: [],      // la libreta local: con quién has jugado. No se sincroniza.
     campos: [],     // la biblioteca de fichas de campo de este teléfono. Tampoco viaja.
+    asis: null,     // por dónde va el asistente de arranque. Local y efímero.
     vista: 'hoy',
     /* La clave de la IA es personal y de pago: vive solo en este teléfono,
        no es un hecho, no viaja por el servidor y no se publica. El token
@@ -408,6 +415,14 @@ function quitarTorneo (S, tid) {
   S.torneos = quedan
   if (S.activo === tid) S.activo = null
 }
+
+/* Lo que la libreta de este teléfono recuerda de alguien. El asistente lo
+   usa para no estrenar a todos en cero: quien ya jugó contigo entra con la
+   ventaja de la última vez. */
+function indiceDeGente (S, nombre) {
+  const g = (S.gente || []).find(x => x.n === nombre)
+  return g ? g.i : 0
+}
 function recordarGente (S, nombre, idx) {
   const i = S.gente.findIndex(g => g.n === nombre)
   if (i >= 0) S.gente[i].i = idx
@@ -461,6 +476,9 @@ const extra = (T, d, jid, h) => T.h[`x.${d}.${jid}.${h}`] ?? 0
 const par = (T, d, h) => T.h[`c.${d}.par.${h}`] ?? 4
 const si = (T, d, h) => T.h[`c.${d}.si.${h}`] ?? h + 1
 const indice = (T, jid) => T.h[`j.${jid}.i`] ?? 0
+/* El nombre de un jugador por su jid, esté visible o dado de baja.
+   `jugadores()` no sirve para esto: excluye a los de baja a propósito. */
+const nomJug = (T, jid) => T.h[`j.${jid}.n`] ?? ''
 const grupo = (T, d, jid) => T.h[`g.${d}.${jid}`] ?? 0
 
 /* Tope de nueve rondas: el servidor v1 trunca la llave de golpes a 16
@@ -919,25 +937,14 @@ function vistaArranque (S) {
   const lista = todos.filter(T => !torneoCerrado(T)).map(fila).join('')
   const cerrados = todos.filter(T => torneoCerrado(T)).map(fila).join('')
   return `<div class="hoja">
-    <h1>Golf</h1>
+    <h1>Golf Poli</h1>
     <p class="guia">Marcador de torneos. Se crea aquí, se comparte con una liga y funciona sin señal.</p>
     ${todos.length ? `<h2>Mis torneos <button class="enlace" data-accion="editarLista">${editando ? 'Listo' : 'Editar'}</button></h2>` : ''}
     ${lista}
-    <h2>${lista ? 'Otro torneo' : 'Empieza'}</h2>
-    <button class="btn" data-accion="irVista" data-vista="nuevo">Torneo nuevo</button>
+    <h2>${lista ? 'Otra vez' : 'Empieza'}</h2>
+    <button class="btn" data-accion="abrirAsistente">Partida o torneo nuevo</button>
     <button class="btn sec" data-accion="irVista" data-vista="unirme">Unirme a uno</button>
     ${cerrados ? `<h2>Terminados</h2>${cerrados}` : ''}
-  </div>`
-}
-function vistaNuevo (S) {
-  return `<div class="hoja">
-    <h1>Torneo nuevo</h1>
-    <h2>Nombre</h2>
-    <input id="nomTorneo" placeholder="Santa Fe 2026">
-    <h2>Cuántas rondas <span class="tenue">máximo 9</span></h2>
-    <input id="diasTorneo" inputmode="numeric" value="1">
-    <button class="btn" data-accion="crearDesdeForm">Crear</button>
-    <button class="btn sec" data-accion="irVista" data-vista="inicio">Cancelar</button>
   </div>`
 }
 
@@ -989,6 +996,414 @@ function unirseA (S, datos) {
   T.clave = datos.clave
   S.activo = T.tid
   return T
+}
+
+
+
+/* La biblioteca de campos de ESTE teléfono. Dar de alta un campo son 36
+   números; la mayoría de las veces es un campo que ya se jugó, así que se
+   ofrece de una lista en vez de teclearlo otra vez.
+
+   Se arma sola con lo que ya hay guardado: cada día de cada torneo que
+   tenga nombre y ficha completa es un campo conocido. Y además se recuerda
+   aparte lo que se guarda desde la foto, para que el campo siga en la lista
+   aunque se quite ese torneo del teléfono.
+
+   Es local, como la libreta de jugadores: no viaja por el servidor. */
+
+/* Los campos que la app ya trae puestos. Un campo se teclea una vez en la
+   vida -o se fotografía-, pero el primero de todos no lo tiene nadie: un
+   teléfono recién instalado abría la lista vacía. Estos vienen dentro del
+   armado, así que aparecen desde el primer momento y en el teléfono de
+   todo el grupo.
+
+   De dónde salió cada uno:
+
+   - Chapultepec, de la tarjeta de papel que fotografió Paulino el
+     15-sep-2026. Índices de las VENTAJAS DORADAS Y BLANCAS, que son las
+     marcas que juega su grupo; la tarjeta trae otros para negras y azules.
+     Las cuatro sumas impresas -7439, 7262, 6813 y 6503- cuadran con las
+     distancias hoyo por hoyo: así se comprobó que las columnas se leyeron
+     alineadas.
+   - Los otros seis, de las apps de torneo que ya jugaron: Turtle Dunes,
+     Tres Vidas y Santa Fe de la de Acapulco; Red Sky, Vail y EagleVail de
+     la del viaje a Vail. Son los mismos números con los que se contaron
+     esos torneos.
+
+   Santa Fe venía de una base de datos y el 15-sep-2026 Paulino mandó la
+   tarjeta de papel: los 18 pares y los 18 índices resultaron idénticos, y
+   las cuatro salidas cuadran con sus totales impresos (6966, 6564, 5521 y
+   5432). No se cambió ningún número; se le quitó la marca.
+
+   `porCotejar` es honestidad, no adorno: en la app de Acapulco quedó
+   anotado que Turtle Dunes se cotejó contra la tarjeta física y que Tres
+   Vidas salió de una base de datos de golf. Un índice
+   equivocado reparte mal las ventajas toda la ronda, así que la lista lo
+   dice hasta que alguien fotografíe la tarjeta de la casa club — y en
+   cuanto lo haga, la ficha del teléfono le gana a ésta y la marca se va.
+
+   Congelado a propósito: la lista la comparten todas las pantallas y
+   nadie debe poder escribir dentro de ella por accidente. */
+const CAMPOS_DE_FABRICA = [
+  { n: 'Club de Golf Chapultepec',
+    par: [4, 4, 3, 4, 4, 5, 3, 5, 4, 4, 5, 4, 3, 4, 5, 4, 3, 4],
+    si: [17, 7, 11, 1, 5, 3, 9, 15, 13, 4, 16, 12, 8, 2, 14, 6, 18, 10] },
+  { n: 'EagleVail Golf Club',
+    par: [5, 4, 4, 3, 4, 4, 4, 3, 4, 3, 5, 4, 3, 5, 4, 4, 3, 5],
+    si: [9, 3, 11, 15, 7, 5, 13, 17, 1, 18, 4, 12, 14, 10, 2, 8, 16, 6] },
+  { n: 'Red Sky · Fazio',
+    par: [4, 5, 4, 4, 5, 4, 3, 4, 3, 3, 4, 4, 4, 4, 5, 4, 3, 5],
+    si: [11, 9, 15, 3, 1, 13, 7, 5, 17, 4, 2, 16, 10, 8, 14, 6, 18, 12] },
+  { n: 'Santa Fe Social Club',
+    par: [4, 5, 3, 4, 4, 3, 5, 4, 4, 4, 4, 3, 5, 4, 5, 4, 3, 4],
+    si: [17, 3, 13, 1, 5, 15, 9, 7, 11, 12, 8, 16, 4, 6, 2, 10, 18, 14] },
+  { n: 'Tres Vidas',
+    porCotejar: true,
+    par: [5, 4, 3, 4, 4, 3, 4, 5, 4, 5, 4, 3, 5, 4, 4, 4, 3, 4],
+    si: [5, 3, 7, 17, 1, 13, 15, 9, 11, 12, 16, 14, 6, 2, 10, 8, 18, 4] },
+  { n: 'Turtle Dunes',
+    par: [4, 5, 4, 3, 4, 5, 4, 3, 4, 4, 4, 5, 4, 4, 3, 4, 3, 5],
+    si: [5, 11, 9, 13, 17, 7, 3, 15, 1, 2, 6, 8, 14, 16, 18, 4, 12, 10] },
+  { n: 'Vail Golf Club',
+    par: [4, 4, 3, 4, 4, 4, 3, 5, 4, 4, 4, 5, 4, 4, 3, 4, 3, 5],
+    si: [7, 5, 13, 11, 9, 1, 15, 17, 3, 16, 4, 14, 8, 6, 18, 2, 10, 12] }
+].map(f => Object.freeze({ ...f, par: Object.freeze(f.par), si: Object.freeze(f.si) }))
+function fichaDelDia (T, d) {
+  return {
+    n: campo(T, d),
+    par: Array.from({ length: HOYOS }, (_, h) => par(T, d, h)),
+    si: Array.from({ length: HOYOS }, (_, h) => si(T, d, h))
+  }
+}
+
+/* Los campos que este teléfono conoce, sin repetir y en orden alfabético.
+   Si un nombre aparece en varios sitios gana el recordado a mano, que es el
+   que sobrevive a borrar torneos. */
+function camposConocidos (S) {
+  const por = new Map()
+  /* Las de fábrica van primero a propósito: lo que este teléfono sepa del
+     campo -porque lo jugó o lo fotografió- pisa a la ficha que vino en el
+     armado. Si un día una tarjeta de fábrica trae un error, se corrige
+     desde el teléfono sin esperar a que publiquemos nada. */
+  for (const f of CAMPOS_DE_FABRICA) por.set(f.n, f)
+  for (const T of Object.values(S.torneos || {})) {
+    for (let d = 0; d < dias(T); d++) {
+      if (!fichaCompleta(T, d)) continue
+      const f = fichaDelDia(T, d)
+      if (f.n) por.set(f.n, f)
+    }
+  }
+  for (const f of S.campos || []) if (f && f.n) por.set(f.n, f)
+  return [...por.values()].sort((a, b) => a.n.localeCompare(b.n, 'es'))
+}
+function recordarCampo (S, ficha) {
+  if (!ficha || !ficha.n) return
+  if (!Array.isArray(S.campos)) S.campos = []
+  const i = S.campos.findIndex(f => f.n === ficha.n)
+  const limpia = { n: ficha.n, par: [...ficha.par], si: [...ficha.si] }
+  if (i >= 0) S.campos[i] = limpia
+  else S.campos.push(limpia)
+}
+
+/* Elegir un campo de la lista es lo mismo que haberlo tecleado: emite los
+   36 números y el nombre como hechos, así que el grupo entero recibe la
+   ficha sin que nadie más fotografíe nada. */
+function usaCampo (T, d, ficha) {
+  if (!ficha || !ficha.n) return
+  emitir(T, `c.${d}.n`, String(ficha.n))
+  for (let h = 0; h < HOYOS; h++) {
+    emitir(T, `c.${d}.par.${h}`, parseInt(ficha.par[h], 10) || 4)
+    emitir(T, `c.${d}.si.${h}`, parseInt(ficha.si[h], 10) || h + 1)
+  }
+}
+
+
+
+/* ============================================================
+   La lectura de una tarjeta en blanco: revisarla, decidir si se
+   puede guardar y convertirla en hechos. Puro: ni DOM ni red.
+
+   El valor de todo esto es cazar los errores de lectura sin que
+   nadie compare número por número. Un índice repetido reparte mal
+   los golpes de ventaja de todo el torneo en silencio, y el
+   silencio es justo lo que queremos evitar.
+   ============================================================ */
+const HOYOS_TARJETA = 18
+const PAR_MIN = 3
+const PAR_MAX = 6
+const PAR_TOTAL_MIN = 68
+const PAR_TOTAL_MAX = 74
+
+/* Entero o null. Nunca lanza: lo que no es un entero limpio es un hueco.
+   Dos casos, no tres: un número ya entero (incluido 17.0, que en JS ES el
+   entero 17 y nunca llega como flotante de verdad) y un texto que solo
+   trae dígitos. Un tercer caso para "un flotante casi entero" nunca se
+   alcanzaría -el primer caso ya acepta cualquier entero- así que no se
+   escribe. */
+function enteroOhueco (v) {
+  if (typeof v === 'number' && Number.isFinite(v) && Number.isInteger(v)) return v
+  if (typeof v === 'string' && /^-?\d+$/.test(v.trim())) return parseInt(v, 10)
+  return null
+}
+
+const aDieciocho = (a) => Array.from({ length: HOYOS_TARJETA }, (_, h) => enteroOhueco(Array.isArray(a) ? a[h] : undefined))
+
+/* Revisa una respuesta cruda de la IA. Devuelve SIEMPRE la misma forma,
+   venga lo que venga: 18 pares, 18 índices, 18 marcas y una lista de
+   avisos ya escritos en español. */
+function revisaLectura (cruda) {
+  const c = cruda && typeof cruda === 'object' ? cruda : {}
+  const nombre = typeof c.campo === 'string' ? c.campo.trim() : ''
+  const par = aDieciocho(c.par)
+  const si = aDieciocho(c.si)
+  const marcas = Array.from({ length: HOYOS_TARJETA }, () => ({ par: null, si: null }))
+  const avisos = []
+
+  for (let h = 0; h < HOYOS_TARJETA; h++) {
+    if (par[h] === null) marcas[h].par = 'hueco'
+    else if (par[h] < PAR_MIN || par[h] > PAR_MAX) marcas[h].par = 'fuera'
+  }
+
+  /* El índice se marca 'repetido' en la segunda aparición y siguientes: la
+     primera puede ser la buena y señalarla confundiría. */
+  const vistos = new Set()
+  for (let h = 0; h < HOYOS_TARJETA; h++) {
+    const v = si[h]
+    if (v === null) { marcas[h].si = 'hueco'; continue }
+    if (v < 1 || v > HOYOS_TARJETA) { marcas[h].si = 'fuera'; continue }
+    if (vistos.has(v)) { marcas[h].si = 'repetido'; continue }
+    vistos.add(v)
+  }
+  const faltan = []
+  for (let n = 1; n <= HOYOS_TARJETA; n++) if (!vistos.has(n)) faltan.push(n)
+  if (faltan.length) {
+    avisos.push(faltan.length === 1
+      ? `falta el índice ${faltan[0]}`
+      : `faltan los índices ${faltan.join(', ')}`)
+  }
+
+  const total = par.reduce((t, x) => t + (x ?? 0), 0)
+  if (!par.includes(null) && (total < PAR_TOTAL_MIN || total > PAR_TOTAL_MAX)) {
+    avisos.push(`el par suma ${total}, revísalo`)
+  }
+
+  return { campo: nombre, par, si, marcas, avisos }
+}
+
+/* Se puede guardar cuando ningún hoyo está señalado. El aviso del par
+   total NO entra: hay campos cortos legítimos. */
+const lecturaCompleta = (rev) =>
+  rev.marcas.every(m => m.par === null && m.si === null)
+
+/* Los hoyos señalados no se emiten: se quedan como estaban en vez de
+   ensuciar el torneo con un número dudoso que además viaja a los demás. */
+function aplicaCampo (T, d, rev) {
+  if (rev.campo) emitir(T, `c.${d}.n`, rev.campo)
+  for (let h = 0; h < HOYOS_TARJETA; h++) {
+    if (rev.marcas[h].par === null) emitir(T, `c.${d}.par.${h}`, rev.par[h])
+    if (rev.marcas[h].si === null) emitir(T, `c.${d}.si.${h}`, rev.si[h])
+  }
+}
+
+/* Uno fotografía y todos juegan: el campo viaja como hecho, así que el
+   resto del grupo recibe los 36 números sin tocar nada. */
+function aplicaCampoATodos (T, rev) {
+  for (let d = 0; d < dias(T); d++) aplicaCampo(T, d, rev)
+}
+
+
+
+
+/* La sección de Ajustes que convierte una foto en el campo del torneo.
+   Nada se guarda hasta tocar Guardar: un par mal leído falsea el
+   Stableford y las presiones de todo el torneo, y viaja a los demás. */
+function bloqueClaveIa (S) {
+  const hay = !!(S.ia && S.ia.clave)
+  return `<h2>Clave de la IA</h2>
+    <p class="guia">Para leer tarjetas con la cámara. Es tuya y de pago: vive solo en este teléfono y no se comparte con el grupo.</p>
+    <input type="password" placeholder="${hay ? 'guardada en este teléfono' : 'sk-…'}" autocomplete="off" data-cambio="ponClaveIa">
+    ${hay ? '<button class="btn sec" data-accion="borrarClaveIa">Borrar la clave</button>' : ''}`
+}
+
+function tablaLectura (rev) {
+  const fila = (et, cual) => {
+    const celdas = Array.from({ length: HOYOS_TARJETA }, (_, h) => {
+      const motivo = rev.marcas[h][cual]
+      return `<td class="${motivo ? 'dudoso' : ''}"><input value="${esc(rev[cual][h] ?? '')}" inputmode="numeric"
+        data-cambio="editaLectura" data-campo="${cual}" data-hoyo="${h}"></td>`
+    }).join('')
+    return `<tr><td class="nom-col">${et}</td>${celdas}</tr>`
+  }
+  const cab = Array.from({ length: HOYOS_TARJETA }, (_, h) => `<th>${h + 1}</th>`).join('')
+  return `<div class="rejilla"><table>
+      <tr><th>Hoyo</th>${cab}</tr>
+      ${fila('Par', 'par')}
+      ${fila('SI', 'si')}
+    </table></div>`
+}
+function bloqueFoto (T, S) {
+  const clave = !!(S.ia && S.ia.clave)
+  const cab = '<h2>Leer de una foto</h2>'
+  if (!clave) {
+    return `${cab}<p class="guia">Pon tu clave de la IA más abajo y aquí podrás fotografiar la tarjeta en blanco del campo para dar de alta los 36 números de un tirón.</p>`
+  }
+  if (S.leyendo) return `${cab}<p class="guia">Leyendo la tarjeta…</p>`
+
+  const rev = S.lectura
+  const n = dias(T)
+  const listo = rev && lecturaCompleta(rev)
+  return `${cab}
+    <p class="guia">Fotografía la tarjeta EN BLANCO del campo. Nada se guarda hasta que lo revises y toques Guardar.</p>
+    <div class="foto-zona">
+      <label class="btn sec">Tomar o elegir la foto
+        <input type="file" accept="image/*" capture="environment" data-cambio="tomarFoto" hidden></label>
+      ${S.foto ? `<img class="foto-prev" src="${esc(S.foto)}" alt="la tarjeta">
+        <button class="btn sec" data-accion="quitarFoto">Quitar la foto</button>` : ''}
+    </div>
+    ${S.errorIa ? `<p class="aviso-ia">${esc(S.errorIa)}</p>` : ''}
+    ${rev
+      ? `<h2>Lo que leyó</h2>
+        <input value="${esc(rev.campo)}" placeholder="nombre del campo" data-cambio="editaLectura" data-campo="campo" data-hoyo="-1">
+        ${tablaLectura(rev)}
+        ${rev.avisos.length ? `<p class="guia">${rev.avisos.map(a => esc(a)).join(' · ')}</p>` : ''}
+        <button class="btn" data-accion="guardaCampoDia"${listo ? '' : ' disabled'}>Guardar en este día</button>
+        ${n > 1 ? `<button class="btn sec" data-accion="guardaCampoTodos"${listo ? '' : ' disabled'}>Guardar en las ${esc(n)} rondas</button>` : ''}
+        ${listo ? '' : '<p class="guia">Corrige lo marcado para poder guardar.</p>'}`
+      : ''}`
+}
+
+
+
+
+
+/* El asistente: las cinco preguntas que uno hace de verdad al llegar al
+   campo, en el orden en que las hace. Antes la app abría con un formulario
+   de nombre y rondas -lenguaje de torneo- y todo lo demás había que ir a
+   buscarlo a Grupos y a Ajustes sabiendo que estaba ahí.
+
+   Las preguntas son:
+     1. ¿partida de hoy o torneo de varias rondas?
+     2. ¿en qué campo estás? (y si no está, se fotografía su tarjeta)
+     3. ¿con cuántos juegas?
+     4. ¿cómo se llaman?
+     5. ¿qué ventajas se dan?
+
+   El torneo se crea en el paso 1, no al final: a partir de ahí cada
+   respuesta es un hecho que ya viaja al grupo, así que quien se salga a
+   medias no pierde lo contestado y quien se una por la liga ve el campo y
+   los jugadores llegar solos. Lo único que vive en el teléfono es por
+   dónde va (`S.asis`). */
+const CUANTOS = [2, 3, 4, 5]
+const PASOS = 5
+const pasoDe = (S) => (S.asis && S.asis.paso) || 1
+const acotaPaso = (v) => {
+  const n = parseInt(v, 10)
+  return Number.isFinite(n) ? Math.max(1, Math.min(PASOS, n)) : 1
+}
+const cuantosDe = (S) => (S.asis && S.asis.cuantos) || 4
+
+function paso1 (T, S) {
+  const hay = Object.keys(S.torneos || {}).length
+  return `<h1>Golf Poli</h1>
+    <p class="guia">¿Qué vas a anotar?</p>
+    <button class="btn" data-accion="asisPartida">Una partida de hoy</button>
+    <p class="guia">Una sola ronda, la de hoy. Se comparte con el grupo igual que un torneo.</p>
+    <h2>O un torneo de varias rondas</h2>
+    <input id="asisNombre" placeholder="Invitacional Santa Fe 2026">
+    <label class="cfg-juego"><span>Cuántas rondas</span>
+      <input id="asisDias" inputmode="numeric" value="2"></label>
+    <button class="btn sec" data-accion="asisTorneo">Crear el torneo</button>
+    <h2>O entrar a uno que ya existe</h2>
+    <button class="btn sec" data-accion="irVista" data-vista="unirme">Unirme con una liga</button>
+    ${hay ? '<button class="btn sec" data-accion="irVista" data-vista="inicio">Ver mis torneos</button>' : ''}`
+}
+
+function paso2 (T, S) {
+  const d = T.d || 0
+  const lista = camposConocidos(S)
+  const listo = fichaCompleta(T, d)
+  const abreFoto = !!(S.asis && S.asis.foto)
+  const hayClaveIa = !!(S.ia && S.ia.clave)
+  return `<h2>¿En qué campo estás?</h2>
+    <select data-cambio="usarCampo">
+      <option value="">Elegir uno de mis campos…</option>
+      ${lista.map(f => `<option value="${esc(f.n)}"${campo(T, d) === f.n ? ' selected' : ''}>${esc(f.n)}${f.porCotejar ? ' · por cotejar' : ''}</option>`).join('')}
+    </select>
+    <p class="guia">${listo
+      ? `Listo: ${esc(campo(T, d))}, con sus 18 pares y sus 18 índices.`
+      : 'Al elegirlo entran sus 18 pares y sus 18 índices, que son los que reparten las ventajas.'}</p>
+    ${abreFoto
+      ? (hayClaveIa
+          ? bloqueFoto(T, S)
+          : `<h2>Leer de una foto</h2>
+             <p class="guia">Para leer la tarjeta con la cámara hace falta tu clave de la IA, que es tuya y de pago. Se pone una sola vez en Ajustes, abajo del todo. Mientras tanto puedes seguir sin campo y ponerlo después: lo único que cambia es que las ventajas no se reparten hasta que el campo tenga sus 18 índices.</p>`)
+      : '<button class="btn sec" data-accion="asisFoto">No está en la lista: fotografiar su tarjeta</button>'}
+    ${listo
+      ? '<button class="btn" data-accion="asisSigue">Seguir</button>'
+      : '<button class="enlace" data-accion="asisSigue">Seguir sin campo, lo pongo después</button>'}`
+}
+
+function paso3 (T, S) {
+  return `<h2>¿Con cuántos juegas?</h2>
+    <p class="guia">Contándote a ti.</p>
+    <div class="segm">${CUANTOS.map(n =>
+      `<button class="${cuantosDe(S) === n ? 'on' : ''}" data-accion="asisCuantos" data-n="${n}">${n}</button>`).join('')}</div>`
+}
+
+function paso4 (T, S) {
+  const n = cuantosDe(S)
+  /* Las casillas se llenan con los jugadores que dio de alta ESTE
+     asistente, por su jid y no por su posición en la lista: así, quien
+     vuelve atrás después de bajar de 5 a 2 encuentra otra vez los nombres
+     de los que había quitado, en su casilla. */
+  const jids = (S.asis && S.asis.jids) || []
+  const filas = Array.from({ length: n }, (_, i) =>
+    `<input id="asisNom${i}" list="laLibreta" placeholder="${i === 0 ? 'Tú' : 'Jugador ' + (i + 1)}"
+       autocapitalize="words" value="${esc(jids[i] ? nomJug(T, jids[i]) : '')}">`).join('')
+  const libreta = (S.gente || []).map(g => `<option value="${esc(g.n)}"></option>`).join('')
+  /* Quien se unió por la liga pudo agregar gente desde su teléfono. El
+     asistente no los toca -no son suyos-, pero callarlo haría que el
+     usuario los volviera a escribir aquí y quedaran por duplicado. */
+  const ajenos = jugadores(T).filter(j => !jids.includes(j.id))
+  return `<h2>¿Cómo se llaman?</h2>
+    <p class="guia">El primero eres tú: así la app sabe de quién es la tarjeta en este teléfono. Si ya han jugado contigo, los propone al escribir.</p>
+    ${filas}
+    <datalist id="laLibreta">${libreta}</datalist>
+    ${ajenos.length
+      ? `<p class="guia">En este torneo ya están ${esc(ajenos.map(j => j.n).join(', '))}, que agregaron desde otro teléfono. No hace falta repetirlos: se suman a los que pongas aquí.</p>`
+      : ''}
+    <button class="btn" data-accion="asisNombres">Seguir</button>`
+}
+
+function paso5 (T, S) {
+  const jug = jugadores(T)
+  if (!jug.length) return '<h2>¿Qué ventajas se dan?</h2><p class="guia">Antes hay que poner los nombres.</p>'
+  const filas = jug.map(j => `<label class="cfg-juego"><span>${esc(j.n)}</span>
+      <input value="${esc(j.i)}" inputmode="numeric" data-cambio="setVentaja" data-jid="${esc(j.id)}"></label>`).join('')
+  return `<h2>¿Qué ventajas se dan?</h2>
+    <p class="guia">Los golpes que recibe cada quien. El que no recibe ninguno va en cero. Se reparten hoyo por hoyo según el índice de dificultad del campo, empezando por el más difícil.</p>
+    ${filas}
+    <button class="btn" data-accion="asisListo">Empezar a anotar</button>`
+}
+function vistaAsistente (S, T) {
+  /* Sin torneo no hay nada que preguntar todavía: siempre es el paso 1,
+     aunque el teléfono venga con un paso guardado de otra vez. */
+  /* Un `paso` raro guardado -de una versión vieja, o de un estado a medio
+     escribir- dejaba la app en blanco y sin un solo botón para salir: la
+     vista reventaba, y como la vista y el paso viven en el teléfono,
+     reventaba otra vez en cada recarga. */
+  const paso = T ? acotaPaso(pasoDe(S)) : 1
+  const dentro = [null, paso1, paso2, paso3, paso4, paso5][paso]
+  return `<div class="hoja">
+    ${paso > 1
+      ? `<p class="guia">Paso ${paso} de ${PASOS} · ${esc(nombre(T))}${dias(T) > 1 ? ` · ${esc(dias(T))} rondas` : ''}</p>`
+      : ''}
+    ${dentro(T, S)}
+    ${paso > 1
+      ? `<button class="btn sec" data-accion="asisAtras">Atrás</button>
+         <button class="enlace" data-accion="asisListo">Salir del asistente</button>`
+      : ''}
+  </div>`
 }
 
 
@@ -2116,6 +2531,31 @@ const bajaJugador = (T, jid) => emitir(T, `j.${jid}.baja`, 1)
 const reactivar = (T, jid) => emitir(T, `j.${jid}.baja`, 0)
 const moverAGrupo = (T, d, jid, g) => emitir(T, `g.${d}.${jid}`, g)
 const ponCorto = (T, jid, v) => emitir(T, `j.${jid}.c`, String(v ?? '').trim())
+
+/* Renombrar en vez de dar de baja y volver a dar de alta: los golpes ya
+   anotados cuelgan del jid. Un nombre vacío se ignora -borraría el del
+   grupo- igual que el del torneo.
+
+   Y el mismo nombre otra vez NO se emite. No es ahorro de red: el orden de
+   los jugadores en la tarjeta es el sello del hecho que puso el nombre
+   (ver `ordenarYMapear`), así que reescribir "Paulino" encima de "Paulino"
+   lo mandaba al final de la lista —en todos los teléfonos del grupo—. Pasar
+   dos veces por la pregunta de los nombres barajaba la tarjeta entera. */
+function ponNombreJugador (T, jid, v) {
+  const n = String(v ?? '').trim()
+  if (n && n !== nomJug(T, jid)) emitir(T, `j.${jid}.n`, n)
+}
+
+/* La ventaja: los golpes que recibe. Es el mismo hecho que el índice
+   -`j.<jid>.i`-, que es de donde el motor reparte los golpes hoyo por
+   hoyo. Un número ilegible no se emite: quien teclea pasa por el vacío
+   antes de llegar a lo que quiere, y un 0 accidental le quitaría las
+   ventajas a alguien en silencio. */
+function ponVentaja (T, jid, v) {
+  const s = String(v ?? '').trim()
+  if (!/^\d+(\.\d+)?$/.test(s)) return
+  emitir(T, `j.${jid}.i`, Number(s))
+}
 function vistaRoster (T, S) {
   const d = T.d || 0
   const jug = jugadores(T)
@@ -2254,8 +2694,8 @@ function vistaDias (T) {
    HTML y no lo suelta: Paulino publicó cinco veces y siguió viendo la
    versión vieja. Con esto la app se entera sola y ofrece pasar a la nueva,
    en vez de que cada quien tenga que adivinar cómo forzar a su iOS. */
-const VERSION = '2026-09-15·442ebcf'
-const VERSION_DEL_ARMADO = '2026-09-15·442ebcf'
+const VERSION = '2026-09-15·9ee6c70'
+const VERSION_DEL_ARMADO = '2026-09-15·9ee6c70'
 
 /* El nombre de la constante es el ancla que se busca en el HTML servido.
    Se escribe partido para que esta línea no se encuentre a sí misma. */
@@ -2275,280 +2715,6 @@ async function hayVersionNueva (actual, buscar, url = '') {
     return v && v !== actual ? v : null
   } catch (e) {
     return null
-  }
-}
-
-
-
-/* ============================================================
-   La lectura de una tarjeta en blanco: revisarla, decidir si se
-   puede guardar y convertirla en hechos. Puro: ni DOM ni red.
-
-   El valor de todo esto es cazar los errores de lectura sin que
-   nadie compare número por número. Un índice repetido reparte mal
-   los golpes de ventaja de todo el torneo en silencio, y el
-   silencio es justo lo que queremos evitar.
-   ============================================================ */
-const HOYOS_TARJETA = 18
-const PAR_MIN = 3
-const PAR_MAX = 6
-const PAR_TOTAL_MIN = 68
-const PAR_TOTAL_MAX = 74
-
-/* Entero o null. Nunca lanza: lo que no es un entero limpio es un hueco.
-   Dos casos, no tres: un número ya entero (incluido 17.0, que en JS ES el
-   entero 17 y nunca llega como flotante de verdad) y un texto que solo
-   trae dígitos. Un tercer caso para "un flotante casi entero" nunca se
-   alcanzaría -el primer caso ya acepta cualquier entero- así que no se
-   escribe. */
-function enteroOhueco (v) {
-  if (typeof v === 'number' && Number.isFinite(v) && Number.isInteger(v)) return v
-  if (typeof v === 'string' && /^-?\d+$/.test(v.trim())) return parseInt(v, 10)
-  return null
-}
-
-const aDieciocho = (a) => Array.from({ length: HOYOS_TARJETA }, (_, h) => enteroOhueco(Array.isArray(a) ? a[h] : undefined))
-
-/* Revisa una respuesta cruda de la IA. Devuelve SIEMPRE la misma forma,
-   venga lo que venga: 18 pares, 18 índices, 18 marcas y una lista de
-   avisos ya escritos en español. */
-function revisaLectura (cruda) {
-  const c = cruda && typeof cruda === 'object' ? cruda : {}
-  const nombre = typeof c.campo === 'string' ? c.campo.trim() : ''
-  const par = aDieciocho(c.par)
-  const si = aDieciocho(c.si)
-  const marcas = Array.from({ length: HOYOS_TARJETA }, () => ({ par: null, si: null }))
-  const avisos = []
-
-  for (let h = 0; h < HOYOS_TARJETA; h++) {
-    if (par[h] === null) marcas[h].par = 'hueco'
-    else if (par[h] < PAR_MIN || par[h] > PAR_MAX) marcas[h].par = 'fuera'
-  }
-
-  /* El índice se marca 'repetido' en la segunda aparición y siguientes: la
-     primera puede ser la buena y señalarla confundiría. */
-  const vistos = new Set()
-  for (let h = 0; h < HOYOS_TARJETA; h++) {
-    const v = si[h]
-    if (v === null) { marcas[h].si = 'hueco'; continue }
-    if (v < 1 || v > HOYOS_TARJETA) { marcas[h].si = 'fuera'; continue }
-    if (vistos.has(v)) { marcas[h].si = 'repetido'; continue }
-    vistos.add(v)
-  }
-  const faltan = []
-  for (let n = 1; n <= HOYOS_TARJETA; n++) if (!vistos.has(n)) faltan.push(n)
-  if (faltan.length) {
-    avisos.push(faltan.length === 1
-      ? `falta el índice ${faltan[0]}`
-      : `faltan los índices ${faltan.join(', ')}`)
-  }
-
-  const total = par.reduce((t, x) => t + (x ?? 0), 0)
-  if (!par.includes(null) && (total < PAR_TOTAL_MIN || total > PAR_TOTAL_MAX)) {
-    avisos.push(`el par suma ${total}, revísalo`)
-  }
-
-  return { campo: nombre, par, si, marcas, avisos }
-}
-
-/* Se puede guardar cuando ningún hoyo está señalado. El aviso del par
-   total NO entra: hay campos cortos legítimos. */
-const lecturaCompleta = (rev) =>
-  rev.marcas.every(m => m.par === null && m.si === null)
-
-/* Los hoyos señalados no se emiten: se quedan como estaban en vez de
-   ensuciar el torneo con un número dudoso que además viaja a los demás. */
-function aplicaCampo (T, d, rev) {
-  if (rev.campo) emitir(T, `c.${d}.n`, rev.campo)
-  for (let h = 0; h < HOYOS_TARJETA; h++) {
-    if (rev.marcas[h].par === null) emitir(T, `c.${d}.par.${h}`, rev.par[h])
-    if (rev.marcas[h].si === null) emitir(T, `c.${d}.si.${h}`, rev.si[h])
-  }
-}
-
-/* Uno fotografía y todos juegan: el campo viaja como hecho, así que el
-   resto del grupo recibe los 36 números sin tocar nada. */
-function aplicaCampoATodos (T, rev) {
-  for (let d = 0; d < dias(T); d++) aplicaCampo(T, d, rev)
-}
-
-
-
-
-/* La sección de Ajustes que convierte una foto en el campo del torneo.
-   Nada se guarda hasta tocar Guardar: un par mal leído falsea el
-   Stableford y las presiones de todo el torneo, y viaja a los demás. */
-function bloqueClaveIa (S) {
-  const hay = !!(S.ia && S.ia.clave)
-  return `<h2>Clave de la IA</h2>
-    <p class="guia">Para leer tarjetas con la cámara. Es tuya y de pago: vive solo en este teléfono y no se comparte con el grupo.</p>
-    <input type="password" placeholder="${hay ? 'guardada en este teléfono' : 'sk-…'}" autocomplete="off" data-cambio="ponClaveIa">
-    ${hay ? '<button class="btn sec" data-accion="borrarClaveIa">Borrar la clave</button>' : ''}`
-}
-
-function tablaLectura (rev) {
-  const fila = (et, cual) => {
-    const celdas = Array.from({ length: HOYOS_TARJETA }, (_, h) => {
-      const motivo = rev.marcas[h][cual]
-      return `<td class="${motivo ? 'dudoso' : ''}"><input value="${esc(rev[cual][h] ?? '')}" inputmode="numeric"
-        data-cambio="editaLectura" data-campo="${cual}" data-hoyo="${h}"></td>`
-    }).join('')
-    return `<tr><td class="nom-col">${et}</td>${celdas}</tr>`
-  }
-  const cab = Array.from({ length: HOYOS_TARJETA }, (_, h) => `<th>${h + 1}</th>`).join('')
-  return `<div class="rejilla"><table>
-      <tr><th>Hoyo</th>${cab}</tr>
-      ${fila('Par', 'par')}
-      ${fila('SI', 'si')}
-    </table></div>`
-}
-function bloqueFoto (T, S) {
-  const clave = !!(S.ia && S.ia.clave)
-  const cab = '<h2>Leer de una foto</h2>'
-  if (!clave) {
-    return `${cab}<p class="guia">Pon tu clave de la IA más abajo y aquí podrás fotografiar la tarjeta en blanco del campo para dar de alta los 36 números de un tirón.</p>`
-  }
-  if (S.leyendo) return `${cab}<p class="guia">Leyendo la tarjeta…</p>`
-
-  const rev = S.lectura
-  const n = dias(T)
-  const listo = rev && lecturaCompleta(rev)
-  return `${cab}
-    <p class="guia">Fotografía la tarjeta EN BLANCO del campo. Nada se guarda hasta que lo revises y toques Guardar.</p>
-    <div class="foto-zona">
-      <label class="btn sec">Tomar o elegir la foto
-        <input type="file" accept="image/*" capture="environment" data-cambio="tomarFoto" hidden></label>
-      ${S.foto ? `<img class="foto-prev" src="${esc(S.foto)}" alt="la tarjeta">
-        <button class="btn sec" data-accion="quitarFoto">Quitar la foto</button>` : ''}
-    </div>
-    ${S.errorIa ? `<p class="aviso-ia">${esc(S.errorIa)}</p>` : ''}
-    ${rev
-      ? `<h2>Lo que leyó</h2>
-        <input value="${esc(rev.campo)}" placeholder="nombre del campo" data-cambio="editaLectura" data-campo="campo" data-hoyo="-1">
-        ${tablaLectura(rev)}
-        ${rev.avisos.length ? `<p class="guia">${rev.avisos.map(a => esc(a)).join(' · ')}</p>` : ''}
-        <button class="btn" data-accion="guardaCampoDia"${listo ? '' : ' disabled'}>Guardar en este día</button>
-        ${n > 1 ? `<button class="btn sec" data-accion="guardaCampoTodos"${listo ? '' : ' disabled'}>Guardar en las ${esc(n)} rondas</button>` : ''}
-        ${listo ? '' : '<p class="guia">Corrige lo marcado para poder guardar.</p>'}`
-      : ''}`
-}
-
-
-
-/* La biblioteca de campos de ESTE teléfono. Dar de alta un campo son 36
-   números; la mayoría de las veces es un campo que ya se jugó, así que se
-   ofrece de una lista en vez de teclearlo otra vez.
-
-   Se arma sola con lo que ya hay guardado: cada día de cada torneo que
-   tenga nombre y ficha completa es un campo conocido. Y además se recuerda
-   aparte lo que se guarda desde la foto, para que el campo siga en la lista
-   aunque se quite ese torneo del teléfono.
-
-   Es local, como la libreta de jugadores: no viaja por el servidor. */
-
-/* Los campos que la app ya trae puestos. Un campo se teclea una vez en la
-   vida -o se fotografía-, pero el primero de todos no lo tiene nadie: un
-   teléfono recién instalado abría la lista vacía. Estos vienen dentro del
-   armado, así que aparecen desde el primer momento y en el teléfono de
-   todo el grupo.
-
-   De dónde salió cada uno:
-
-   - Chapultepec, de la tarjeta de papel que fotografió Paulino el
-     15-sep-2026. Índices de las VENTAJAS DORADAS Y BLANCAS, que son las
-     marcas que juega su grupo; la tarjeta trae otros para negras y azules.
-     Las cuatro sumas impresas -7439, 7262, 6813 y 6503- cuadran con las
-     distancias hoyo por hoyo: así se comprobó que las columnas se leyeron
-     alineadas.
-   - Los otros seis, de las apps de torneo que ya jugaron: Turtle Dunes,
-     Tres Vidas y Santa Fe de la de Acapulco; Red Sky, Vail y EagleVail de
-     la del viaje a Vail. Son los mismos números con los que se contaron
-     esos torneos.
-
-   Santa Fe venía de una base de datos y el 15-sep-2026 Paulino mandó la
-   tarjeta de papel: los 18 pares y los 18 índices resultaron idénticos, y
-   las cuatro salidas cuadran con sus totales impresos (6966, 6564, 5521 y
-   5432). No se cambió ningún número; se le quitó la marca.
-
-   `porCotejar` es honestidad, no adorno: en la app de Acapulco quedó
-   anotado que Turtle Dunes se cotejó contra la tarjeta física y que Tres
-   Vidas salió de una base de datos de golf. Un índice
-   equivocado reparte mal las ventajas toda la ronda, así que la lista lo
-   dice hasta que alguien fotografíe la tarjeta de la casa club — y en
-   cuanto lo haga, la ficha del teléfono le gana a ésta y la marca se va.
-
-   Congelado a propósito: la lista la comparten todas las pantallas y
-   nadie debe poder escribir dentro de ella por accidente. */
-const CAMPOS_DE_FABRICA = [
-  { n: 'Club de Golf Chapultepec',
-    par: [4, 4, 3, 4, 4, 5, 3, 5, 4, 4, 5, 4, 3, 4, 5, 4, 3, 4],
-    si: [17, 7, 11, 1, 5, 3, 9, 15, 13, 4, 16, 12, 8, 2, 14, 6, 18, 10] },
-  { n: 'EagleVail Golf Club',
-    par: [5, 4, 4, 3, 4, 4, 4, 3, 4, 3, 5, 4, 3, 5, 4, 4, 3, 5],
-    si: [9, 3, 11, 15, 7, 5, 13, 17, 1, 18, 4, 12, 14, 10, 2, 8, 16, 6] },
-  { n: 'Red Sky · Fazio',
-    par: [4, 5, 4, 4, 5, 4, 3, 4, 3, 3, 4, 4, 4, 4, 5, 4, 3, 5],
-    si: [11, 9, 15, 3, 1, 13, 7, 5, 17, 4, 2, 16, 10, 8, 14, 6, 18, 12] },
-  { n: 'Santa Fe Social Club',
-    par: [4, 5, 3, 4, 4, 3, 5, 4, 4, 4, 4, 3, 5, 4, 5, 4, 3, 4],
-    si: [17, 3, 13, 1, 5, 15, 9, 7, 11, 12, 8, 16, 4, 6, 2, 10, 18, 14] },
-  { n: 'Tres Vidas',
-    porCotejar: true,
-    par: [5, 4, 3, 4, 4, 3, 4, 5, 4, 5, 4, 3, 5, 4, 4, 4, 3, 4],
-    si: [5, 3, 7, 17, 1, 13, 15, 9, 11, 12, 16, 14, 6, 2, 10, 8, 18, 4] },
-  { n: 'Turtle Dunes',
-    par: [4, 5, 4, 3, 4, 5, 4, 3, 4, 4, 4, 5, 4, 4, 3, 4, 3, 5],
-    si: [5, 11, 9, 13, 17, 7, 3, 15, 1, 2, 6, 8, 14, 16, 18, 4, 12, 10] },
-  { n: 'Vail Golf Club',
-    par: [4, 4, 3, 4, 4, 4, 3, 5, 4, 4, 4, 5, 4, 4, 3, 4, 3, 5],
-    si: [7, 5, 13, 11, 9, 1, 15, 17, 3, 16, 4, 14, 8, 6, 18, 2, 10, 12] }
-].map(f => Object.freeze({ ...f, par: Object.freeze(f.par), si: Object.freeze(f.si) }))
-function fichaDelDia (T, d) {
-  return {
-    n: campo(T, d),
-    par: Array.from({ length: HOYOS }, (_, h) => par(T, d, h)),
-    si: Array.from({ length: HOYOS }, (_, h) => si(T, d, h))
-  }
-}
-
-/* Los campos que este teléfono conoce, sin repetir y en orden alfabético.
-   Si un nombre aparece en varios sitios gana el recordado a mano, que es el
-   que sobrevive a borrar torneos. */
-function camposConocidos (S) {
-  const por = new Map()
-  /* Las de fábrica van primero a propósito: lo que este teléfono sepa del
-     campo -porque lo jugó o lo fotografió- pisa a la ficha que vino en el
-     armado. Si un día una tarjeta de fábrica trae un error, se corrige
-     desde el teléfono sin esperar a que publiquemos nada. */
-  for (const f of CAMPOS_DE_FABRICA) por.set(f.n, f)
-  for (const T of Object.values(S.torneos || {})) {
-    for (let d = 0; d < dias(T); d++) {
-      if (!fichaCompleta(T, d)) continue
-      const f = fichaDelDia(T, d)
-      if (f.n) por.set(f.n, f)
-    }
-  }
-  for (const f of S.campos || []) if (f && f.n) por.set(f.n, f)
-  return [...por.values()].sort((a, b) => a.n.localeCompare(b.n, 'es'))
-}
-function recordarCampo (S, ficha) {
-  if (!ficha || !ficha.n) return
-  if (!Array.isArray(S.campos)) S.campos = []
-  const i = S.campos.findIndex(f => f.n === ficha.n)
-  const limpia = { n: ficha.n, par: [...ficha.par], si: [...ficha.si] }
-  if (i >= 0) S.campos[i] = limpia
-  else S.campos.push(limpia)
-}
-
-/* Elegir un campo de la lista es lo mismo que haberlo tecleado: emite los
-   36 números y el nombre como hechos, así que el grupo entero recibe la
-   ficha sin que nadie más fotografíe nada. */
-function usaCampo (T, d, ficha) {
-  if (!ficha || !ficha.n) return
-  emitir(T, `c.${d}.n`, String(ficha.n))
-  for (let h = 0; h < HOYOS; h++) {
-    emitir(T, `c.${d}.par.${h}`, parseInt(ficha.par[h], 10) || 4)
-    emitir(T, `c.${d}.si.${h}`, parseInt(ficha.si[h], 10) || h + 1)
   }
 }
 
@@ -3085,6 +3251,7 @@ function vistaJuego (T) {
 
 
 
+
 /* Los iconos de la barra, como en la app de Santa Fe: trazo de 1.7 sobre
    currentColor, 21 px, sin relleno. Van en el marcado y no en el CSS
    porque cada pestaña lleva el suyo. */
@@ -3109,10 +3276,19 @@ const VISTAS = [
 function cuerpo (S, base = '', versionNueva = null) {
   /* Las pantallas de arranque van ANTES de mirar el torneo activo: se llega
      a ellas tanto sin torneos como teniendo uno abierto. */
-  if (S.vista === 'nuevo') return vistaNuevo(S)
   if (S.vista === 'unirme') return vistaUnirme(S)
   const T = activo(S)
-  if (!T || S.vista === 'inicio') return vistaArranque(S)
+  /* El asistente sí mira el torneo: desde su segunda pregunta ya hay uno
+     creado y cada respuesta se escribe dentro de él. */
+  if (S.vista === 'asistente') return vistaAsistente(S, T)
+  /* Un teléfono sin nada en curso abre preguntando, no con una lista
+     vacía y dos botones: es la primera vez de alguien a quien le pasaron
+     la liga en el estacionamiento. Con torneos abiertos, o si pidió ver su
+     lista, manda la lista. */
+  if (!T || S.vista === 'inicio') {
+    const enCurso = Object.values(S.torneos || {}).some(t => !torneoCerrado(t))
+    return (!enCurso && S.vista !== 'inicio') ? vistaAsistente(S, null) : vistaArranque(S)
+  }
   /* La puerta se cruza solo al ir a Hoy: un torneo recién creado no tiene
      jugadores, y que la pregunta salte a mitad de las altas en Grupos
      sería abrupto. */
@@ -3344,6 +3520,7 @@ function marcarOnces (T, aid, h, jid, v) {
 
 
 
+
 const S = typeof localStorage !== 'undefined' ? cargar(localStorage) : estadoInicial()
 const T = () => activo(S)
 const base = location.origin + location.pathname
@@ -3403,6 +3580,25 @@ async function revisarVersion () {
    quedó -aplicaCampo no emite los hoyos dudosos-. */
 const recuerda = (t, d) => { if (fichaCompleta(t, d)) recordarCampo(S, fichaDelDia(t, d)) }
 
+const pasoActual = () => (S.asis && S.asis.paso) || 1
+const hayGolpes = (t) => Object.keys(t.ct).some(k => k.startsWith('s.'))
+
+/* Crear el torneo del asistente. Igual que crearDesdeForm: el torneo
+   existe desde ya y el registro para el código corto se intenta aquí,
+   sin que un fallo de red detenga nada. */
+async function arrancaTorneo (nom, dd, tipo) {
+  avisar('')
+  const t = crearDesdeFormulario(S, { nombre: nom, dias: dd })
+  /* La primera ronda es hoy: sin fecha, la cabecera sale vacía y dos
+     partidas seguidas son indistinguibles en la lista. */
+  ponFecha(t, 0, hoyISO())
+  S.asis = { paso: 2, tipo, tid: t.tid, jids: [] }
+  S.vista = 'asistente'
+  salvar()
+  try { await registrar(t, red()); salvar() } catch (e) {}
+  programar()
+}
+
 const ACCIONES = {
   /* A una liga distinta el teléfono no puede responder con la copia vieja:
      es lo único que de verdad funciona en iOS. */
@@ -3410,6 +3606,100 @@ const ACCIONES = {
     if (versionNueva) location.replace(location.pathname + '?v=' + versionNueva)
   },
   irVista: d => { S.vista = d.vista; salvar() },
+  /* ── El asistente de arranque ──────────────────────────────────────
+     Cinco preguntas en el orden en que uno las hace al llegar al campo.
+     El torneo se crea en la primera: de ahí en adelante cada respuesta
+     es un hecho que ya viaja al grupo. */
+  abrirAsistente: () => { S.asis = { paso: 1 }; S.vista = 'asistente'; salvar() },
+  /* Volver desde la segunda pregunta es corregir la primera: "era un
+     torneo, no una partida". El torneo que se acababa de crear se quita,
+     porque si se quedara, contestar otra vez crearía un SEGUNDO torneo y
+     el primero se llevaría el campo ya elegido. Solo se quita el que creó
+     el asistente y solo mientras nadie haya anotado un golpe. */
+  asisAtras: () => {
+    const t = T()
+    if (pasoActual() === 2 && t && S.asis && S.asis.tid === t.tid && !hayGolpes(t)) {
+      quitarTorneo(S, t.tid)
+      S.asis = { paso: 1 }
+      salvar()
+      return
+    }
+    S.asis = { ...(S.asis || {}), paso: Math.max(1, pasoActual() - 1) }
+    salvar()
+  },
+  asisSigue: () => {
+    /* Una partida se queda con el nombre del campo: en la lista de
+       torneos "Club de Golf Chapultepec" dice más que "Partida de hoy". */
+    const t = T()
+    if (t && S.asis && S.asis.tipo === 'partida' && pasoActual() === 2 && campo(t, t.d || 0)) {
+      ponNombre(t, campo(t, t.d || 0))
+    }
+    S.asis = { ...(S.asis || {}), paso: Math.min(PASOS, pasoActual() + 1) }
+    salvar(); programar()
+  },
+  asisFoto: () => { S.asis = { ...(S.asis || {}), foto: true }; salvar() },
+  asisPartida: async () => { await arrancaTorneo('Partida de hoy', 1, 'partida') },
+  asisTorneo: async () => {
+    const campoNom = document.getElementById('asisNombre')
+    const nom = campoNom ? campoNom.value.trim() : ''
+    if (!nom) { avisar('Ponle un nombre al torneo'); if (campoNom && campoNom.focus) campoNom.focus(); return }
+    const dd = Math.max(1, parseInt(document.getElementById('asisDias').value, 10) || 1)
+    await arrancaTorneo(nom, dd, 'torneo')
+  },
+  asisCuantos: d => { S.asis = { ...(S.asis || {}), cuantos: Number(d.n), paso: 4 }; salvar() },
+  asisNombres: () => {
+    const t = T()
+    if (!t) return
+    const cuantos = cuantosDe(S)
+    /* Sin filtrar los vacíos: la casilla ES el jugador. Compactando la
+       lista, borrar la casilla de en medio corría a todos los de abajo y
+       el jugador de la 2 se quedaba con el nombre del de la 3 -y con los
+       golpes del de la 2, que cuelgan de su jid-. */
+    const casillas = Array.from({ length: cuantos }, (_, i) => {
+      const el = document.getElementById('asisNom' + i)
+      return el ? String(el.value || '').trim() : ''
+    })
+    if (!casillas.some(Boolean)) { avisar('Pon al menos un nombre'); return }
+    avisar('')
+    /* El asistente solo manda sobre los jugadores que él mismo dio de
+       alta. A quien agregó otro teléfono -o el propio dueño desde Grupos-
+       no lo renombra ni lo da de baja: esas bajas viajaban al grupo
+       entero y borraban a gente de la lista de todos. */
+    const jids = [...((S.asis && S.asis.jids) || [])]
+    const vivos = new Set(jugadores(t).map(j => j.id))
+    const caidos = new Set(bajas(t).map(j => j.id))
+    casillas.forEach((nom, i) => {
+      const jid = jids[i]
+      if (nom) {
+        if (jid && (vivos.has(jid) || caidos.has(jid))) {
+          /* Volver a subir de 2 a 5 recupera a los de antes en vez de
+             acuñar jids nuevos y dejar fantasmas en "Dados de baja". */
+          if (caidos.has(jid)) reactivar(t, jid)
+          ponNombreJugador(t, jid, nom)
+        } else {
+          jids[i] = altaJugador(t, S, nom, indiceDeGente(S, nom))
+        }
+      } else if (jid && vivos.has(jid)) {
+        bajaJugador(t, jid)
+      }
+    })
+    /* Si ahora juegan menos, los de las casillas que ya no se ven salen. */
+    jids.slice(cuantos).forEach(jid => { if (jid && vivos.has(jid)) bajaJugador(t, jid) })
+    const yo = jids.find(j => j && jugadores(t).some(x => x.id === j))
+    if (yo) t.yo = yo
+    S.asis = { ...(S.asis || {}), jids, paso: 5 }
+    salvar(); programar()
+  },
+  /* La libreta del teléfono aprende la ventaja: la próxima vez que juegues
+     con esa persona entra con ella puesta en vez de en cero. */
+  setVentaja: (d, el) => {
+    const t = T()
+    ponVentaja(t, d.jid, el.value)
+    const j = jugadores(t).find(x => x.id === d.jid)
+    if (j) recordarGente(S, j.n, j.i)
+    salvar(); programar()
+  },
+  asisListo: () => { S.asis = null; S.vista = 'hoy'; salvar(); programar() },
   /* programar() aquí porque el ciclo se detiene con un torneo cerrado:
      al cambiarse a uno vivo hay que volver a encenderlo. */
   setNombreTorneo: (d, el) => { ponNombre(T(), el.value); salvar(); programar() },
@@ -3521,28 +3811,6 @@ const ACCIONES = {
   setPresAl: (d, el) => { ponPresAl(T(), el.value); salvar(); programar() },
   setPresCarry: (d, el) => { ponPresCarry(T(), el.checked); salvar(); programar() },
   setPresMatch: (d, el) => { ponPresMatch(T(), el.value); salvar(); programar() },
-  /* Crear no necesita red: el torneo existe desde ya. El registro para
-     obtener el código corto se intenta aquí mismo, para tenerlo lo antes
-     posible; si falla (sin señal, típicamente en el estacionamiento del
-     campo) no pasa nada — sincronizar() lo vuelve a intentar en cada
-     ciclo mientras el torneo no tenga código. */
-  crearDesdeForm: async () => {
-    const campo = document.getElementById('nomTorneo')
-    const nom = campo.value.trim()
-    const dd = Math.max(1, parseInt(document.getElementById('diasTorneo').value, 10) || 1)
-    /* Sin esto el botón se tragaba el toque en silencio, y el recuadro
-       muestra "Santa Fe 2026" en gris: parece un nombre ya escrito. */
-    if (!nom) { avisar('Ponle un nombre al torneo'); if (campo.focus) campo.focus(); return }
-    avisar('')
-    const t = crearDesdeFormulario(S, { nombre: nom, dias: dd })
-    S.vista = 'grupos'
-    salvar()
-    try {
-      await registrar(t, red())
-      salvar()
-    } catch (e) {}
-    programar()
-  },
   unirmeConLigaPegada: () => {
     const v = document.getElementById('ligaPegada').value.trim()
     const hash = v.includes('#') ? v.slice(v.indexOf('#')) : v
@@ -3715,7 +3983,10 @@ async function sincronizar () {
      en un input, repintar le borraría lo tecleado. El repintado llega con
      su siguiente acción; el chip sí se actualiza arriba. */
   const tecleando = document.activeElement && document.activeElement.tagName === 'INPUT'
-  if (r.bajados && !tecleando) dibujar()
+  /* Y en el asistente NUNCA se repinta por lo que baje del grupo: la
+     pantalla de los nombres tiene cinco casillas escritas que todavía no
+     son hechos, y repintar las vacía aunque el dedo no esté en ninguna. */
+  if (r.bajados && !tecleando && S.vista !== 'asistente') dibujar()
   /* Un torneo creado sin señal nace sin código: crearDesdeForm ya lo
      intentó una vez y pudo fallar. Este es el "próximo ciclo" real donde
      se reintenta -no hay otro-, en cada vuelta, hasta que el torneo tenga
