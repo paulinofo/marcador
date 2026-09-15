@@ -29,7 +29,7 @@ html,body{margin:0;padding:0}
 body{background:var(--verde-hondo);color:var(--tarjeta);font-family:var(--ui);
   font-size:17px;line-height:1.4;-webkit-font-smoothing:antialiased;
   overscroll-behavior-y:none}
-button,input{font-family:inherit;font-size:17px}
+button,input,select{font-family:inherit;font-size:17px}
 button{cursor:pointer;border:none;background:none;color:inherit}
 :focus-visible{outline:2px solid var(--laton);outline-offset:2px}
 
@@ -119,9 +119,10 @@ h2{font-size:12px;font-family:var(--mono);letter-spacing:.12em;text-transform:up
 .fila input.corto{margin:6px 0 0;padding:8px 10px;font-size:15px;max-width:180px}
 
 /* ── Controles ──────────────────────────────────────────────── */
-input{background:var(--verde);border:1px solid var(--verde-linea);border-radius:8px;
+input,select{background:var(--verde);border:1px solid var(--verde-linea);border-radius:8px;
   padding:12px;color:var(--tarjeta);width:100%;margin:0 0 8px}
 input::placeholder{color:var(--tinta-suave)}
+input:focus,select:focus{outline:2px solid var(--laton);outline-offset:1px}
 .btn{display:block;width:100%;padding:13px;border-radius:9px;background:var(--laton);color:var(--verde-hondo);
   font-weight:700;font-size:17px;margin-top:9px}
 .btn.sec{background:transparent;border:1px solid var(--verde-linea);color:var(--tarjeta)}
@@ -350,6 +351,7 @@ function estadoInicial () {
     torneos: Object.create(null),
     activo: null,
     gente: [],      // la libreta local: con quién has jugado. No se sincroniza.
+    campos: [],     // la biblioteca de fichas de campo de este teléfono. Tampoco viaja.
     vista: 'hoy',
     /* La clave de la IA es personal y de pago: vive solo en este teléfono,
        no es un hecho, no viaja por el servidor y no se publica. El token
@@ -488,6 +490,17 @@ const salida = (T, d) => T.h[`c.${d}.salida`] ?? ''
    aquí -no en la vista- porque lee T.ct, y nadie fuera de selectores.js
    toca T.ct ni T.h. */
 const diaSinFicha = (T, d) => !Object.keys(T.ct).some(k => k.startsWith(`c.${d}.par.`))
+
+/* Un día tiene ficha COMPLETA cuando alguien puso de verdad los 18 pares y
+   los 18 índices. No basta con `par(T,d,h)`, que devuelve 4 por omisión:
+   hay que mirar T.ct, que solo tiene las llaves realmente emitidas. */
+function fichaCompleta (T, d) {
+  for (let h = 0; h < HOYOS; h++) {
+    if (T.ct[`c.${d}.par.${h}`] === undefined) return false
+    if (T.ct[`c.${d}.si.${h}`] === undefined) return false
+  }
+  return true
+}
 
 /* Regla de Santa Fe: tres o más palabras → las dos primeras; si no, la
    primera. Es lo que cabe en un renglón de teléfono al sol. */
@@ -2241,8 +2254,8 @@ function vistaDias (T) {
    HTML y no lo suelta: Paulino publicó cinco veces y siguió viendo la
    versión vieja. Con esto la app se entera sola y ofrece pasar a la nueva,
    en vez de que cada quien tenga que adivinar cómo forzar a su iOS. */
-const VERSION = '2026-09-15·7a546f1'
-const VERSION_DEL_ARMADO = '2026-09-15·7a546f1'
+const VERSION = '2026-09-15·221b29d'
+const VERSION_DEL_ARMADO = '2026-09-15·221b29d'
 
 /* El nombre de la constante es el ancla que se busca en el HTML servido.
    Se escribe partido para que esta línea no se encuentre a sí misma. */
@@ -2420,8 +2433,62 @@ function bloqueFoto (T, S) {
       : ''}`
 }
 
-const ponPar = (T, d, h, v) => emitir(T, `c.${d}.par.${h}`, parseInt(v, 10) || 4)
-const ponSi = (T, d, h, v) => emitir(T, `c.${d}.si.${h}`, parseInt(v, 10) || h + 1)
+
+
+/* La biblioteca de campos de ESTE teléfono. Dar de alta un campo son 36
+   números; la mayoría de las veces es un campo que ya se jugó, así que se
+   ofrece de una lista en vez de teclearlo otra vez.
+
+   Se arma sola con lo que ya hay guardado: cada día de cada torneo que
+   tenga nombre y ficha completa es un campo conocido. Y además se recuerda
+   aparte lo que se guarda desde la foto, para que el campo siga en la lista
+   aunque se quite ese torneo del teléfono.
+
+   Es local, como la libreta de jugadores: no viaja por el servidor. */
+function fichaDelDia (T, d) {
+  return {
+    n: campo(T, d),
+    par: Array.from({ length: HOYOS }, (_, h) => par(T, d, h)),
+    si: Array.from({ length: HOYOS }, (_, h) => si(T, d, h))
+  }
+}
+
+/* Los campos que este teléfono conoce, sin repetir y en orden alfabético.
+   Si un nombre aparece en varios sitios gana el recordado a mano, que es el
+   que sobrevive a borrar torneos. */
+function camposConocidos (S) {
+  const por = new Map()
+  for (const T of Object.values(S.torneos || {})) {
+    for (let d = 0; d < dias(T); d++) {
+      if (!fichaCompleta(T, d)) continue
+      const f = fichaDelDia(T, d)
+      if (f.n) por.set(f.n, f)
+    }
+  }
+  for (const f of S.campos || []) if (f && f.n) por.set(f.n, f)
+  return [...por.values()].sort((a, b) => a.n.localeCompare(b.n, 'es'))
+}
+function recordarCampo (S, ficha) {
+  if (!ficha || !ficha.n) return
+  if (!Array.isArray(S.campos)) S.campos = []
+  const i = S.campos.findIndex(f => f.n === ficha.n)
+  const limpia = { n: ficha.n, par: [...ficha.par], si: [...ficha.si] }
+  if (i >= 0) S.campos[i] = limpia
+  else S.campos.push(limpia)
+}
+
+/* Elegir un campo de la lista es lo mismo que haberlo tecleado: emite los
+   36 números y el nombre como hechos, así que el grupo entero recibe la
+   ficha sin que nadie más fotografíe nada. */
+function usaCampo (T, d, ficha) {
+  if (!ficha || !ficha.n) return
+  emitir(T, `c.${d}.n`, String(ficha.n))
+  for (let h = 0; h < HOYOS; h++) {
+    emitir(T, `c.${d}.par.${h}`, parseInt(ficha.par[h], 10) || 4)
+    emitir(T, `c.${d}.si.${h}`, parseInt(ficha.si[h], 10) || h + 1)
+  }
+}
+
 const ponCampo = (T, d, v) => emitir(T, `c.${d}.n`, String(v))
 const ponFecha = (T, d, v) => emitir(T, `c.${d}.iso`, String(v ?? '').trim())
 const ponSalida = (T, d, v) => emitir(T, `c.${d}.salida`, String(v ?? '').trim())
@@ -2487,13 +2554,11 @@ function camposDelJuego (T) {
    en Node no existe, y la prueba que pinta esta vista reventaría. */
 function vistaAjustes (T, S, base = '') {
   const d = T.d || 0
-  const rejilla = Array.from({ length: HOYOS }, (_, h) => `<tr>
-      <td>${h + 1}</td>
-      <td><input value="${esc(par(T, d, h))}" inputmode="numeric"
-           data-cambio="setPar" data-hoyo="${h}" style="width:56px"></td>
-      <td><input value="${esc(si(T, d, h))}" inputmode="numeric"
-           data-cambio="setSi" data-hoyo="${h}" style="width:56px"></td>
-    </tr>`).join('')
+  /* Los campos que este teléfono ya conoce. Antes aquí había una
+     cuadrícula de 36 casillas que se llenaba a mano hoyo por hoyo, con el
+     teléfono en una mano y la tarjeta en la otra. Un campo se teclea una
+     vez -o se fotografía- y desde entonces se elige de la lista. */
+  const biblioteca = camposConocidos(S)
 
   /* El día está "vacío" si nadie ha emitido su par: entonces conviene
      copiar la ficha del día 1 en vez de teclear 36 números otra vez. */
@@ -2528,9 +2593,15 @@ function vistaAjustes (T, S, base = '') {
     <h2>El campo</h2>
     <input value="${esc(campo(T, d))}" placeholder="nombre del campo"
       data-cambio="setCampo">
-    <div class="rejilla">
-      <table><tr><th>Hoyo</th><th>Par</th><th>SI</th></tr>${rejilla}</table>
-    </div>
+    ${biblioteca.length
+      ? `<select data-cambio="usarCampo">
+            <option value="">Elegir uno de mis campos…</option>
+            ${biblioteca.map(f => `<option value="${esc(f.n)}">${esc(f.n)}</option>`).join('')}
+          </select>
+         <p class="guia">${fichaCompleta(T, d)
+            ? 'Este día ya tiene sus 18 pares y sus 18 índices. Elegir otro campo los reemplaza.'
+            : 'Elige uno y sus 18 pares y sus 18 índices entran a este día.'}</p>`
+      : `<p class="guia">Todavía no hay campos guardados en este teléfono. Fotografía aquí arriba la tarjeta en blanco y el campo queda en la lista para la próxima vez.</p>`}
     <h2>Tipo de juego</h2>
     <select data-cambio="setFormato">${JUEGOS_DEL_TORNEO.map(([k, et]) => `<option value="${k}"${formato(T) === k ? ' selected' : ''}>${et}</option>`).join('')}</select>
     <p class="guia">Presiones enciende su pestaña; Stableford usa la Tabla; los demás abren la suya.</p>
@@ -3208,6 +3279,7 @@ function marcarOnces (T, aid, h, jid, v) {
 
 
 
+
 const S = typeof localStorage !== 'undefined' ? cargar(localStorage) : estadoInicial()
 const T = () => activo(S)
 const base = location.origin + location.pathname
@@ -3260,6 +3332,12 @@ async function revisarVersion () {
   versionNueva = await hayVersionNueva(VERSION, fetch.bind(globalThis), location.pathname)
   if (versionNueva) dibujar()
 }
+
+/* Un campo leído de una foto se recuerda aparte del torneo: así sigue en
+   la lista aunque después quiten ese torneo del teléfono. Se toma del
+   torneo ya aplicado y no de la lectura, para guardar exactamente lo que
+   quedó -aplicaCampo no emite los hoyos dudosos-. */
+const recuerda = (t, d) => { if (fichaCompleta(t, d)) recordarCampo(S, fichaDelDia(t, d)) }
 
 const ACCIONES = {
   /* A una liga distinta el teléfono no puede responder con la copia vieja:
@@ -3335,8 +3413,15 @@ const ACCIONES = {
     moverAGrupo(t, dia, d.jid, Math.max(0, grupo(t, dia, d.jid) + Number(d.delta)))
     salvar(); programar()
   },
-  setPar: (d, el) => { ponPar(T(), T().d || 0, Number(d.hoyo), el.value); salvar(); programar() },
-  setSi: (d, el) => { ponSi(T(), T().d || 0, Number(d.hoyo), el.value); salvar(); programar() },
+  /* Un campo de la lista entra entero: nombre, 18 pares y 18 índices. Es
+     el reemplazo de la cuadrícula que se llenaba a mano. */
+  usarCampo: (d, el) => {
+    const ficha = camposConocidos(S).find(f => f.n === el.value)
+    if (!ficha) return
+    const t = T()
+    usaCampo(t, t.d || 0, ficha)
+    salvar(); programar()
+  },
   setCampo: (d, el) => { ponCampo(T(), T().d || 0, el.value); salvar(); programar() },
   setFecha: (d, el) => { ponFecha(T(), T().d || 0, el.value); salvar(); programar() },
   setSalida: (d, el) => { ponSalida(T(), T().d || 0, el.value); salvar(); programar() },
@@ -3461,6 +3546,7 @@ const ACCIONES = {
     const t = T()
     if (!t || !S.lectura) return
     aplicaCampo(t, t.d || 0, S.lectura)
+    recuerda(t, t.d || 0)
     S.lectura = null
     S.foto = null
     salvar()
@@ -3470,6 +3556,7 @@ const ACCIONES = {
     const t = T()
     if (!t || !S.lectura) return
     aplicaCampoATodos(t, S.lectura)
+    recuerda(t, t.d || 0)
     S.lectura = null
     S.foto = null
     salvar()
