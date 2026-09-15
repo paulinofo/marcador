@@ -2254,8 +2254,8 @@ function vistaDias (T) {
    HTML y no lo suelta: Paulino publicó cinco veces y siguió viendo la
    versión vieja. Con esto la app se entera sola y ofrece pasar a la nueva,
    en vez de que cada quien tenga que adivinar cómo forzar a su iOS. */
-const VERSION = '2026-09-15·221b29d'
-const VERSION_DEL_ARMADO = '2026-09-15·221b29d'
+const VERSION = '2026-09-15·f9d24a2'
+const VERSION_DEL_ARMADO = '2026-09-15·f9d24a2'
 
 /* El nombre de la constante es el ancla que se busca en el HTML servido.
    Se escribe partido para que esta línea no se encuentre a sí misma. */
@@ -2445,6 +2445,26 @@ function bloqueFoto (T, S) {
    aunque se quite ese torneo del teléfono.
 
    Es local, como la libreta de jugadores: no viaja por el servidor. */
+
+/* Los campos que la app ya trae puestas. Un campo se teclea una vez en
+   la vida -o se fotografía-, pero el primero de todos no lo tiene nadie:
+   un teléfono recién instalado abría la lista vacía. Estos vienen dentro
+   del armado, así que aparecen desde el primer momento y en el teléfono de
+   todo el grupo.
+
+   Chapultepec salió de la tarjeta de papel que fotografió Paulino el
+   15-sep-2026. Los índices son los de las VENTAJAS DORADAS Y BLANCAS, que
+   son las marcas que juega su grupo; la tarjeta trae otros para las negras
+   y azules. Las cuatro sumas impresas en la tarjeta -7439, 7262, 6813 y
+   6503- cuadran con las distancias hoyo por hoyo, que es como se comprobó
+   que las columnas se leyeron alineadas. */
+const CAMPOS_DE_FABRICA = [
+  {
+    n: 'Club de Golf Chapultepec',
+    par: [4, 4, 3, 4, 4, 5, 3, 5, 4, 4, 5, 4, 3, 4, 5, 4, 3, 4],
+    si: [17, 7, 11, 1, 5, 3, 9, 15, 13, 4, 16, 12, 8, 2, 14, 6, 18, 10]
+  }
+]
 function fichaDelDia (T, d) {
   return {
     n: campo(T, d),
@@ -2458,6 +2478,11 @@ function fichaDelDia (T, d) {
    que sobrevive a borrar torneos. */
 function camposConocidos (S) {
   const por = new Map()
+  /* Las de fábrica van primero a propósito: lo que este teléfono sepa del
+     campo -porque lo jugó o lo fotografió- pisa a la ficha que vino en el
+     armado. Si un día una tarjeta de fábrica trae un error, se corrige
+     desde el teléfono sin esperar a que publiquemos nada. */
+  for (const f of CAMPOS_DE_FABRICA) por.set(f.n, f)
   for (const T of Object.values(S.torneos || {})) {
     for (let d = 0; d < dias(T); d++) {
       if (!fichaCompleta(T, d)) continue
@@ -2593,15 +2618,13 @@ function vistaAjustes (T, S, base = '') {
     <h2>El campo</h2>
     <input value="${esc(campo(T, d))}" placeholder="nombre del campo"
       data-cambio="setCampo">
-    ${biblioteca.length
-      ? `<select data-cambio="usarCampo">
-            <option value="">Elegir uno de mis campos…</option>
-            ${biblioteca.map(f => `<option value="${esc(f.n)}">${esc(f.n)}</option>`).join('')}
-          </select>
-         <p class="guia">${fichaCompleta(T, d)
-            ? 'Este día ya tiene sus 18 pares y sus 18 índices. Elegir otro campo los reemplaza.'
-            : 'Elige uno y sus 18 pares y sus 18 índices entran a este día.'}</p>`
-      : `<p class="guia">Todavía no hay campos guardados en este teléfono. Fotografía aquí arriba la tarjeta en blanco y el campo queda en la lista para la próxima vez.</p>`}
+    <select data-cambio="usarCampo">
+      <option value="">Elegir uno de mis campos…</option>
+      ${biblioteca.map(f => `<option value="${esc(f.n)}">${esc(f.n)}</option>`).join('')}
+    </select>
+    <p class="guia">${fichaCompleta(T, d)
+      ? 'Este día ya tiene sus 18 pares y sus 18 índices. Elegir otro campo los reemplaza.'
+      : 'Elige uno y sus 18 pares y sus 18 índices entran a este día. La lista crece sola: cada campo que juegues o fotografíes se queda en ella.'}</p>
     <h2>Tipo de juego</h2>
     <select data-cambio="setFormato">${JUEGOS_DEL_TORNEO.map(([k, et]) => `<option value="${k}"${formato(T) === k ? ' selected' : ''}>${et}</option>`).join('')}</select>
     <p class="guia">Presiones enciende su pestaña; Stableford usa la Tabla; los demás abren la suya.</p>
