@@ -66,8 +66,9 @@ h2{font-size:12px;font-family:var(--mono);letter-spacing:.12em;text-transform:up
 .paso{background:var(--tarjeta);border-radius:var(--r);padding:14px 12px;margin:0 0 10px;
   display:grid;grid-template-columns:52px 1fr 52px;align-items:center;gap:10px;
   color:var(--tinta)}
-.paso button{background:var(--verde);color:var(--tarjeta);border-radius:8px;
-  height:46px;font-size:22px;font-weight:700}
+.paso button{width:46px;height:46px;border-radius:8px;background:var(--verde);color:var(--tarjeta);
+  font-size:22px;font-weight:700;display:grid;place-items:center;flex:none;border:0}
+.paso button:disabled{opacity:.25}
 .paso .centro{text-align:center}
 .paso .num{font-size:34px;font-weight:800;letter-spacing:-.02em;line-height:1;
   font-variant-numeric:tabular-nums}
@@ -85,8 +86,9 @@ h2{font-size:12px;font-family:var(--mono);letter-spacing:.12em;text-transform:up
 .jug .meta{font-family:var(--mono);font-size:12px;color:var(--tinta-suave);
   letter-spacing:.04em;margin-top:2px}
 .jug .pasos{display:flex;align-items:center;gap:8px;flex:0 0 auto}
-.jug .pasos button{background:var(--verde);color:var(--tarjeta);border-radius:8px;
-  width:46px;height:46px;font-size:24px;font-weight:700;line-height:1}
+.jug .pasos button{width:44px;height:44px;border-radius:8px;background:#E5DDC9;color:var(--tinta);
+  font-size:23px;font-weight:700;display:grid;place-items:center;border:0}
+.jug .pasos button:active{background:#D6CBB2}
 /* El número va limpio sobre la tarjeta, sin caja: lo de Santa Fe. Lleva
    tres clases a propósito — `.jug .pasos button` tiene dos clases y un
    elemento, y sin esto le ganaba y lo volvía a meter en la caja oscura. */
@@ -117,10 +119,9 @@ h2{font-size:12px;font-family:var(--mono);letter-spacing:.12em;text-transform:up
 input{background:var(--verde);border:1px solid var(--verde-linea);border-radius:8px;
   padding:12px;color:var(--tarjeta);width:100%;margin:0 0 8px}
 input::placeholder{color:var(--tinta-suave)}
-.btn{background:var(--laton);color:var(--verde-hondo);border-radius:9px;padding:15px;
-  width:100%;font-weight:700;margin:6px 0 0}
-.btn.sec{background:transparent;border:1px solid var(--verde-linea);color:var(--cal);
-  font-weight:600}
+.btn{display:block;width:100%;padding:13px;border-radius:9px;background:var(--laton);color:var(--verde-hondo);
+  font-weight:700;font-size:17px;margin-top:9px}
+.btn.sec{background:transparent;border:1px solid var(--verde-linea);color:var(--tarjeta)}
 
 /* ── Tablas ─────────────────────────────────────────────────── */
 .rejilla{overflow-x:auto;background:var(--tarjeta);border-radius:var(--r);padding:10px 12px}
@@ -219,6 +220,79 @@ td.nace{background:var(--laton);color:var(--verde-hondo);font-weight:800}
 
 /* Un filete de latón separa la guía del marcador, como en Santa Fe. */
 .jug + .guia,.rejilla + .guia{border-top:1px solid var(--laton);padding-top:11px;margin-top:14px}
+
+/* ---- La tarjeta de papel, copiada de la app de Santa Fe ----
+   Círculo para lo que va bajo par, cuadro para lo que va encima, doble
+   trazo para eagle y doble bogey. Es la notación de una tarjeta impresa:
+   se lee de un vistazo sin sumar nada. */
+.nota{display:inline-grid;place-items:center;width:34px;height:34px;position:relative}
+.nota.birdie::before,.nota.eagle::before,.nota.eagle::after{content:"";position:absolute;inset:1px;
+  border:1.8px solid var(--bandera);border-radius:50%}
+.nota.eagle::after{inset:5px}
+.nota.bogey::before,.nota.doble::before,.nota.doble::after{content:"";position:absolute;inset:2px;
+  border:1.8px solid var(--verde);border-radius:2px}
+.nota.doble::after{inset:6px}
+
+.scroll-x{overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:var(--r)}
+table.card{border-collapse:collapse;background:var(--tarjeta);color:var(--tinta);width:100%;
+  font-family:var(--mono);font-size:13.5px}
+table.card th,table.card td{border:1px solid var(--tarjeta-linea);padding:5px 4px;
+  text-align:center;min-width:33px;position:relative}
+/* La columna de los nombres se queda fija: son 22 columnas y sin esto no
+   se sabe de quién es el renglón que estás leyendo. */
+/* `nom-col`, no `nom`: el nombre de un RENGLÓN se recorta con elipsis para
+   no pintarse sobre los botones, y hay una prueba que lo exige de todas las
+   reglas `.nom`. La columna de una tarjeta que rueda de lado es otra cosa:
+   ahí el nombre se ve entero y es la tabla la que se desplaza. */
+table.card th.nom-col,table.card td.nom-col{text-align:left;min-width:72px;white-space:nowrap;
+  position:sticky;left:0;background:var(--tarjeta);z-index:2;font-family:var(--ui);
+  font-weight:700;font-size:13px;border-right:2px solid var(--verde)}
+table.card thead th{background:var(--verde);color:var(--tarjeta);font-weight:700;font-size:13px;
+  border-color:var(--verde-linea)}
+table.card thead th.nom-col{background:var(--verde);color:var(--tarjeta)}
+table.card tr.par td{background:#EAE3D2;font-size:13px;color:var(--tinta-suave)}
+table.card td.tot{background:#EAE3D2;font-weight:700}
+table.card .nota{width:21px;height:21px;z-index:1}
+table.card .nota.birdie::before,table.card .nota.eagle::before,
+table.card .nota.eagle::after{inset:0;border-width:1.4px}
+table.card .nota.eagle::after{inset:3px}
+table.card .nota.bogey::before,table.card .nota.doble::before,
+table.card .nota.doble::after{inset:1px;border-width:1.4px}
+table.card .nota.doble::after{inset:4px}
+table.card td sup{color:var(--bandera);font-size:9px;position:absolute;top:2px;right:3px}
+/* En Hoy el número ya es grande: su círculo o su cuadro van a esa medida. */
+.jug .pasos .nota{width:38px;height:38px}
+
+/* ---- Tabla de posiciones, Grupos y el triángulo de ventaja: Santa Fe ---- */
+.pos-cab{display:flex;align-items:center;gap:11px;padding:0 13px;margin:0 0 6px}
+.pos-cab .pos-dias b,.pos-cab .pos-tot{font-size:10.5px;font-weight:600;color:var(--cal);letter-spacing:.03em;text-transform:uppercase}
+.pos-fila{display:flex;align-items:center;gap:11px;background:var(--tarjeta);color:var(--tinta);
+  border-radius:var(--r);padding:11px 13px;margin-bottom:7px}
+.pos-fila.lider{box-shadow:inset 3px 0 0 var(--laton)}
+.pos-n{font-family:var(--mono);font-size:17px;font-weight:700;width:27px;color:var(--tinta-suave);flex:none}
+.pos-fila.lider .pos-n{color:var(--laton)}
+.pos-id{flex:1;min-width:0}
+.pos-id .nom{font-weight:700;font-size:17px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pos-rondas{font-family:var(--mono);font-size:12.5px;color:var(--tinta-suave);margin-top:2px;letter-spacing:.05em}
+.pos-tot{font-family:var(--mono);font-size:23px;font-weight:700;flex:none;min-width:48px;text-align:right}
+.pos-dias{display:flex;flex:none;gap:4px}
+.pos-dias b{width:28px;text-align:right;font-family:var(--mono);font-size:14px;font-weight:600;color:var(--tinta-suave)}
+
+.grupo{background:var(--tarjeta);color:var(--tinta);border-radius:var(--r);padding:12px 14px;margin-bottom:8px}
+.grupo h3{margin:0 0 7px;font-family:var(--mono);font-size:12.5px;letter-spacing:.13em;text-transform:uppercase;
+  color:var(--tinta-suave);font-weight:600;display:flex;justify-content:space-between}
+.grupo h3 span{color:var(--verde);font-weight:700}
+.grupo ol{margin:0;padding-left:19px}
+.grupo li{font-size:16.5px;padding:2px 0;font-weight:600}
+.grupo li span{font-family:var(--mono);font-size:13px;color:var(--tinta-suave);font-weight:400;margin-left:6px}
+
+/* El triángulo rojo en la esquina de la tarjeta: cuántos golpes de ventaja
+   recibe en este hoyo. Crece con los golpes. */
+.jug-fila{position:relative;overflow:hidden}
+.tri{position:absolute;top:0;right:0;width:0;height:0;pointer-events:none;
+  border-top:32px solid var(--bandera);border-left:32px solid transparent}
+.tri.t2{border-top-width:42px;border-left-width:42px}
+.tri.t3{border-top-width:52px;border-left-width:52px}
 </style>
 </head>
 <body>
@@ -425,7 +499,10 @@ function miGrupo (T, d) {
 /* ---- Presiones: ajustes del torneo y pacto de sliding por pareja ----
    Los valores por omisión viven aquí (no se emiten al crear el torneo):
    un torneo viejo los adquiere sin migración. */
-const presOn = (T) => (T.h['t.pres.on'] ?? 1) !== 0
+/* Sin interruptor explícito, presiones va encendido solo si el tipo de
+   juego del torneo es presiones: «si es presiones habilitas la pestaña, si
+   no, el juego que escogí» (Paulino, 14-sep). */
+const presOn = (T) => (T.h['t.pres.on'] ?? (formato(T) === 'presiones' ? 1 : 0)) !== 0
 
 /* Un hecho de t.pres.* mal formado (texto, vacío, NaN) no debe tumbar el
    cálculo: cae al valor por omisión en vez de propagar NaN. */
@@ -820,6 +897,19 @@ function resumenTotal (T, jid) {
   return total
 }
 
+/* La notación de una tarjeta de golf de papel: círculo para lo que va bajo
+   par, cuadro para lo que va encima, doble trazo para eagle y doble bogey.
+   Es lo que hace que una tarjeta se lea de un vistazo sin sumar nada. */
+function notaDe (g, parHoyo) {
+  if (g === null || g === undefined) return ''
+  const dif = g - parHoyo
+  if (dif <= -2) return 'eagle'
+  if (dif === -1) return 'birdie'
+  if (dif === 1) return 'bogey'
+  if (dif >= 2) return 'doble'
+  return ''
+}
+
 
 
 /* Portado de Santa Fe. Cada castigo es un CONTADOR de dos bits, porque en
@@ -1164,15 +1254,15 @@ function vistaHoy (T) {
     const r = resumenRonda(T, d, j.id)
     const neto = g === null ? null : g - ventaja
     return `<div class="jug">
-      <div class="jug-fila">
+      <div class="jug-fila">${ventaja > 0 ? `<i class="tri t${Math.min(ventaja, 3)}" title="${esc(String(ventaja))} golpe${ventaja > 1 ? 's' : ''} de ventaja"></i>` : ''}
         <div class="quien">
-          <span class="nom">${esc(j.c)}${ventaja > 0 ? ` <span class="ventaja">${'▲'.repeat(Math.min(ventaja, 3))}</span>` : ''}</span>
+          <span class="nom">${esc(j.c)}</span>
           <div class="meta">HCP ${esc(String(ch))}${neto === null ? '' : ` · neto ${esc(String(neto))}`}</div>
         </div>
         <div class="pasos">
           <button data-accion="golpeMenos" data-jid="${esc(j.id)}" aria-label="un golpe menos">−</button>
           <button class="marca${g === null ? ' vacio' : ''}" data-accion="${g === null ? 'ponerPar' : 'borrarHoyo'}" data-jid="${esc(j.id)}"
-            aria-label="${g === null ? 'anotar el par' : 'borrar el hoyo'}">${g === null ? '–' : esc(String(g))}</button>
+            aria-label="${g === null ? 'anotar el par' : 'borrar el hoyo'}">${g === null ? '–' : `<span class="nota ${notaDe(g, par(T, d, h))}">${esc(String(g))}</span>`}</button>
           <button data-accion="golpeMas" data-jid="${esc(j.id)}" aria-label="un golpe más">+</button>
         </div>
         <span class="pts-lado">${esc(String(r.pts))}p</span>
@@ -1196,31 +1286,64 @@ function vistaHoy (T) {
     ${T.yo && miGrupo(T, d) ? `<p class="guia"><button class="enlace" data-accion="verTodos">${T.todos ? 'Ver solo mi grupo' : 'Ver a todos'}</button></p>` : ''}`
 }
 
+
+
+
+const NUEVE = 9
+const sumaTramo = (T, d, jid, de, a) => {
+  let t = 0
+  let n = 0
+  for (let h = de; h < a; h++) { const g = golpe(T, d, jid, h); if (g !== null) { t += g; n++ } }
+  return n ? t : ''
+}
+const parTramo = (T, d, de, a) => {
+  let t = 0
+  for (let h = de; h < a; h++) t += par(T, d, h)
+  return t
+}
+
+/* Una tarjeta de papel: los nueve de ida, OUT, los nueve de vuelta, IN y el
+   total. La columna de los nombres se queda fija al deslizar -son 22
+   columnas y sin eso no se sabe de quién es el renglón que estás leyendo. */
 function vistaTarjeta (T) {
   const d = T.d || 0
-  const cab = Array.from({ length: HOYOS }, (_, h) => `<th>${h + 1}</th>`).join('')
-  const pares = Array.from({ length: HOYOS }, (_, h) => `<td>${esc(par(T, d, h))}</td>`).join('')
+  const hoyos = (de, a) => Array.from({ length: a - de }, (_, i) => de + i)
+  const cab = `<th class="nom-col">Hoyo</th>` +
+    hoyos(0, NUEVE).map(h => `<th>${h + 1}</th>`).join('') + '<th>OUT</th>' +
+    hoyos(NUEVE, HOYOS).map(h => `<th>${h + 1}</th>`).join('') + '<th>IN</th><th>TOT</th><th>PTS</th>'
+
+  const filaPar = `<tr class="par"><td class="nom-col">Par</td>` +
+    hoyos(0, NUEVE).map(h => `<td>${esc(par(T, d, h))}</td>`).join('') +
+    `<td class="tot">${esc(parTramo(T, d, 0, NUEVE))}</td>` +
+    hoyos(NUEVE, HOYOS).map(h => `<td>${esc(par(T, d, h))}</td>`).join('') +
+    `<td class="tot">${esc(parTramo(T, d, NUEVE, HOYOS))}</td><td class="tot">${esc(parTramo(T, d, 0, HOYOS))}</td><td></td></tr>`
+
   const filas = jugadores(T).map(j => {
     const ch = hcpCampo(T, j.id)
-    const celdas = Array.from({ length: HOYOS }, (_, h) => {
+    const celda = (h) => {
       const g = golpe(T, d, j.id, h)
       const v = golpesEnHoyo(ch, si(T, d, h))
-      return `<td>${g === null ? '' : esc(g)}${v > 0 ? '<sup>▲</sup>' : ''}</td>`
-    }).join('')
+      const marca = v > 0 ? '<sup>▲</sup>' : ''
+      if (g === null) return `<td>${marca}</td>`
+      return `<td><span class="nota ${notaDe(g, par(T, d, h))}">${esc(g)}</span>${marca}</td>`
+    }
     const r = resumenRonda(T, d, j.id)
-    // r.pts está escapado pero sin prueba: pts siempre es numérico (Math.max garantiza número).
-    // Ningún payload de texto alcanza pts como cadena. El esc es red si resumenRonda cambia.
-    return `<tr><td class="nom-col">${esc(j.c)}</td>${celdas}<td><b>${esc(r.bruto)}</b></td><td><b>${esc(r.pts)}</b></td></tr>`
+    return `<tr><td class="nom-col">${esc(j.c)}</td>` +
+      hoyos(0, NUEVE).map(celda).join('') +
+      `<td class="tot">${esc(sumaTramo(T, d, j.id, 0, NUEVE))}</td>` +
+      hoyos(NUEVE, HOYOS).map(celda).join('') +
+      `<td class="tot">${esc(sumaTramo(T, d, j.id, NUEVE, HOYOS))}</td>` +
+      `<td class="tot">${esc(r.bruto)}</td><td class="tot">${esc(r.pts)}</td></tr>`
   }).join('')
 
   return `<h2>Tarjeta</h2>
-    <div class="rejilla">
-      <table>
-        <tr><th>Hoyo</th>${cab}<th>Tot</th><th>Pts</th></tr>
-        <tr class="par"><td>Par</td>${pares}<td></td><td></td></tr>
-        ${filas}
+    <div class="scroll-x">
+      <table class="card">
+        <thead><tr>${cab}</tr></thead>
+        <tbody>${filaPar}${filas}</tbody>
       </table>
-    </div>`
+    </div>
+    <p class="guia">Círculo, bajo par. Cuadro, encima. El triángulo marca dónde recibes golpe.</p>`
 }
 
 
@@ -1237,17 +1360,24 @@ function posiciones (T) {
     })
 }
 function vistaTabla (T) {
-  // p.pts está escapado pero sin prueba: pts siempre es numérico (Math.max en cálculo).
-  // Ningún payload de texto alcanza pts como cadena. El esc es red si resumenTotal cambia.
-  const filas = posiciones(T).map((p, i) => `<tr>
-      <td>${i + 1}. ${esc(p.n)}</td>
-      <td>${p.jugados ? esc(p.bruto) : '–'}</td>
-      <td><b>${p.jugados ? esc(p.pts) : '–'}</b></td>
-    </tr>`).join('')
-  return `<h2>Posiciones</h2>
-    <div class="rejilla">
-      <table><tr><th>Jugador</th><th>Bruto</th><th>Puntos</th></tr>${filas}</table>
+  const n = dias(T)
+  const pos = posiciones(T)
+  const cabDias = n > 1 ? `<div class="pos-dias">${Array.from({ length: n }, (_, d) => `<b>D${d + 1}</b>`).join('')}</div>` : ''
+  const filas = pos.map((p, i) => {
+    const porDia = n > 1
+      ? `<div class="pos-dias">${Array.from({ length: n }, (_, d) => { const r = resumenRonda(T, d, p.id); return `<b>${r.jugados ? esc(r.pts) : '·'}</b>` }).join('')}</div>`
+      : ''
+    return `<div class="pos-fila${i === 0 && p.jugados ? ' lider' : ''}">
+      <div class="pos-n">${i + 1}</div>
+      <div class="pos-id"><div class="nom">${esc(p.n)}</div>
+        <div class="pos-rondas">${p.jugados ? `${esc(p.jugados)} hoyos · bruto ${esc(p.bruto)}` : 'sin capturar'}</div></div>
+      ${porDia}
+      <div class="pos-tot">${p.jugados ? esc(p.pts) : '–'}</div>
     </div>`
+  }).join('')
+  return `<h2>Posiciones</h2>
+    <div class="pos-cab"><div class="pos-n"></div><div class="pos-id"></div>${cabDias}<div class="pos-tot">Puntos</div></div>
+    ${filas || '<p class="guia">Todavía no hay jugadores.</p>'}`
 }
 
 function altaJugador (T, S, nombre, idx) {
@@ -1309,7 +1439,14 @@ function vistaRoster (T, S) {
       </div>
     </div>`).join('')
 
-  return `<h2>Jugadores <span class="tenue">· ${esc(gruposDe(T, d).length)} grupo(s)</span></h2>
+  /* Las tarjetas de grupo de Santa Fe: se leen de un vistazo en el tee.
+     Debajo sigue la lista con la que se edita. */
+  const tarjetas = gruposDe(T, d).map((g, i) => `<div class="grupo">
+      <h3>Grupo ${i + 1} <span>${esc(g.length)}</span></h3>
+      <ol>${g.map(id => { const j = jug.find(x => x.id === id); return j ? `<li>${esc(j.n)} <span>${esc(j.i)}</span></li>` : '' }).join('')}</ol>
+    </div>`).join('')
+  return `${tarjetas}
+    <h2>Jugadores <span class="tenue">· ${esc(gruposDe(T, d).length)} grupo(s)</span></h2>
     ${filas || '<p class="tenue">Todavía no hay jugadores.</p>'}
     <h2>Agregar</h2>
     <input id="nomNuevo" placeholder="nombre">
@@ -1413,6 +1550,14 @@ function ponDias (T, v) {
 
 const enteroO = (v, def) => { const n = parseInt(v, 10); return Number.isFinite(n) ? n : def }
 const ponPresOn = (T, v) => emitir(T, 't.pres.on', v ? 1 : 0)
+/* El tipo de juego del torneo. Presiones enciende su pestaña; cualquier
+   otro la apaga. Cuando lleguen los demás juegos entran aquí. */
+const JUEGOS_DEL_TORNEO = [['stableford', 'Stableford'], ['presiones', 'Presiones']]
+function ponFormato (T, v) {
+  const f = JUEGOS_DEL_TORNEO.some(([k]) => k === v) ? v : 'stableford'
+  emitir(T, 't.formato', f)
+  emitir(T, 't.pres.on', f === 'presiones' ? 1 : 0)
+}
 const ponPresIda = (T, v) => emitir(T, 't.pres.ida', Math.max(0, enteroO(v, 5)))
 const ponPresVuelta = (T, v) => emitir(T, 't.pres.vuelta', Math.max(0, enteroO(v, 5)))
 const ponPresBono = (T, v) => emitir(T, 't.pres.bono', Math.max(0, enteroO(v, 10)))
@@ -1467,8 +1612,10 @@ function vistaAjustes (T, S, base = '') {
     <div class="rejilla">
       <table><tr><th>Hoyo</th><th>Par</th><th>SI</th></tr>${rejilla}</table>
     </div>
-    <h2>Presiones</h2>
-    <label class="casilla"><input type="checkbox"${presOn(T) ? ' checked' : ''} data-cambio="setPresOn"> Se juegan presiones</label>
+    <h2>Tipo de juego</h2>
+    <select data-cambio="setFormato">${JUEGOS_DEL_TORNEO.map(([k, et]) => `<option value="${k}"${formato(T) === k ? ' selected' : ''}>${et}</option>`).join('')}</select>
+    <p class="guia">Presiones enciende su pestaña; los demás juegos usan la Tabla.</p>
+    ${presOn(T) ? `<h2>Presiones</h2>
     <div class="pres-ajustes">
       <label>Ida $ <input value="${esc(presIda(T))}" inputmode="numeric" data-cambio="setPresIda"></label>
       <label>Vuelta $ <input value="${esc(presVuelta(T))}" inputmode="numeric" data-cambio="setPresVuelta"></label>
@@ -1480,7 +1627,7 @@ function vistaAjustes (T, S, base = '') {
       <select data-cambio="setPresMatch">
         <option value="mayoria"${presMatch(T) === 'mayoria' ? ' selected' : ''}>quien junte más apuestas</option>
         <option value="suma"${presMatch(T) === 'suma' ? ' selected' : ''}>el signo de la suma de las dos salidas</option>
-      </select></label>
+      </select></label>` : ''}
     <h2>Este teléfono</h2>
     <div class="fila"><div class="quien"><span class="nom">${esc(T.yo ? (jugadores(T).find(j => j.id === T.yo)?.n ?? '—') : (T.yo === '' ? 'Solo miro' : 'Sin decir'))}</span></div>
       <div class="acciones"><button data-accion="cambiarYo">Cambiar</button></div></div>
@@ -1850,6 +1997,7 @@ const ACCIONES = {
   setSalida: (d, el) => { ponSalida(T(), T().d || 0, el.value); salvar(); programar() },
   copiarFicha: () => { const t = T(); copiarFicha(t, 0, t.d || 0); salvar(); programar() },
   setCorto: (d, el) => { ponCorto(T(), d.jid, el.value); salvar(); programar() },
+  setFormato: (d, el) => { ponFormato(T(), el.value); salvar(); programar() },
   setPresOn: (d, el) => { ponPresOn(T(), el.checked); salvar(); programar() },
   setPresIda: (d, el) => { ponPresIda(T(), el.value); salvar(); programar() },
   setPresVuelta: (d, el) => { ponPresVuelta(T(), el.value); salvar(); programar() },
