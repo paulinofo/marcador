@@ -2254,8 +2254,8 @@ function vistaDias (T) {
    HTML y no lo suelta: Paulino publicó cinco veces y siguió viendo la
    versión vieja. Con esto la app se entera sola y ofrece pasar a la nueva,
    en vez de que cada quien tenga que adivinar cómo forzar a su iOS. */
-const VERSION = '2026-09-15·1fa8d14'
-const VERSION_DEL_ARMADO = '2026-09-15·1fa8d14'
+const VERSION = '2026-09-15·442ebcf'
+const VERSION_DEL_ARMADO = '2026-09-15·442ebcf'
 
 /* El nombre de la constante es el ancla que se busca en el HTML servido.
    Se escribe partido para que esta línea no se encuentre a sí misma. */
@@ -2465,9 +2465,14 @@ function bloqueFoto (T, S) {
      la del viaje a Vail. Son los mismos números con los que se contaron
      esos torneos.
 
+   Santa Fe venía de una base de datos y el 15-sep-2026 Paulino mandó la
+   tarjeta de papel: los 18 pares y los 18 índices resultaron idénticos, y
+   las cuatro salidas cuadran con sus totales impresos (6966, 6564, 5521 y
+   5432). No se cambió ningún número; se le quitó la marca.
+
    `porCotejar` es honestidad, no adorno: en la app de Acapulco quedó
    anotado que Turtle Dunes se cotejó contra la tarjeta física y que Tres
-   Vidas y Santa Fe salieron de una base de datos de golf. Un índice
+   Vidas salió de una base de datos de golf. Un índice
    equivocado reparte mal las ventajas toda la ronda, así que la lista lo
    dice hasta que alguien fotografíe la tarjeta de la casa club — y en
    cuanto lo haga, la ficha del teléfono le gana a ésta y la marca se va.
@@ -2485,7 +2490,6 @@ const CAMPOS_DE_FABRICA = [
     par: [4, 5, 4, 4, 5, 4, 3, 4, 3, 3, 4, 4, 4, 4, 5, 4, 3, 5],
     si: [11, 9, 15, 3, 1, 13, 7, 5, 17, 4, 2, 16, 10, 8, 14, 6, 18, 12] },
   { n: 'Santa Fe Social Club',
-    porCotejar: true,
     par: [4, 5, 3, 4, 4, 3, 5, 4, 4, 4, 4, 3, 5, 4, 5, 4, 3, 4],
     si: [17, 3, 13, 1, 5, 15, 9, 7, 11, 12, 8, 16, 4, 6, 2, 10, 18, 14] },
   { n: 'Tres Vidas',
