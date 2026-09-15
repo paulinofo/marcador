@@ -996,7 +996,13 @@ function vistaAjustes (T, S, base = '') {
      copiar la ficha del día 1 en vez de teclear 36 números otra vez. */
   const vacio = d > 0 && diaSinFicha(T, d)
 
-  return `<h2>Día ${d + 1} de ${esc(dias(T))}</h2>
+  /* La salida. Sin esto la app es una puerta de un solo sentido: creado el
+     primer torneo, ninguna de las cinco pestañas vuelve a la lista donde
+     viven "Torneo nuevo" y "Unirme a uno", y quien ya tenía uno no podía
+     crear otro nunca más. Lo encontró Paulino en su teléfono el 14-sep. */
+  return `<h2>Mis torneos</h2>
+    <button class="btn sec" data-accion="irVista" data-vista="inicio">Ver todos mis torneos</button>
+    <h2>Día ${d + 1} de ${esc(dias(T))}</h2>
     <p class="guia">Editas la ficha del día activo. Cambia de día tocando el nombre del torneo arriba.</p>
     ${vacio ? `<button class="btn sec" data-accion="copiarFicha">Copiar la ficha del día 1</button>` : ''}
     <h2>Fecha</h2>
