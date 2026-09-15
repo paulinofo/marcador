@@ -1381,7 +1381,7 @@ function paso5 (T, S) {
   const filas = jug.map(j => `<label class="cfg-juego"><span>${esc(j.n)}</span>
       <input value="${esc(j.i)}" inputmode="numeric" data-cambio="setVentaja" data-jid="${esc(j.id)}"></label>`).join('')
   return `<h2>¿Qué ventajas se dan?</h2>
-    <p class="guia">Los golpes que recibe cada quien. El que no recibe ninguno va en cero. Se reparten hoyo por hoyo según el índice de dificultad del campo, empezando por el más difícil.</p>
+    <p class="guia">Con signo: <b>5</b> son los golpes que le dan, <b>−3</b> los que da. El que ni da ni recibe va en cero. Se reparten hoyo por hoyo según el índice de dificultad del campo: los que se reciben empiezan por el hoyo más difícil, los que se dan por el más fácil.</p>
     ${filas}
     <button class="btn" data-accion="asisListo">Empezar a anotar</button>`
 }
@@ -2546,14 +2546,19 @@ function ponNombreJugador (T, jid, v) {
   if (n && n !== nomJug(T, jid)) emitir(T, `j.${jid}.n`, n)
 }
 
-/* La ventaja: los golpes que recibe. Es el mismo hecho que el índice
-   -`j.<jid>.i`-, que es de donde el motor reparte los golpes hoyo por
-   hoyo. Un número ilegible no se emite: quien teclea pasa por el vacío
+/* La ventaja, con signo: **+5 son los golpes que le DAN, −3 los que DA**.
+   Es el mismo hecho que el índice -`j.<jid>.i`-, que es de donde el motor
+   reparte los golpes hoyo por hoyo, y que ya entendía los negativos
+   (`golpesEnHoyo` devuelve golpes empezando por los hoyos más fáciles).
+   Lo que no los entendía era esta casilla: se tragaba "-3" en silencio y
+   dejaba el número anterior, sin decir nada.
+
+   Un número ilegible sigue sin emitirse: quien teclea pasa por el vacío
    antes de llegar a lo que quiere, y un 0 accidental le quitaría las
-   ventajas a alguien en silencio. */
+   ventajas a alguien sin que se note. */
 function ponVentaja (T, jid, v) {
   const s = String(v ?? '').trim()
-  if (!/^\d+(\.\d+)?$/.test(s)) return
+  if (!/^[+-]?\d+(\.\d+)?$/.test(s)) return
   emitir(T, `j.${jid}.i`, Number(s))
 }
 function vistaRoster (T, S) {
@@ -2694,8 +2699,8 @@ function vistaDias (T) {
    HTML y no lo suelta: Paulino publicó cinco veces y siguió viendo la
    versión vieja. Con esto la app se entera sola y ofrece pasar a la nueva,
    en vez de que cada quien tenga que adivinar cómo forzar a su iOS. */
-const VERSION = '2026-09-15·e801b1b'
-const VERSION_DEL_ARMADO = '2026-09-15·e801b1b'
+const VERSION = '2026-09-15·686c4f5'
+const VERSION_DEL_ARMADO = '2026-09-15·686c4f5'
 
 /* El nombre de la constante es el ancla que se busca en el HTML servido.
    Se escribe partido para que esta línea no se encuentre a sí misma. */
