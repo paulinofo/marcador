@@ -308,6 +308,15 @@ td.cuenta{background:#EAE3D2;font-weight:700}
 td.fuera{color:var(--tarjeta-linea)}
 .chips{flex-wrap:wrap}
 .chip-once.cerrado{opacity:.45}
+
+/* ---- Leer la tarjeta de una foto ---- */
+.foto-zona{display:flex;flex-direction:column;gap:9px;margin:0 0 10px}
+.foto-zona .btn{margin:0;text-align:center}
+.foto-prev{width:100%;border-radius:var(--r);border:1px solid var(--verde-linea);display:block}
+.aviso-ia{background:var(--bandera);color:#fff;border-radius:var(--r);padding:11px 13px;
+  margin:0 0 10px;font-size:15px;font-weight:600}
+td.dudoso input{border-color:var(--bandera);color:var(--bandera);font-weight:700;background:#FFF3F0}
+.rejilla button[disabled],.btn[disabled]{opacity:.45}
 </style>
 </head>
 <body>
@@ -333,7 +342,11 @@ function estadoInicial () {
     torneos: Object.create(null),
     activo: null,
     gente: [],      // la libreta local: con quién has jugado. No se sincroniza.
-    vista: 'hoy'
+    vista: 'hoy',
+    /* La clave de la IA es personal y de pago: vive solo en este teléfono,
+       no es un hecho, no viaja por el servidor y no se publica. El token
+       del servidor sí va embebido en el HTML porque es compartido. */
+    ia: { clave: '' }
   }
 }
 const activo = (S) => (S.activo && S.torneos[S.activo]) || null
@@ -341,7 +354,14 @@ const activo = (S) => (S.activo && S.torneos[S.activo]) || null
 /* Un almacén lleno o bloqueado (pestaña privada) no debe tumbar la app:
    se pierde la persistencia, no la ronda que se está jugando. */
 function guardar (S, almacen) {
-  try { almacen.setItem(LLAVE, JSON.stringify(S)) } catch (e) {}
+  /* Lo que se está revisando NO se guarda: la foto, la lectura y el
+     «leyendo» viven mientras revisas y se van con la pantalla. Guardarlos
+     dejaba la app atrapada en «Leyendo la tarjeta…» al recargar -sin un
+     botón para salir- y hacía que una lectura de un torneo siguiera a la
+     vista al abrir otro, con Guardar armado. Y la foto son cientos de
+     miles de caracteres reescritos en cada corrección. */
+  const { leyendo, lectura, foto, ...persistente } = S
+  try { almacen.setItem(LLAVE, JSON.stringify(persistente)) } catch (e) {}
 }
 function cargar (almacen) {
   try {
@@ -357,6 +377,12 @@ function cargar (almacen) {
         T.h = Object.assign(Object.create(null), T.h)
         T.ct = Object.assign(Object.create(null), T.ct)
       }
+      if (!S.ia || typeof S.ia !== 'object') S.ia = { clave: '' }
+      /* Un estado guardado antes del arreglo de arriba puede traer una
+         revisión a medias: se descarta al cargar. */
+      delete S.leyendo
+      delete S.lectura
+      delete S.foto
       return S
     }
   } catch (e) {}
@@ -2200,6 +2226,161 @@ function vistaDias (T) {
     </button>`).join('')}</div>`
 }
 
+
+
+/* ============================================================
+   La lectura de una tarjeta en blanco: revisarla, decidir si se
+   puede guardar y convertirla en hechos. Puro: ni DOM ni red.
+
+   El valor de todo esto es cazar los errores de lectura sin que
+   nadie compare número por número. Un índice repetido reparte mal
+   los golpes de ventaja de todo el torneo en silencio, y el
+   silencio es justo lo que queremos evitar.
+   ============================================================ */
+const HOYOS_TARJETA = 18
+const PAR_MIN = 3
+const PAR_MAX = 6
+const PAR_TOTAL_MIN = 68
+const PAR_TOTAL_MAX = 74
+
+/* Entero o null. Nunca lanza: lo que no es un entero limpio es un hueco.
+   Dos casos, no tres: un número ya entero (incluido 17.0, que en JS ES el
+   entero 17 y nunca llega como flotante de verdad) y un texto que solo
+   trae dígitos. Un tercer caso para "un flotante casi entero" nunca se
+   alcanzaría -el primer caso ya acepta cualquier entero- así que no se
+   escribe. */
+function enteroOhueco (v) {
+  if (typeof v === 'number' && Number.isFinite(v) && Number.isInteger(v)) return v
+  if (typeof v === 'string' && /^-?\d+$/.test(v.trim())) return parseInt(v, 10)
+  return null
+}
+
+const aDieciocho = (a) => Array.from({ length: HOYOS_TARJETA }, (_, h) => enteroOhueco(Array.isArray(a) ? a[h] : undefined))
+
+/* Revisa una respuesta cruda de la IA. Devuelve SIEMPRE la misma forma,
+   venga lo que venga: 18 pares, 18 índices, 18 marcas y una lista de
+   avisos ya escritos en español. */
+function revisaLectura (cruda) {
+  const c = cruda && typeof cruda === 'object' ? cruda : {}
+  const nombre = typeof c.campo === 'string' ? c.campo.trim() : ''
+  const par = aDieciocho(c.par)
+  const si = aDieciocho(c.si)
+  const marcas = Array.from({ length: HOYOS_TARJETA }, () => ({ par: null, si: null }))
+  const avisos = []
+
+  for (let h = 0; h < HOYOS_TARJETA; h++) {
+    if (par[h] === null) marcas[h].par = 'hueco'
+    else if (par[h] < PAR_MIN || par[h] > PAR_MAX) marcas[h].par = 'fuera'
+  }
+
+  /* El índice se marca 'repetido' en la segunda aparición y siguientes: la
+     primera puede ser la buena y señalarla confundiría. */
+  const vistos = new Set()
+  for (let h = 0; h < HOYOS_TARJETA; h++) {
+    const v = si[h]
+    if (v === null) { marcas[h].si = 'hueco'; continue }
+    if (v < 1 || v > HOYOS_TARJETA) { marcas[h].si = 'fuera'; continue }
+    if (vistos.has(v)) { marcas[h].si = 'repetido'; continue }
+    vistos.add(v)
+  }
+  const faltan = []
+  for (let n = 1; n <= HOYOS_TARJETA; n++) if (!vistos.has(n)) faltan.push(n)
+  if (faltan.length) {
+    avisos.push(faltan.length === 1
+      ? `falta el índice ${faltan[0]}`
+      : `faltan los índices ${faltan.join(', ')}`)
+  }
+
+  const total = par.reduce((t, x) => t + (x ?? 0), 0)
+  if (!par.includes(null) && (total < PAR_TOTAL_MIN || total > PAR_TOTAL_MAX)) {
+    avisos.push(`el par suma ${total}, revísalo`)
+  }
+
+  return { campo: nombre, par, si, marcas, avisos }
+}
+
+/* Se puede guardar cuando ningún hoyo está señalado. El aviso del par
+   total NO entra: hay campos cortos legítimos. */
+const lecturaCompleta = (rev) =>
+  rev.marcas.every(m => m.par === null && m.si === null)
+
+/* Los hoyos señalados no se emiten: se quedan como estaban en vez de
+   ensuciar el torneo con un número dudoso que además viaja a los demás. */
+function aplicaCampo (T, d, rev) {
+  if (rev.campo) emitir(T, `c.${d}.n`, rev.campo)
+  for (let h = 0; h < HOYOS_TARJETA; h++) {
+    if (rev.marcas[h].par === null) emitir(T, `c.${d}.par.${h}`, rev.par[h])
+    if (rev.marcas[h].si === null) emitir(T, `c.${d}.si.${h}`, rev.si[h])
+  }
+}
+
+/* Uno fotografía y todos juegan: el campo viaja como hecho, así que el
+   resto del grupo recibe los 36 números sin tocar nada. */
+function aplicaCampoATodos (T, rev) {
+  for (let d = 0; d < dias(T); d++) aplicaCampo(T, d, rev)
+}
+
+
+
+
+/* La sección de Ajustes que convierte una foto en el campo del torneo.
+   Nada se guarda hasta tocar Guardar: un par mal leído falsea el
+   Stableford y las presiones de todo el torneo, y viaja a los demás. */
+function bloqueClaveIa (S) {
+  const hay = !!(S.ia && S.ia.clave)
+  return `<h2>Clave de la IA</h2>
+    <p class="guia">Para leer tarjetas con la cámara. Es tuya y de pago: vive solo en este teléfono y no se comparte con el grupo.</p>
+    <input type="password" placeholder="${hay ? 'guardada en este teléfono' : 'sk-…'}" autocomplete="off" data-cambio="ponClaveIa">
+    ${hay ? '<button class="btn sec" data-accion="borrarClaveIa">Borrar la clave</button>' : ''}`
+}
+
+function tablaLectura (rev) {
+  const fila = (et, cual) => {
+    const celdas = Array.from({ length: HOYOS_TARJETA }, (_, h) => {
+      const motivo = rev.marcas[h][cual]
+      return `<td class="${motivo ? 'dudoso' : ''}"><input value="${esc(rev[cual][h] ?? '')}" inputmode="numeric"
+        data-cambio="editaLectura" data-campo="${cual}" data-hoyo="${h}"></td>`
+    }).join('')
+    return `<tr><td class="nom-col">${et}</td>${celdas}</tr>`
+  }
+  const cab = Array.from({ length: HOYOS_TARJETA }, (_, h) => `<th>${h + 1}</th>`).join('')
+  return `<div class="rejilla"><table>
+      <tr><th>Hoyo</th>${cab}</tr>
+      ${fila('Par', 'par')}
+      ${fila('SI', 'si')}
+    </table></div>`
+}
+function bloqueFoto (T, S) {
+  const clave = !!(S.ia && S.ia.clave)
+  const cab = '<h2>Leer de una foto</h2>'
+  if (!clave) {
+    return `${cab}<p class="guia">Pon tu clave de la IA más abajo y aquí podrás fotografiar la tarjeta en blanco del campo para dar de alta los 36 números de un tirón.</p>`
+  }
+  if (S.leyendo) return `${cab}<p class="guia">Leyendo la tarjeta…</p>`
+
+  const rev = S.lectura
+  const n = dias(T)
+  const listo = rev && lecturaCompleta(rev)
+  return `${cab}
+    <p class="guia">Fotografía la tarjeta EN BLANCO del campo. Nada se guarda hasta que lo revises y toques Guardar.</p>
+    <div class="foto-zona">
+      <label class="btn sec">Tomar o elegir la foto
+        <input type="file" accept="image/*" capture="environment" data-cambio="tomarFoto" hidden></label>
+      ${S.foto ? `<img class="foto-prev" src="${esc(S.foto)}" alt="la tarjeta">
+        <button class="btn sec" data-accion="quitarFoto">Quitar la foto</button>` : ''}
+    </div>
+    ${S.errorIa ? `<p class="aviso-ia">${esc(S.errorIa)}</p>` : ''}
+    ${rev
+      ? `<h2>Lo que leyó</h2>
+        <input value="${esc(rev.campo)}" placeholder="nombre del campo" data-cambio="editaLectura" data-campo="campo" data-hoyo="-1">
+        ${tablaLectura(rev)}
+        ${rev.avisos.length ? `<p class="guia">${rev.avisos.map(a => esc(a)).join(' · ')}</p>` : ''}
+        <button class="btn" data-accion="guardaCampoDia"${listo ? '' : ' disabled'}>Guardar en este día</button>
+        ${n > 1 ? `<button class="btn sec" data-accion="guardaCampoTodos"${listo ? '' : ' disabled'}>Guardar en las ${esc(n)} rondas</button>` : ''}
+        ${listo ? '' : '<p class="guia">Corrige lo marcado para poder guardar.</p>'}`
+      : ''}`
+}
+
 const ponPar = (T, d, h, v) => emitir(T, `c.${d}.par.${h}`, parseInt(v, 10) || 4)
 const ponSi = (T, d, h, v) => emitir(T, `c.${d}.si.${h}`, parseInt(v, 10) || h + 1)
 const ponCampo = (T, d, v) => emitir(T, `c.${d}.n`, String(v))
@@ -2304,6 +2485,7 @@ function vistaAjustes (T, S, base = '') {
     <input value="${esc(fecha(T, d))}" placeholder="2026-09-12" inputmode="numeric" data-cambio="setFecha">
     <h2>Salida</h2>
     <input value="${esc(salida(T, d))}" placeholder="9:00 · por el 6" data-cambio="setSalida">
+    ${bloqueFoto(T, S)}
     <h2>El campo</h2>
     <input value="${esc(campo(T, d))}" placeholder="nombre del campo"
       data-cambio="setCampo">
@@ -2330,6 +2512,7 @@ function vistaAjustes (T, S, base = '') {
     <h2>Este teléfono</h2>
     <div class="fila"><div class="quien"><span class="nom">${esc(T.yo ? (jugadores(T).find(j => j.id === T.yo)?.n ?? '—') : (T.yo === '' ? 'Solo miro' : 'Sin decir'))}</span></div>
       <div class="acciones"><button data-accion="cambiarYo">Cambiar</button></div></div>
+    ${bloqueClaveIa(S)}
     <h2>Invitar</h2>
     <p class="guia" style="word-break:break-all">${esc(ligaDe(T, base))}</p>
     <button class="btn" data-accion="compartirLiga">Compartir la liga</button>
@@ -2807,6 +2990,119 @@ function pintar (nodo, S, base = '') {
   nodo.innerHTML = cuerpo(S, base)
 }
 
+/* ============================================================
+   La lectura por IA de una tarjeta en blanco. `fetch` directo,
+   sin SDK: el proyecto no tiene dependencias y se arma en un solo
+   HTML. Misma decisión que la app de Santa Fe.
+
+   La clave es del teléfono, personal y de pago: no se emite como
+   hecho, no se publica y NUNCA sale en un mensaje de error.
+   ============================================================ */
+const MODELO_IA = 'claude-opus-5'
+const URL_IA = 'https://api.anthropic.com/v1/messages'
+
+/* El hueco va con anyOf y no con "type": ["integer","null"]: la unión en
+   `type` no está documentada como soportada y anyOf sí. El esquema no
+   puede exigir 18 posiciones (minItems solo admite 0 y 1); de eso se
+   encarga revisaLectura. */
+const hueco = { anyOf: [{ type: 'integer' }, { type: 'null' }] }
+const ESQUEMA_TARJETA = {
+  type: 'object',
+  properties: {
+    campo: { type: 'string' },
+    par: { type: 'array', items: hueco },
+    si: { type: 'array', items: hueco }
+  },
+  required: ['campo', 'par', 'si'],
+  additionalProperties: false
+}
+const INSTRUCCION_TARJETA = [
+  'Esta es la tarjeta EN BLANCO de un campo de golf.',
+  'Devuelve el nombre del campo, el par de los 18 hoyos y el índice de dificultad (handicap o stroke index) de los 18 hoyos.',
+  'Los arreglos "par" y "si" traen siempre 18 posiciones, del hoyo 1 al 18 en ese orden.',
+  'Ante la menor duda pon null en esa posición. NUNCA inventes un número.',
+  'Ignora las yardas, el slope, el rating, el hándicap de campo y cualquier casilla para anotar golpes.'
+].join(' ')
+
+/* Encoge la foto antes de mandarla: las del iPhone son enormes y mandarlas
+   enteras es caro y lento. Copiado de `comprimir` de Santa Fe. */
+function comprimeImagen (file, maxLado = 1600) {
+  return new Promise((res, rej) => {
+    const img = new Image()
+    const url = URL.createObjectURL(file)
+    img.onload = () => {
+      const k = Math.min(1, maxLado / Math.max(img.width, img.height))
+      const cv = document.createElement('canvas')
+      cv.width = Math.round(img.width * k)
+      cv.height = Math.round(img.height * k)
+      cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height)
+      URL.revokeObjectURL(url)
+      res(cv.toDataURL('image/jpeg', 0.85))
+    }
+    img.onerror = () => { URL.revokeObjectURL(url); rej(new Error('No se pudo abrir la imagen')) }
+    img.src = url
+  })
+}
+
+/* Los errores se traducen a algo que se pueda leer en el estacionamiento.
+   El cuerpo crudo no se enseña nunca: puede traer la clave. */
+function errorDeEstado (status, texto) {
+  if (status === 401 || status === 403) return 'La clave no sirve. Revísala en Ajustes.'
+  if (status === 400 && texto.includes(MODELO_IA)) return 'El modelo ya no existe. Hay que actualizar la app.'
+  if (status === 429) return 'Demasiadas peticiones seguidas. Espera un momento y vuelve a intentar.'
+  return `La API respondió ${status}.`
+}
+async function leeTarjeta (dataUrl, clave, buscar = (typeof fetch !== 'undefined' ? fetch.bind(globalThis) : null)) {
+  const cuerpo = {
+    model: MODELO_IA,
+    max_tokens: 16000,
+    messages: [{
+      role: 'user',
+      content: [
+        { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: String(dataUrl).replace(/^data:[^,]*,/, '') } },
+        { type: 'text', text: INSTRUCCION_TARJETA }
+      ]
+    }],
+    output_config: { effort: 'medium', format: { type: 'json_schema', schema: ESQUEMA_TARJETA } }
+  }
+  let r
+  try {
+    r = await buscar(URL_IA, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-api-key': clave,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify(cuerpo)
+    })
+  } catch (e) {
+    throw new Error('Sin señal: no se pudo llegar a la API.')
+  }
+  if (!r.ok) {
+    let texto = ''
+    try { texto = await r.text() } catch (e) {}
+    throw new Error(errorDeEstado(r.status, texto))
+  }
+  /* El cuerpo de un 200 también puede venir roto: la conexión del campo se
+     cae a media respuesta y `r.json()` lanza un SyntaxError en inglés que
+     se saltaba la traducción entera. */
+  let datos
+  try {
+    datos = await r.json()
+  } catch (e) {
+    throw new Error('La respuesta no se entendió: pudo venir incompleta. Vuelve a intentar.')
+  }
+  const bloque = (datos && typeof datos === 'object' ? datos.content || [] : []).find(b => b && b.type === 'text')
+  if (!bloque || !bloque.text) throw new Error('La respuesta vino vacía.')
+  try {
+    return JSON.parse(bloque.text)
+  } catch (e) {
+    throw new Error('La respuesta no se entendió: pudo venir incompleta. Vuelve a intentar.')
+  }
+}
+
 
 
 
@@ -2847,6 +3143,8 @@ function marcarOnces (T, aid, h, jid, v) {
   const despues = v ? (antes | (1 << h)) : (antes & ~(1 << h))
   emitir(T, llaveOnces(aid, jid), despues)
 }
+
+
 
 
 
@@ -3057,6 +3355,55 @@ const ACCIONES = {
     } catch (e) {
       try { await navigator.clipboard.writeText(liga) } catch (e2) {}
     }
+  },
+  /* La clave de la IA es del teléfono: personal y de pago. Vive en S.ia,
+     nunca se emite como hecho ni viaja al grupo. */
+  ponClaveIa: (d, el) => { S.ia.clave = String(el.value || '').trim(); salvar() },
+  borrarClaveIa: () => { S.ia.clave = ''; salvar() },
+  /* La foto no se guarda en ningún lado: vive en memoria mientras la
+     revisas y se va con ella. */
+  quitarFoto: () => { S.foto = null; S.lectura = null; S.errorIa = ''; salvar() },
+  tomarFoto: async (d, el) => {
+    const file = el.files && el.files[0]
+    if (!file) return
+    S.errorIa = ''
+    S.lectura = null
+    S.leyendo = true
+    salvar()
+    try {
+      S.foto = await comprimeImagen(file)
+      S.lectura = revisaLectura(await leeTarjeta(S.foto, S.ia.clave))
+    } catch (e) {
+      S.errorIa = e && e.message ? e.message : 'No se pudo leer la tarjeta.'
+    }
+    S.leyendo = false
+    salvar()
+  },
+  editaLectura: (d, el) => {
+    if (!S.lectura) return
+    const cruda = { campo: S.lectura.campo, par: [...S.lectura.par], si: [...S.lectura.si] }
+    if (d.campo === 'campo') cruda.campo = el.value
+    else cruda[d.campo][Number(d.hoyo)] = el.value.trim() === '' ? null : el.value
+    S.lectura = revisaLectura(cruda)
+    salvar()
+  },
+  guardaCampoDia: () => {
+    const t = T()
+    if (!t || !S.lectura) return
+    aplicaCampo(t, t.d || 0, S.lectura)
+    S.lectura = null
+    S.foto = null
+    salvar()
+    programar()
+  },
+  guardaCampoTodos: () => {
+    const t = T()
+    if (!t || !S.lectura) return
+    aplicaCampoATodos(t, S.lectura)
+    S.lectura = null
+    S.foto = null
+    salvar()
+    programar()
   }
 }
 
