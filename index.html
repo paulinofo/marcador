@@ -293,6 +293,21 @@ table.card td sup{color:var(--bandera);font-size:9px;position:absolute;top:2px;r
   border-top:32px solid var(--bandera);border-left:32px solid transparent}
 .tri.t2{border-top-width:42px;border-left-width:42px}
 .tri.t3{border-top-width:52px;border-left-width:52px}
+
+/* ---- La pestaña del juego del torneo ---- */
+.dinero{font-family:var(--mono);font-size:17px;font-weight:700;color:var(--cal);flex:0 0 auto}
+.dinero.arr{color:#6FD39B} .dinero.aba{color:#E8836F}
+.saldo{align-items:center}
+.cfg-juego{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 9px}
+.cfg-juego span{font-size:15px;color:var(--cal)}
+.cfg-juego input,.cfg-juego select{margin:0;width:auto;min-width:130px;text-align:center}
+.lado-chip{font-family:var(--mono);font-size:12px;letter-spacing:.04em;border:1px solid var(--verde-linea);
+  background:transparent;color:var(--cal);border-radius:999px;padding:8px 12px}
+.lado-chip.on{border-color:var(--laton);color:var(--laton);font-weight:700}
+td.cuenta{background:#EAE3D2;font-weight:700}
+td.fuera{color:var(--tarjeta-linea)}
+.chips{flex-wrap:wrap}
+.chip-once.cerrado{opacity:.45}
 </style>
 </head>
 <body>
@@ -540,6 +555,83 @@ function slidingPactado (T, d, a, b) {
    el grupo lo ve terminado, se guarda para consultarlo y deja de
    sincronizar cada 1.8 s. Se puede reabrir. */
 const torneoCerrado = (T) => (T.h['t.cerrado'] ?? 0) !== 0
+
+/* ---- El libro de apuestas ----------------------------------------
+   Una apuesta vive en un día y en un grupo, como en Teezr, y es un puñado
+   de hechos `a.<aid>.*`. Quién juega NO se guarda: son los del grupo que
+   nombra, tal como esté hoy. Lo único que se guarda por jugador es el lado
+   -en los juegos de dos bandos- y las marcas de Onces.
+
+   Las llaves son de una letra y el aid es de cuatro caracteres porque el
+   servidor v1 RECORTA la llave a 16 en silencio (sondeado el 14-sep: de 17
+   en adelante el hecho no vuelve nunca). El valor no tiene ese límite, así
+   que lo que no cabe en la llave se guarda en el valor: las marcas de
+   Onces son una máscara de 18 bits por jugador, no 18 llaves.
+
+   `jidCorto` ya existe arriba (lo dejó presiones): se usa tal cual. */
+
+/* El id sale de sortear(4). Filtrar por esa forma es lo que impide que una
+   llave venida de otro teléfono -a.__proto__.t- se cuele como apuesta. */
+const RE_AID = /^[a-z0-9]{4}$/
+
+function idsDeApuestas (T) {
+  const ids = new Set()
+  for (const k in T.h) {
+    const m = /^a\.([^.]+)\./.exec(k)
+    if (m && RE_AID.test(m[1])) ids.add(m[1])
+  }
+  return [...ids]
+}
+
+const leerApuesta = (T, id) => ({
+  id,
+  tipo: T.h[`a.${id}.t`] ?? '',
+  d: T.h[`a.${id}.d`] ?? 0,
+  grupo: T.h[`a.${id}.g`] ?? 0
+})
+
+/* El orden es el sello del hecho que fijó el tipo: así la lista se dibuja
+   igual en todos los teléfonos, como con los jugadores. */
+function apuestas (T, d) {
+  return idsDeApuestas(T)
+    .filter(id => !T.h[`a.${id}.x`] && (T.h[`a.${id}.d`] ?? 0) === d)
+    .sort((a, b) => (T.ct[`a.${a}.t`] ?? Infinity) - (T.ct[`a.${b}.t`] ?? Infinity))
+    .map(id => leerApuesta(T, id))
+}
+function apuestaPorId (T, aid) {
+  if (!RE_AID.test(String(aid)) || !T.h[`a.${aid}.t`] || T.h[`a.${aid}.x`]) return null
+  return leerApuesta(T, aid)
+}
+
+/* El juego del torneo -el que se elige en Ajustes- no se da de alta: el
+   libro sintetiza una apuesta por grupo con un id como 'nassau-0', que NO
+   tiene la forma de sortear(4) y por eso no tiene hechos `a.` detrás.
+
+   Lo suyo vive en el torneo, no en la apuesta, y por dos razones. La
+   primera es el límite de 16: `a.nassau-0.l.63vgj` mide 18 y el servidor
+   v1 lo truncaría en silencio, mientras que `t.l.63vgj` mide 11. La
+   segunda es que hay UN solo juego por torneo, así que un solo juego de
+   ajustes, de lados y de marcas por jugador basta para todos los grupos y
+   todos los días. Las apuestas dadas de alta (aid de cuatro caracteres)
+   siguen guardando lo suyo en `a.<aid>.*`, sin cambio. */
+const aidSintetico = (aid) => !RE_AID.test(String(aid))
+const llaveCfg = (aid, k) => (aidSintetico(aid) ? `t.j.${k}` : `a.${aid}.c.${k}`)
+const llaveLado = (aid, jid) => (aidSintetico(aid) ? `t.l.${jidCorto(jid)}` : `a.${aid}.l.${jidCorto(jid)}`)
+const llaveOnces = (aid, jid) => (aidSintetico(aid) ? `t.o.${jidCorto(jid)}` : `a.${aid}.o.${jidCorto(jid)}`)
+
+/* Un campo vaciado en Ajustes guarda '' y `??` no lo atrapa: el juego se
+   quedaba valiendo cero -Nassau sin presiones, Nines pagando nada- sin
+   decir por qué. Vacío es «como venía». */
+const cfgDe = (T, aid, k, def) => {
+  const v = T.h[llaveCfg(aid, k)]
+  return v === null || v === undefined || v === '' ? def : v
+}
+const ladoDe = (T, aid, jid) => {
+  const v = T.h[llaveLado(aid, jid)]
+  return v === null || v === undefined ? null : (v ? 1 : 0)
+}
+const mascaraOnces = (T, aid, jid) => T.h[llaveOnces(aid, jid)] ?? 0
+const marcaOnces = (T, aid, h, jid) => ((mascaraOnces(T, aid, jid) >> h) & 1) === 1
 
 
 
@@ -1146,6 +1238,565 @@ function cuentaPresiones (T, jid) {
 
 
 
+/* ============================================================
+   El motor que comparten los juegos de match play: el hoyo lo
+   gana el lado con la mejor bola neta, y de ahí salen tramos,
+   escaleras de presiones y líneas de dinero.
+   ============================================================ */
+
+/* Quién juega una apuesta: los del grupo que nombra, tal como esté HOY.
+   Si alguien se cambia de grupo, la apuesta lo suelta -igual que en
+   Teezr, donde el partido es del foursome, no de una lista aparte. */
+function participantes (T, A) {
+  return gruposDe(T, A.d)[A.grupo] || []
+}
+
+/* Ventaja dentro de la apuesta. 'diferencia' es lo de Teezr: nadie juega
+   con su hándicap completo, todos contra el más bajo de la mesa. */
+function ventajaJuego (T, A, jid) {
+  const modo = cfgDe(T, A.id, 'hcp', 'diferencia')
+  if (modo === 'bruto') return 0
+  const ch = hcpCampo(T, jid)
+  if (modo === 'completo') return ch
+  const mesa = participantes(T, A).map(j => hcpCampo(T, j))
+  return mesa.length ? ch - Math.min(...mesa) : 0
+}
+function netoJuego (T, A, jid, h) {
+  const g = golpe(T, A.d, jid, h)
+  if (g === null) return null
+  const v = ventajaJuego(T, A, jid)
+  return g - (v ? golpesEnHoyo(v, si(T, A.d, h)) : 0)
+}
+
+/* La mejor bola neta del lado. Quien levantó la bola no tiene golpe y
+   simplemente no compite en ese hoyo; el hoyo solo deja de contar cuando
+   NADIE del lado tiene golpe. */
+function mejorBola (T, A, lado, h) {
+  let mejor = null
+  for (const jid of lado) {
+    const n = netoJuego(T, A, jid, h)
+    if (n !== null && (mejor === null || n < mejor)) mejor = n
+  }
+  return mejor
+}
+function resultadoHoyo (T, A, ladoA, ladoB, h) {
+  const a = mejorBola(T, A, ladoA, h)
+  const b = mejorBola(T, A, ladoB, h)
+  if (a === null || b === null) return null
+  return a < b ? 1 : (a > b ? -1 : 0)
+}
+
+/* Un tramo de match play. `cerradoEn` es el hoyo donde la ventaja se
+   volvió mayor que los hoyos que quedaban: el famoso "3&2". */
+function segmento (T, A, ladoA, ladoB, ini, fin, hasta = HOYOS - 1) {
+  const hist = new Array(HOYOS).fill(null)
+  let st = 0
+  let jugados = 0
+  let cerradoEn = null
+  for (let h = ini; h <= Math.min(fin, hasta); h++) {
+    const r = resultadoHoyo(T, A, ladoA, ladoB, h)
+    if (r === null) continue
+    st += r
+    jugados++
+    hist[h] = st
+    if (cerradoEn === null && Math.abs(st) > fin - h) cerradoEn = h
+  }
+  return { et: '', ini, fin, st, hist, jugados, cerradoEn }
+}
+function marcadorTexto (seg) {
+  const cerrado = seg.cerradoEn ?? null
+  const jugados = seg.jugados ?? seg.hist.filter(x => x !== null).length
+  /* La ventaja es la del hoyo que CERRÓ el tramo, no la final: el
+     marcador sigue creciendo después y salían cosas como «9&4» o «18&8»,
+     que no existen. Y un tramo decidido en su último hoyo no es «1&0»:
+     se gana por uno, sin hoyos por jugar. */
+  if (cerrado !== null && cerrado < seg.fin) {
+    return `${Math.abs(seg.hist[cerrado])}&${seg.fin - cerrado}`
+  }
+  if (!jugados) return '—'
+  if (seg.st === 0) return 'empatados'
+  return `${Math.abs(seg.st)} ${seg.st > 0 ? 'arriba' : 'abajo'}`
+}
+
+/* La escalera de Santa Fe, generalizada a cualquier tramo: la apuesta de
+   salida corre entero, y cada apuesta abierta engendra UNA nueva -desde
+   el hoyo siguiente- al llegar a `al` arriba o abajo. Ninguna se cierra y
+   ninguna nace en el último hoyo del tramo. */
+function presses (T, A, ladoA, ladoB, ini, fin, al = 2, hasta = HOYOS - 1) {
+  const umbral = Math.max(1, al)
+  let vivas = [{ et: 'salida', ini, fin, st: 0, p: false, hist: new Array(HOYOS).fill(null), jugados: 0 }]
+  const todas = [vivas[0]]
+  let n = 0
+  for (let h = ini; h <= Math.min(fin, hasta); h++) {
+    const r = resultadoHoyo(T, A, ladoA, ladoB, h)
+    if (r === null) continue
+    for (const ap of vivas) {
+      if (h >= ap.ini) { ap.st += r; ap.hist[h] = ap.st; ap.jugados++ }
+    }
+    const nuevas = []
+    for (const ap of vivas) {
+      if (!ap.p && Math.abs(ap.st) >= umbral && h >= ap.ini && h < fin) {
+        ap.p = true
+        n++
+        nuevas.push({ et: 'presión ' + n, ini: h + 1, fin, st: 0, p: false, hist: new Array(HOYOS).fill(null), jugados: 0 })
+      }
+    }
+    vivas = vivas.concat(nuevas)
+    todas.push(...nuevas)
+  }
+  return todas
+}
+
+/* Quién le paga a quién. En 1v1 sale una línea; en 2v2 cada quien le paga
+   a su contraparte -el de su misma posición en el otro lado-, así que el
+   monto es POR CABEZA, como se jugó en Vail. Con lados desiguales (el
+   Mudo del hito 2) los de más pagan todos al mismo. */
+function lineasPorSigno (ladoA, ladoB, signo, monto, motivo) {
+  const m = Math.round(monto)
+  if (!signo || !(m > 0) || !ladoA.length || !ladoB.length) return []
+  const ganan = signo > 0 ? ladoA : ladoB
+  const pierden = signo > 0 ? ladoB : ladoA
+  return pierden.map((jid, i) => ({ de: jid, a: ganan[Math.min(i, ganan.length - 1)], monto: m, motivo }))
+}
+
+
+
+/* Los dos bandos de una apuesta. Con dos jugadores no hace falta marcar
+   nada: cada quien es su lado. Con cuatro, manda lo marcado; sin marcas,
+   se parte el grupo a la mitad en su orden, que es como se sientan en el
+   carrito. */
+/* El bando que se VE y el que se toca son el mismo: la vista y la acción
+   llaman aquí. Antes la vista derivaba el bando de la posición y la acción
+   suponía 0, así que el primer toque sobre alguien del bando 2 no hacía
+   nada y el segundo lo mandaba al 1, dejando 3 contra 1. */
+function ladoVisible (T, A, jid) {
+  const p = participantes(T, A)
+  const i = p.indexOf(jid)
+  const marcado = ladoDe(T, A.id, jid)
+  if (marcado !== null) return marcado
+  return i >= 0 && i < Math.ceil(p.length / 2) ? 0 : 1
+}
+
+/* Los bandos se guardan por TORNEO y se leen contra el grupo de HOY: si
+   los grupos se reacomodan entre días, las marcas viejas y las posiciones
+   nuevas dejan de cuadrar y salía, por ejemplo, 1 contra 3 -que además
+   `lineasPorSigno` paga tres a uno en un sentido y uno a uno en el otro-.
+   Cuando no cuadran se reparte a la mitad y la pantalla lo dice. */
+const bandosCuadran = (T, A) => {
+  const p = participantes(T, A)
+  if (p.length <= 2) return true
+  const enCero = p.filter(j => ladoVisible(T, A, j) === 0).length
+  return enCero * 2 === p.length
+}
+function ladosDe (T, A) {
+  const p = participantes(T, A)
+  if (p.length <= 2) return [p.slice(0, 1), p.slice(1, 2)]
+  const mitad = Math.ceil(p.length / 2)
+  if (!bandosCuadran(T, A)) return [p.slice(0, mitad), p.slice(mitad)]
+  return [p.filter(j => ladoVisible(T, A, j) === 0), p.filter(j => ladoVisible(T, A, j) === 1)]
+}
+
+
+const matchVacio = () => ({ lineas: [], vivo: { forma: 'segmentos', lados: [[], []], filas: [] } })
+
+/* Una fila del detalle: el tramo más lo que vale. `dinero` va desde el
+   lado A, que es como lo lee la pantalla. */
+function filaDeTramo (seg, et, monto) {
+  const dinero = Math.sign(seg.st) * Math.round(monto)
+  return { et, ini: seg.ini, fin: seg.fin, st: seg.st, hist: seg.hist, texto: marcadorTexto(seg), monto: Math.round(monto), dinero }
+}
+function evaluarMatch (T, A, hasta = HOYOS - 1) {
+  const [la, lb] = ladosDe(T, A)
+  if (!la.length || !lb.length) return matchVacio()
+  const monto = cfgDe(T, A.id, 'monto', 100)
+  const hoyos = cfgDe(T, A.id, 'hoyos', 18) === 9 ? 9 : HOYOS
+  const seg = segmento(T, A, la, lb, 0, hoyos - 1, hasta)
+  return {
+    lineas: lineasPorSigno(la, lb, Math.sign(seg.st), monto, 'Hoyo por hoyo'),
+    vivo: { forma: 'segmentos', lados: [la, lb], filas: [filaDeTramo(seg, 'Match', monto)] }
+  }
+}
+
+
+
+
+/* Las tres apuestas del Nassau. El global NO es la suma de la ida y la
+   vuelta: es su propio marcador continuo sobre los 18 hoyos. */
+const TRAMOS_NASSAU = [[0, 8, 'Ida'], [9, HOYOS - 1, 'Vuelta'], [0, HOYOS - 1, 'Global']]
+function evaluarNassau (T, A, hasta = HOYOS - 1) {
+  const [la, lb] = ladosDe(T, A)
+  if (!la.length || !lb.length) return { lineas: [], vivo: { forma: 'segmentos', lados: [[], []], filas: [] } }
+  const monto = cfgDe(T, A.id, 'monto', 100)
+  const al = cfgDe(T, A.id, 'al', 2)
+  const conPress = cfgDe(T, A.id, 'press', 0) !== 0
+  const filas = []
+  const lineas = []
+  for (const [ini, fin, et] of TRAMOS_NASSAU) {
+    const tramos = conPress
+      ? presses(T, A, la, lb, ini, fin, al, hasta).map((ap, i) => [ap, i === 0 ? et : `${et} · ${ap.et}`])
+      : [[segmento(T, A, la, lb, ini, fin, hasta), et]]
+    for (const [seg, nombreFila] of tramos) {
+      filas.push(filaDeTramo(seg, nombreFila, monto))
+      lineas.push(...lineasPorSigno(la, lb, Math.sign(seg.st), monto, nombreFila))
+    }
+  }
+  return { lineas, vivo: { forma: 'segmentos', lados: [la, lb], filas } }
+}
+
+
+
+
+/* Tres partidos de seis hoyos, cambiando de rival -o de compañero- en cada
+   tramo. La rotación es la de la guía: 1-2/3-4, 1-3/2-4, 1-4/2-3. */
+const ROTACION_SIXES = [[[0, 1], [2, 3]], [[0, 2], [1, 3]], [[0, 3], [1, 2]]]
+const TRAMOS_SIXES = [[0, 5], [6, 11], [12, HOYOS - 1]]
+
+/* Quién ganó el último hoyo que se decidió en el tramo: el desempate
+   'ultimo'. 0 si el tramo no tuvo ninguno. */
+function ultimoDecidido (seg) {
+  let previo = 0
+  let ultimo = 0
+  for (let h = seg.ini; h <= seg.fin; h++) {
+    if (seg.hist[h] === null) continue
+    const paso = seg.hist[h] - previo
+    if (paso !== 0) ultimo = Math.sign(paso)
+    previo = seg.hist[h]
+  }
+  return ultimo
+}
+function evaluarSixes (T, A, hasta = HOYOS - 1) {
+  const p = participantes(T, A)
+  const vacia = { lineas: [], vivo: { forma: 'segmentos', lados: [[], []], filas: [] } }
+  if (p.length !== 4) return vacia
+  const monto = cfgDe(T, A.id, 'monto', 100)
+  const modo = cfgDe(T, A.id, 'modo', 'ind') === 'parejas' ? 'parejas' : 'ind'
+  const empate = cfgDe(T, A.id, 'empate', 'anula')
+  const nom = (j) => corto(T, j)
+  const filas = []
+  const lineas = []
+  /* El acumulado del empate corre por partido: en individual son dos
+     partidos paralelos, cada uno con su bolsa. */
+  const bolsa = [0, 0]
+  for (let t = 0; t < TRAMOS_SIXES.length; t++) {
+    const [ini, fin] = TRAMOS_SIXES[t]
+    const [uno, dos] = ROTACION_SIXES[t]
+    const duelos = modo === 'parejas'
+      ? [[[p[uno[0]], p[uno[1]]], [p[dos[0]], p[dos[1]]],
+          `Tramo ${t + 1} · ${nom(p[uno[0]])} y ${nom(p[uno[1]])} contra ${nom(p[dos[0]])} y ${nom(p[dos[1]])}`]]
+      : [[[p[uno[0]]], [p[uno[1]]], `Tramo ${t + 1} · ${nom(p[uno[0]])}-${nom(p[uno[1]])}`],
+         [[p[dos[0]]], [p[dos[1]]], `Tramo ${t + 1} · ${nom(p[dos[0]])}-${nom(p[dos[1]])}`]]
+    duelos.forEach(([la, lb, et], i) => {
+      const seg = segmento(T, A, la, lb, ini, fin, hasta)
+      const valor = monto + bolsa[i]
+      let signo = Math.sign(seg.st)
+      if (signo === 0) {
+        if (empate === 'acumula' && t < TRAMOS_SIXES.length - 1) { bolsa[i] = valor; filas.push(filaDeTramo(seg, et, 0)); return }
+        if (empate === 'ultimo') signo = ultimoDecidido(seg)
+      }
+      bolsa[i] = 0
+      /* La fila dice la verdad del tramo -'empatados' si lo estuvo- y el
+         desempate por último hoyo se ve solo en el dinero. */
+      const fila = filaDeTramo(seg, et, signo ? valor : 0)
+      fila.dinero = signo * fila.monto
+      filas.push(fila)
+      lineas.push(...lineasPorSigno(la, lb, signo, valor, et))
+    })
+  }
+  return { lineas, vivo: { forma: 'segmentos', lados: [p.slice(0, 2), p.slice(2)], filas } }
+}
+
+
+
+/* Nueve puntos por hoyo entre tres: 5 al mejor neto, 3 al segundo, 1 al
+   tercero. Los empates reparten en partes iguales la suma de los lugares
+   que empatan: 4-4-1 arriba, 5-2-2 abajo, 3-3-3 los tres. */
+const VALORES_NINES = [5, 3, 1]
+function repartoNines (netos) {
+  const pts = [0, 0, 0]
+  if (netos.length !== 3 || netos.some(n => n === null || n === undefined)) return pts
+  const orden = [0, 1, 2].sort((a, b) => netos[a] - netos[b])
+  let i = 0
+  while (i < 3) {
+    let j = i
+    while (j + 1 < 3 && netos[orden[j + 1]] === netos[orden[i]]) j++
+    const total = VALORES_NINES.slice(i, j + 1).reduce((a, b) => a + b, 0)
+    const cada = total / (j - i + 1)
+    for (let k = i; k <= j; k++) pts[orden[k]] = cada
+    i = j + 1
+  }
+  return pts
+}
+function evaluarNines (T, A, hasta = HOYOS - 1) {
+  const p = participantes(T, A)
+  if (p.length !== 3) return { lineas: [], vivo: { forma: 'puntos', jugadores: [], porHoyo: [], totales: [] } }
+  const punto = cfgDe(T, A.id, 'punto', 10)
+  /* Contra la media es lo mismo que cobrarle a cada rival un tercio de la
+     diferencia: la suma por jugador da idéntica, y así todo el dinero
+     sigue siendo una línea de alguien a alguien. */
+  const divisor = cfgDe(T, A.id, 'liq', 'rivales') === 'media' ? 3 : 1
+  const porHoyo = []
+  const totales = [0, 0, 0]
+  for (let h = 0; h < HOYOS; h++) {
+    if (h > hasta) { porHoyo.push(null); continue }
+    const pts = repartoNines(p.map(j => netoJuego(T, A, j, h)))
+    const hubo = pts.some(x => x > 0)
+    porHoyo.push(hubo ? pts : null)
+    if (hubo) for (let i = 0; i < 3; i++) totales[i] += pts[i]
+  }
+  const lineas = []
+  for (let i = 0; i < 3; i++) {
+    for (let j = i + 1; j < 3; j++) {
+      const dif = Math.round((totales[i] - totales[j]) * punto / divisor)
+      if (dif > 0) lineas.push({ de: p[j], a: p[i], monto: dif, motivo: 'Nines' })
+      else if (dif < 0) lineas.push({ de: p[i], a: p[j], monto: -dif, motivo: 'Nines' })
+    }
+  }
+  return { lineas, vivo: { forma: 'puntos', jugadores: p, porHoyo, totales } }
+}
+
+
+
+/* Se juegan los 18, pero solo cuentan once: los que cada quien marca
+   durante la ronda. Un hoyo se decide hasta que entra el score del hoyo
+   siguiente -de ese mismo jugador-, y ahí se congela. El 18 no tiene
+   siguiente: se queda abierto hasta el final. */
+const ONCE = 11
+const bloqueadoOnces = (T, A, jid, h) =>
+  h < HOYOS - 1 && golpe(T, A.d, jid, h + 1) !== null
+
+/* La red de seguridad de la guía: si los hoyos que aún se pueden marcar
+   son justo los que faltan para llegar a once, cuentan a la fuerza. */
+function hoyosDeOnces (T, A, jid) {
+  const marcados = []
+  const abiertos = []
+  for (let h = 0; h < HOYOS; h++) {
+    if (marcaOnces(T, A.id, h, jid)) marcados.push(h)
+    else if (!bloqueadoOnces(T, A, jid, h)) abiertos.push(h)
+  }
+  const faltan = ONCE - marcados.length
+  const forzados = faltan > 0 && abiertos.length > 0 && abiertos.length <= faltan ? abiertos : []
+  const cuentan = marcados.concat(forzados).sort((a, b) => a - b)
+  return { marcados, abiertos, forzados, cuentan }
+}
+function evaluarOnces (T, A, hasta = HOYOS - 1) {
+  const p = participantes(T, A)
+  const monto = cfgDe(T, A.id, 'monto', 100)
+  const jugadores = p.map(jid => {
+    const q = hoyosDeOnces(T, A, jid)
+    let total = 0
+    let completo = q.cuentan.length === ONCE
+    for (const h of q.cuentan) {
+      const n = h <= hasta ? netoJuego(T, A, jid, h) : null
+      if (n === null) { completo = false; continue }
+      total += n
+    }
+    return { jid, marcados: q.marcados, forzados: q.forzados, cuentan: q.cuentan, total, compite: completo }
+  })
+  const lineas = []
+  const compiten = jugadores.filter(x => x.compite)
+  for (let i = 0; i < compiten.length; i++) {
+    for (let j = i + 1; j < compiten.length; j++) {
+      const a = compiten[i], b = compiten[j]
+      if (a.total < b.total) lineas.push({ de: b.jid, a: a.jid, monto: Math.round(monto), motivo: 'Onces' })
+      else if (b.total < a.total) lineas.push({ de: a.jid, a: b.jid, monto: Math.round(monto), motivo: 'Onces' })
+    }
+  }
+  return { lineas, vivo: { forma: 'onces', jugadores } }
+}
+
+
+
+/* Presiones no se da de alta: mientras el torneo las juegue, el libro
+   sintetiza una apuesta por grupo. Su id no es de sortear -no hay hechos
+   `a.` detrás- y por eso lleva su propia forma. */
+const idPresiones = (grupo) => `pres-${grupo}`
+const apuestaPresiones = (d, grupo) => ({ id: idPresiones(grupo), tipo: 'presiones', d, grupo })
+
+/* El motor de presiones es por pareja; aquí se recorre la mesa entera y
+   cada duelo se convierte en una línea. */
+function evaluarPresiones (T, A, hasta) {
+  const p = participantes(T, A)
+  const lineas = []
+  const pares = []
+  for (let i = 0; i < p.length; i++) {
+    for (let j = i + 1; j < p.length; j++) {
+      const g = dineroDesglosado(T, A.d, p[i], p[j])
+      pares.push({ a: p[i], b: p[j], ...g })
+      if (!g.capturado || !g.total) continue
+      const monto = Math.abs(Math.round(g.total))
+      if (g.total > 0) lineas.push({ de: p[j], a: p[i], monto, motivo: 'Presiones' })
+      else lineas.push({ de: p[i], a: p[j], monto, motivo: 'Presiones' })
+    }
+  }
+  return { lineas, vivo: { forma: 'presiones', pares } }
+}
+
+
+
+
+
+
+
+/* Un renglón por juego: cómo se llama, con cuántos se juega, si tiene
+   bandos y qué se le puede configurar. La pantalla de alta se dibuja sola
+   desde aquí: añadir un juego nuevo es añadir un renglón. */
+const HCP = { k: 'hcp', et: 'Hándicap', def: 'diferencia', opciones: [
+  { v: 'diferencia', et: 'Por diferencia' }, { v: 'completo', et: 'Completo' }, { v: 'bruto', et: 'Bruto' }] }
+const JUEGOS = {
+  presiones: { nombre: 'Presiones', min: 2, max: 5, lados: false, alta: false, cfg: [], evaluar: evaluarPresiones },
+  match: {
+    nombre: 'Hoyo por hoyo',
+    min: 2,
+    max: 4,
+    lados: true,
+    alta: true,
+    cfg: [{ k: 'monto', et: 'Monto', def: 100 },
+      { k: 'hoyos', et: 'Hoyos', def: 18, opciones: [{ v: 18, et: '18' }, { v: 9, et: '9' }] }, HCP],
+    evaluar: evaluarMatch
+  },
+  nassau: {
+    nombre: 'Nassau',
+    min: 2,
+    max: 4,
+    lados: true,
+    alta: true,
+    cfg: [{ k: 'monto', et: 'Monto por apuesta', def: 100 },
+      { k: 'press', et: 'Presión automática', def: 0, opciones: [{ v: 0, et: 'No' }, { v: 1, et: 'Sí' }] },
+      { k: 'al', et: 'Presión al ir abajo', def: 2 }, HCP],
+    evaluar: evaluarNassau
+  },
+  sixes: {
+    nombre: 'Sixes 6-6-6',
+    min: 4,
+    max: 4,
+    lados: false,
+    alta: true,
+    cfg: [{ k: 'monto', et: 'Monto por tramo', def: 100 },
+      { k: 'modo', et: 'Modo', def: 'ind', opciones: [{ v: 'ind', et: 'Individual' }, { v: 'parejas', et: 'Parejas' }] },
+      { k: 'empate', et: 'Tramo empatado', def: 'anula', opciones: [{ v: 'anula', et: 'Se anula' }, { v: 'acumula', et: 'Se acumula' }, { v: 'ultimo', et: 'Decide el último hoyo' }] },
+      HCP],
+    evaluar: evaluarSixes
+  },
+  nines: {
+    nombre: 'Nines 5-3-1',
+    min: 3,
+    max: 3,
+    lados: false,
+    alta: true,
+    cfg: [{ k: 'punto', et: 'Valor del punto', def: 10 },
+      { k: 'liq', et: 'Se liquida', def: 'rivales', opciones: [{ v: 'rivales', et: 'Contra cada rival' }, { v: 'media', et: 'Contra la media' }] },
+      HCP],
+    evaluar: evaluarNines
+  },
+  onces: {
+    nombre: 'Onces',
+    min: 2,
+    max: 5,
+    lados: false,
+    alta: true,
+    cfg: [{ k: 'monto', et: 'Monto', def: 100 }, HCP],
+    evaluar: evaluarOnces
+  }
+}
+
+/* Si un juego se le puede poner a un grupo de n. Los de dos bandos piden
+   2 o 4 exactos: con tres, el reparto 2 contra 1 paga torcido -lo
+   resuelven Mudo y Yo-Yo en el hito 2-. Una sola regla, usada por el
+   libro para sintetizar la apuesta del torneo y por la guía de la
+   pestaña, para que las dos digan lo mismo. */
+function cabeEnGrupo (juego, n) {
+  const j = JUEGOS[juego]
+  if (!j || !j.alta || n < j.min || n > j.max) return false
+  return j.lados ? (n === 2 || n === 4) : true
+}
+
+/* Lo que se le puede ofrecer a un grupo de n. Presiones no aparece: vive
+   en los ajustes del torneo, no en el alta. */
+const tiposParaGrupo = (n) =>
+  Object.keys(JUEGOS).filter(k => JUEGOS[k].alta && n >= JUEGOS[k].min && n <= JUEGOS[k].max)
+
+
+
+
+/* Las apuestas del día: las que alguien dio de alta, más las que se
+   sintetizan por grupo -sin hechos propios-: la de presiones mientras el
+   torneo las juegue, y la del juego del torneo (el que se elige en
+   Ajustes) en los grupos donde cabe. Un grupo de uno no tiene con quién
+   apostar.
+
+   El `grupo` de una apuesta sintética es el ÍNDICE POSICIONAL dentro de
+   gruposDe -arreglo denso de los grupos no vacíos-, que es justo lo que
+   participantes() usa para resolverlo a jugadores; NO es el número crudo
+   de `g.<d>.<jid>`. */
+function apuestasDelDia (T, d) {
+  const juego = formato(T)
+  const presiones = presOn(T)
+  const sinteticas = []
+  gruposDe(T, d).forEach((g, i) => {
+    if (presiones && g.length >= 2) sinteticas.push(apuestaPresiones(d, i))
+    if (cabeEnGrupo(juego, g.length)) sinteticas.push({ id: `${juego}-${i}`, tipo: juego, d, grupo: i })
+  })
+  return sinteticas.concat(apuestas(T, d))
+}
+
+/* Toda línea mueve el mismo monto de alguien a alguien: el neto de la
+   mesa suma cero por construcción, sin importar cómo redondee cada juego. */
+function resumirLineas (lineas) {
+  const porJugador = new Map()
+  const pares = new Map()
+  const mueve = (jid, v) => porJugador.set(jid, (porJugador.get(jid) || 0) + v)
+  for (const l of lineas) {
+    mueve(l.a, l.monto)
+    mueve(l.de, -l.monto)
+    const k = llavePareja(l.de, l.a)
+    const signo = [l.de, l.a].sort()[0] === l.a ? 1 : -1
+    pares.set(k, (pares.get(k) || 0) + signo * l.monto)
+  }
+  return { lineas, porJugador, pares }
+}
+function libroDia (T, d, hasta = HOYOS - 1) {
+  const lineas = []
+  for (const A of apuestasDelDia(T, d)) {
+    const juego = JUEGOS[A.tipo]
+    if (!juego) continue
+    const r = juego.evaluar(T, A, hasta)
+    if (r && r.lineas) lineas.push(...r.lineas)
+  }
+  return resumirLineas(lineas)
+}
+function libroTorneo (T) {
+  const lineas = []
+  for (let d = 0; d < dias(T); d++) lineas.push(...libroDia(T, d).lineas)
+  return resumirLineas(lineas)
+}
+
+/* Lo que un jugador tiene con cada rival, con el signo desde su lado:
+   positivo = le deben.
+
+   `pares` está llaveado con llavePareja(), que recorta cada jid con
+   jidCorto -son jugadores dentro de un hecho, con su límite de 16
+   caracteres-, así que la llave ya no trae el jid completo. Aquí se
+   compara por jidCorto y el jid completo del rival se recupera buscándolo
+   entre las llaves de porJugador, que sí las guarda enteras. */
+function saldosDe (libro, jid) {
+  const corto = jidCorto(jid)
+  const fuera = []
+  for (const [k, v] of libro.pares) {
+    const [uno, dos] = k.split('|')
+    if (uno !== corto && dos !== corto) continue
+    if (!v) continue
+    const rivalCorto = uno === corto ? dos : uno
+    const rival = [...libro.porJugador.keys()].find(j => jidCorto(j) === rivalCorto) ?? rivalCorto
+    fuera.push({ rival, saldo: uno === corto ? v : -v })
+  }
+  return fuera
+}
+
+
+
+
+
+
 
 
 
@@ -1196,12 +1847,38 @@ function visiblesEnHoy (T) {
   return mio ? todos.filter(j => mio.includes(j.id)) : todos
 }
 
+/* Devuelve los botones pelones: el renglón los envuelve junto a los de
+   Onces en un solo `.chips`, para que unos y otros compartan el corte de
+   línea en vez de apilarse en dos hileras. */
 function chipsCastigo (T, d, jid, h) {
   const x = extra(T, d, jid, h)
-  return `<div class="chips">${PENALES.map(p => {
+  return PENALES.map(p => {
     const n = cuentaPenal(x, p.desp)
     return `<button class="chip-pen${n ? ' on' : ''}" data-accion="castigo" data-jid="${esc(jid)}" data-penal="${p.id}">${p.et} +${p.golpes}${n > 1 ? ` ×${n}` : ''}</button>`
-  }).join('')}</div>`
+  }).join('')
+}
+
+/* Onces: por omisión un hoyo NO cuenta; es el jugador quien lo sube al
+   marcador, y solo hasta que entra el golpe del hoyo siguiente. El chip
+   vive aquí porque es donde se anota, no en la pestaña del juego.
+
+   Con once hoyos ya marcados, el chip de un hoyo nuevo se pinta cerrado:
+   el motor deja FUERA de competencia a quien marca de más, y eso no debe
+   poder pasar por un toque distraído. Desmarcar uno de los once sí se
+   puede: ese chip sigue vivo. */
+function chipsOnces (T, d, jid, h) {
+  const juegos = apuestasDelDia(T, d).filter(A => A.tipo === 'onces' && participantes(T, A).includes(jid))
+  if (!juegos.length) return ''
+  return juegos.map(A => {
+    const q = hoyosDeOnces(T, A, jid)
+    const puesto = q.marcados.includes(h)
+    const lleno = !puesto && q.marcados.length >= ONCE
+    const cerrado = lleno || bloqueadoOnces(T, A, jid, h)
+    const clase = `chip-pen chip-once${cerrado ? ' cerrado' : (puesto ? ' on' : '')}`
+    const et = `🔢 cuenta ${q.marcados.length} de ${ONCE}`
+    if (cerrado) return `<span class="${clase}">${esc(et)}</span>`
+    return `<button class="${clase}" data-accion="marcaOnce" data-aid="${esc(A.id)}" data-jid="${esc(jid)}">${esc(et)}</button>`
+  }).join('')
 }
 
 /* El bloque de Santa Fe: por jugador, puntos de este hoyo y los que lleva
@@ -1267,7 +1944,7 @@ function vistaHoy (T) {
         </div>
         <span class="pts-lado">${esc(String(r.pts))}p</span>
       </div>
-      ${chipsCastigo(T, d, j.id, h)}
+      <div class="chips">${chipsCastigo(T, d, j.id, h)}${chipsOnces(T, d, j.id, h)}</div>
     </div>`
   }).join('')
 
@@ -1551,8 +2228,10 @@ function ponDias (T, v) {
 const enteroO = (v, def) => { const n = parseInt(v, 10); return Number.isFinite(n) ? n : def }
 const ponPresOn = (T, v) => emitir(T, 't.pres.on', v ? 1 : 0)
 /* El tipo de juego del torneo. Presiones enciende su pestaña; cualquier
-   otro la apaga. Cuando lleguen los demás juegos entran aquí. */
-const JUEGOS_DEL_TORNEO = [['stableford', 'Stableford'], ['presiones', 'Presiones']]
+   otro la apaga -y si es uno del registro, enciende la suya-. La lista se
+   arma desde el registro: un juego nuevo allá aparece aquí solo. */
+const JUEGOS_DEL_TORNEO = [['stableford', 'Stableford'], ['presiones', 'Presiones'],
+  ...Object.entries(JUEGOS).filter(([, j]) => j.alta).map(([k, j]) => [k, j.nombre])]
 function ponFormato (T, v) {
   const f = JUEGOS_DEL_TORNEO.some(([k]) => k === v) ? v : 'stableford'
   emitir(T, 't.formato', f)
@@ -1564,6 +2243,25 @@ const ponPresBono = (T, v) => emitir(T, 't.pres.bono', Math.max(0, enteroO(v, 10
 const ponPresAl = (T, v) => emitir(T, 't.pres.al', Math.max(1, enteroO(v, 2)))
 const ponPresCarry = (T, v) => emitir(T, 't.pres.carry', v ? 1 : 0)
 const ponPresMatch = (T, v) => emitir(T, 't.pres.match', v === 'suma' ? 'suma' : 'mayoria')
+
+/* Lo que se le puede ajustar al juego elegido. Vive en el TORNEO, no en
+   una apuesta -hay un solo juego por torneo-, y por eso se lee y se
+   escribe con el aid sintético del primer grupo: cfgDe lo manda a
+   `t.j.<k>`, que sí cabe en 16 caracteres. */
+function camposDelJuego (T) {
+  const juego = JUEGOS[formato(T)]
+  if (!juego || !juego.cfg.length) return ''
+  const aid = formato(T) + '-0'
+  const campos = juego.cfg.map(c => {
+    const valor = cfgDe(T, aid, c.k, c.def)
+    const control = c.opciones
+      ? `<select data-cambio="setCfgJuego" data-k="${esc(c.k)}">${c.opciones.map(o =>
+          `<option value="${esc(o.v)}"${String(o.v) === String(valor) ? ' selected' : ''}>${esc(o.et)}</option>`).join('')}</select>`
+      : `<input value="${esc(valor)}" inputmode="numeric" data-cambio="setCfgJuego" data-k="${esc(c.k)}">`
+    return `<label class="cfg-juego"><span>${esc(c.et)}</span>${control}</label>`
+  }).join('')
+  return `<p class="guia">Así se juega ${esc(juego.nombre)} en todo el torneo. Su pestaña lleva la cuenta.</p>${campos}`
+}
 
 /* `base` entra como argumento y no se lee de `location` aquí dentro:
    en Node no existe, y la prueba que pinta esta vista reventaría. */
@@ -1614,7 +2312,8 @@ function vistaAjustes (T, S, base = '') {
     </div>
     <h2>Tipo de juego</h2>
     <select data-cambio="setFormato">${JUEGOS_DEL_TORNEO.map(([k, et]) => `<option value="${k}"${formato(T) === k ? ' selected' : ''}>${et}</option>`).join('')}</select>
-    <p class="guia">Presiones enciende su pestaña; los demás juegos usan la Tabla.</p>
+    <p class="guia">Presiones enciende su pestaña; Stableford usa la Tabla; los demás abren la suya.</p>
+    ${camposDelJuego(T)}
     ${presOn(T) ? `<h2>Presiones</h2>
     <div class="pres-ajustes">
       <label>Ida $ <input value="${esc(presIda(T))}" inputmode="numeric" data-cambio="setPresIda"></label>
@@ -1799,6 +2498,228 @@ function vistaPresiones (T) {
 
 
 
+/* La pestaña del juego del torneo. No hay lista de apuestas ni alta: hay
+   UN juego, el que se eligió en Ajustes, y el libro lo sintetiza para mi
+   grupo. Esta pantalla es su detalle más las cuentas del día. */
+
+/* El menos es el signo tipográfico, no el guion del teclado: en la fuente
+   mono del marcador tiene el mismo ancho que el más y las columnas de
+   dinero no bailan. */
+const signoTexto = (v) => (v > 0 ? '+' + v : (v < 0 ? '−' + Math.abs(v) : '—'))
+const signoClase = (v) => (v > 0 ? 'arr' : (v < 0 ? 'aba' : ''))
+
+const miDinero = (lineas, jid) =>
+  lineas.reduce((t, l) => t + (l.a === jid ? l.monto : (l.de === jid ? -l.monto : 0)), 0)
+
+const sumaDe = (T, d, jid, de, a) => {
+  let t = 0
+  let n = 0
+  for (let h = de; h < a; h++) { const g = golpe(T, d, jid, h); if (g !== null) { t += g; n++ } }
+  return n ? String(t) : '·'
+}
+
+/* Cabecera de 18 hoyos con sus cortes: la misma forma que la tarjeta. */
+function cabezaHoyos () {
+  let c = '<th>Hoyo</th>'
+  for (let h = 0; h < 9; h++) c += `<th>${h + 1}</th>`
+  c += '<th>OUT</th>'
+  for (let h = 9; h < HOYOS; h++) c += `<th>${h + 1}</th>`
+  return c + '<th>IN</th><th>TOT</th>'
+}
+
+function filaDeGolpes (T, A, jid) {
+  const d = A.d
+  const celda = (h) => {
+    const g = golpe(T, d, jid, h)
+    if (g === null) return '<td></td>'
+    const p = par(T, d, h)
+    return `<td class="${g < p ? 'bajo' : (g > p ? 'alto' : '')}">${esc(g)}</td>`
+  }
+  let f = `<td class="nom-col">${esc(corto(T, jid))}</td>`
+  for (let h = 0; h < 9; h++) f += celda(h)
+  f += `<td class="tot">${esc(sumaDe(T, d, jid, 0, 9))}</td>`
+  for (let h = 9; h < HOYOS; h++) f += celda(h)
+  f += `<td class="tot">${esc(sumaDe(T, d, jid, 9, 18))}</td><td class="tot">${esc(sumaDe(T, d, jid, 0, 18))}</td>`
+  return `<tr>${f}</tr>`
+}
+
+const celdaHist = (fila, h) => {
+  const v = fila.hist[h]
+  if (v === null || v === undefined) return '<td class="vacia"></td>'
+  return `<td class="${signoClase(v)}">${esc(signoTexto(v))}</td>`
+}
+
+/* Las filas de tramos: una por apuesta -salida, presión, tramo- con su
+   historia, su marcador y lo que vale. */
+function tablaDeTramos (T, A, vivo) {
+  /* Los tramos vienen contados desde el lado A. Si yo juego en el B, todo
+     -marcador, historia y dinero- se invierte para que la tabla diga lo
+     mismo que el veredicto de arriba; si no, un jugador del lado B leía
+     «Vas −1500» sobre tres renglones que decían +500. */
+  const mio = vivo.lados[1].includes(T.yo) ? -1 : 1
+  const filas = vivo.filas.map(f0 => {
+    const f = mio > 0 ? f0 : {
+      ...f0,
+      st: -f0.st,
+      dinero: -f0.dinero,
+      hist: f0.hist.map(x => (x === null ? null : -x)),
+      texto: f0.texto.replace('arriba', '\u0000').replace('abajo', 'arriba').replace('\u0000', 'abajo')
+    }
+    let c = `<td class="nom-col">${esc(f.et)}</td>`
+    for (let h = 0; h < 9; h++) c += celdaHist(f, h)
+    /* La columna OUT solo dice algo en los tramos que terminan en el 9;
+       los de la vuelta y el global cierran en la columna IN. */
+    c += f.fin <= 8 ? `<td class="tot ${signoClase(f.st)}">${esc(signoTexto(f.st))}</td>` : '<td class="tot"></td>'
+    for (let h = 9; h < HOYOS; h++) c += celdaHist(f, h)
+    c += `<td class="tot ${signoClase(f.st)}">${esc(f.texto)}</td>`
+    c += `<td class="tot ${signoClase(f.dinero)}">${esc(signoTexto(f.dinero))}</td>`
+    return `<tr>${c}</tr>`
+  }).join('')
+  const enJuego = vivo.lados[0].concat(vivo.lados[1])
+  const nombres = (l) => l.map(j => esc(corto(T, j))).join(' y ')
+  const cabecera = mio > 0
+    ? `${nombres(vivo.lados[0])} contra ${nombres(vivo.lados[1])}`
+    : `${nombres(vivo.lados[1])} contra ${nombres(vivo.lados[0])}`
+  return `<p class="guia">${cabecera}</p>
+    <div class="rejilla"><table>
+      <tr>${cabezaHoyos()}</tr>
+      ${enJuego.map(j => filaDeGolpes(T, A, j)).join('')}
+    </table></div>
+    <div class="rejilla bloque"><table>
+      <tr>${cabezaHoyos()}</tr>
+      ${filas}
+    </table></div>`
+}
+
+function tablaDePuntos (T, A, vivo) {
+  const cab = '<th>Hoyo</th>' + Array.from({ length: HOYOS }, (_, h) => `<th>${h + 1}</th>`).join('') + '<th>TOT</th>'
+  const filas = vivo.jugadores.map((jid, i) => {
+    const celdas = vivo.porHoyo.map(p => `<td>${p === null ? '' : esc(Math.round(p[i] * 10) / 10)}</td>`).join('')
+    return `<tr><td class="nom-col">${esc(corto(T, jid))}</td>${celdas}<td class="tot">${esc(Math.round(vivo.totales[i] * 10) / 10)}</td></tr>`
+  }).join('')
+  return `<div class="rejilla"><table>
+      <tr>${cabezaHoyos()}</tr>
+      ${vivo.jugadores.map(j => filaDeGolpes(T, A, j)).join('')}
+    </table></div>
+    <h2>Puntos</h2><div class="rejilla"><table><tr>${cab}</tr>${filas}</table></div>`
+}
+
+function tablaDeOnces (T, A, vivo) {
+  const cab = '<th>Hoyo</th>' + Array.from({ length: HOYOS }, (_, h) => `<th>${h + 1}</th>`).join('') + '<th>NETO</th>'
+  const filas = vivo.jugadores.map(x => {
+    const cuenta = new Set(x.cuentan)
+    const forzado = new Set(x.forzados)
+    const celdas = Array.from({ length: HOYOS }, (_, h) =>
+      `<td class="${cuenta.has(h) ? (forzado.has(h) ? 'nace' : 'cuenta') : 'fuera'}">${h + 1}</td>`).join('')
+    return `<tr><td class="nom-col">${esc(corto(T, x.jid))}</td>${celdas}
+      <td class="tot">${x.compite ? esc(x.total) : `${esc(x.cuentan.length)} de 11`}</td></tr>`
+  }).join('')
+  return `<div class="rejilla"><table>
+      <tr>${cabezaHoyos()}</tr>
+      ${vivo.jugadores.map(x => filaDeGolpes(T, A, x.jid)).join('')}
+    </table></div>
+    <div class="rejilla bloque"><table><tr>${cab}</tr>${filas}</table></div>
+    <p class="guia">Se marcan en Hoy, con el chip de cada jugador. Un hoyo se cierra cuando entra el golpe del siguiente.</p>`
+}
+
+/* Los bandos, solo donde hay dos de a dos: con dos jugadores cada quien es
+   su lado y no hay nada que cambiar. El lado se guarda en el torneo
+   (t.l.<j5>), así que el botón no necesita decir de qué apuesta habla. */
+function bandosDe (T, A) {
+  const juego = JUEGOS[A.tipo]
+  const p = participantes(T, A)
+  if (!juego.lados || p.length < 4) return ''
+  const chips = p.map(j => {
+    const lado = ladoVisible(T, A, j)
+    return `<button class="lado-chip${lado === 0 ? ' on' : ''}" data-accion="setLadoJuego" data-aid="${esc(A.id)}" data-jid="${esc(j)}">${esc(corto(T, j))} · ${lado === 0 ? 1 : 2}</button>`
+  }).join('')
+  return `<h2>Bandos</h2><div class="chips">${chips}</div>
+    <p class="guia">Toca a alguien para cambiarlo de bando.${bandosCuadran(T, A) ? '' : ' Ahora mismo no están parejos, así que se repartió a la mitad: los bandos se guardan para el torneo y hoy el grupo es otro.'}</p>`
+}
+
+
+/* El detalle del juego: el veredicto, los golpes y la forma que cada
+   juego tiene de contarse. Sin «Quitar» ni «Volver» -no hay lista- y sin
+   ajustes: viven en Ajustes, porque el juego es del torneo entero. */
+function vistaDetalleJuego (T, A) {
+  const juego = JUEGOS[A.tipo]
+  const r = juego.evaluar(T, A)
+  const v = r.vivo || {}
+  let cuerpoJuego = ''
+  if (v.forma === 'segmentos') {
+    /* Sin dos bandos no hay partido: antes salían dos tablas con su
+       encabezado y ni un renglón debajo, sin explicar nada. */
+    cuerpoJuego = v.lados[0].length && v.lados[1].length
+      ? tablaDeTramos(T, A, v)
+      : '<p class="guia">Hacen falta dos bandos para jugar. Acomódalos abajo.</p>'
+  }
+  else if (v.forma === 'puntos') cuerpoJuego = tablaDePuntos(T, A, v)
+  else if (v.forma === 'onces') cuerpoJuego = tablaDeOnces(T, A, v)
+  const dinero = miDinero(r.lineas, T.yo)
+  return `<h2>${esc(juego.nombre)}</h2>
+    <p class="veredicto ${signoClase(dinero)}">Vas ${esc(signoTexto(dinero))}</p>
+    ${cuerpoJuego}
+    ${bandosDe(T, A)}`
+}
+
+/* Lo que llevo con cada quien HOY, sumando todo lo que se juega: este
+   juego y las presiones si están las dos. */
+function bloqueCuentas (T) {
+  const d = T.d || 0
+  const libro = libroDia(T, d)
+  const filas = saldosDe(libro, T.yo).map(s => `<div class="fila saldo">
+      <div class="quien"><span class="nom">${esc(corto(T, s.rival))}</span>
+        <div class="meta">${s.saldo > 0 ? 'te debe' : 'le debes'}</div></div>
+      <span class="dinero ${signoClase(s.saldo)}">${esc(Math.abs(s.saldo))}</span>
+    </div>`).join('')
+  const total = libro.porJugador.get(T.yo) || 0
+  const torneo = dias(T) > 1 ? libroTorneo(T).porJugador.get(T.yo) || 0 : null
+  return `<h2>Cuentas del día</h2>
+    ${filas || '<p class="guia">Nadie debe nada todavía.</p>'}
+    <p class="veredicto ${signoClase(total)}">Hoy vas ${esc(signoTexto(total))}</p>
+    ${torneo === null ? '' : `<h2>Acumulado del torneo</h2>
+      <p class="veredicto ${signoClase(torneo)}">${esc(signoTexto(torneo))}</p>`}`
+}
+
+/* Con cuántos se juega, dicho como lo diría alguien en el tee. */
+const exigenciaDe = (juego) =>
+  juego.lados ? '2 o 4' : (juego.min === juego.max ? `${juego.min}` : `${juego.min} a ${juego.max}`)
+
+/* El nombre bonito del juego del torneo, para la cabecera: el chip decía
+   la llave interna ('match · neto') en una app que por lo demás está toda
+   en español. */
+const nombreDelJuego = (T) => (JUEGOS[formato(T)] || {}).nombre || 'Stableford'
+function vistaJuego (T) {
+  const tipo = formato(T)
+  const juego = JUEGOS[tipo]
+  if (!juego || !juego.alta) {
+    return '<h2>Juego</h2><p class="guia">Este torneo no juega ninguno de los juegos de dinero. Se eligen en Ajustes.</p>'
+  }
+  const titulo = `<h2>${esc(juego.nombre)}</h2>`
+  if (!T.yo) {
+    return `${titulo}<p class="guia">Di quién eres para ver tu juego y tus cuentas.</p>
+      <button class="btn sec" data-accion="cambiarYo">Decir quién soy</button>`
+  }
+  const d = T.d || 0
+  const grupo = miGrupo(T, d)
+  if (!grupo) return `${titulo}<p class="guia">Hoy no estás en ningún grupo. Acomódalos en la pestaña Grupos.</p>`
+  if (!cabeEnGrupo(tipo, grupo.length)) {
+    return `${titulo}<p class="guia">${esc(juego.nombre)} es de ${esc(exigenciaDe(juego))} jugadores: tu grupo es de ${esc(grupo.length)}.
+      Cambia el juego en Ajustes o acomoda los grupos.</p>`
+  }
+  const A = apuestasDelDia(T, d).find(x => x.tipo === tipo && participantes(T, x).includes(T.yo))
+  if (!A) return `${titulo}<p class="guia">Hoy no hay juego en tu grupo.</p>`
+  return vistaDetalleJuego(T, A) + bloqueCuentas(T)
+}
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1818,8 +2739,13 @@ const ICONOS = {
   grupos: svg('<circle cx="9" cy="8" r="3"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0"/><path d="M16 6.5a3 3 0 0 1 0 5.8M17.5 19a5.5 5.5 0 0 0-2-4.2"/>'),
   ajustes: svg('<circle cx="12" cy="12" r="3.2"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M18.4 5.6L17 7M7 17l-1.4 1.4"/>')
 }
+
+/* Entre Tabla y Grupos van las dos pestañas de juego, y nunca las dos a
+   la vez: la de presiones si el torneo las juega, la del juego elegido si
+   es uno del registro. La etiqueta 'Juego' es solo el hueco -en la barra
+   se pinta el nombre del juego que se está jugando-. */
 const VISTAS = [
-  ['hoy', 'Hoy'], ['tarjeta', 'Tarjeta'], ['tabla', 'Tabla'], ['presiones', 'Presiones'], ['grupos', 'Grupos']
+  ['hoy', 'Hoy'], ['tarjeta', 'Tarjeta'], ['tabla', 'Tabla'], ['juego', 'Juego'], ['presiones', 'Presiones'], ['grupos', 'Grupos']
 ]
 function cuerpo (S, base = '') {
   /* Las pantallas de arranque van ANTES de mirar el torneo activo: se llega
@@ -1837,16 +2763,23 @@ function cuerpo (S, base = '') {
     tarjeta: () => vistaTarjeta(T),
     tabla: () => vistaTabla(T),
     presiones: () => vistaPresiones(T),
+    juego: () => vistaJuego(T),
     grupos: () => vistaRoster(T, S),
     ajustes: () => vistaAjustes(T, S, base)
   }
-  /* Si el torneo no juega presiones, la pestaña no existe: ni en la
-     barra ni como vista guardada (caería en Hoy). */
-  const juega = presOn(T)
-  const cual = pintores[S.vista] && (S.vista !== 'presiones' || juega) ? S.vista : 'hoy'
-  const TODAS = VISTAS.filter(([k]) => k !== 'presiones' || juega).concat([['ajustes', 'Ajustes']])
+  /* Una pestaña de juego que el torneo no juega no existe: ni en la barra
+     ni como vista guardada (caería en Hoy). Presiones se enciende con su
+     interruptor; la del juego, con que el formato sea uno del registro
+     -Stableford usa la Tabla y no abre ninguna-. */
+  const suyo = JUEGOS[formato(T)]
+  const juegoDelTorneo = suyo && suyo.alta ? suyo : null
+  const seJuega = (k) => (k === 'presiones' ? presOn(T) : (k === 'juego' ? !!juegoDelTorneo : true))
+  const cual = pintores[S.vista] && seJuega(S.vista) ? S.vista : 'hoy'
+  const TODAS = VISTAS.filter(([k]) => seJuega(k))
+    .map(([k, et]) => [k, k === 'juego' ? juegoDelTorneo.nombre : et])
+    .concat([['ajustes', 'Ajustes']])
   const pestanas = TODAS.map(([k, et]) =>
-    `<button class="${cual === k ? 'on' : ''}" data-accion="irVista" data-vista="${k}">${ICONOS[k] || ''}<span>${et}</span></button>`).join('')
+    `<button class="${cual === k ? 'on' : ''}" data-accion="irVista" data-vista="${k}">${ICONOS[k] || ''}<span>${esc(et)}</span></button>`).join('')
   const d = T.d || 0
   const sub = [`Día ${d + 1}`, fecha(T, d), salida(T, d)].filter(Boolean).join(' · ')
   const yo = T.yo ? (jugadores(T).find(j => j.id === T.yo) || {}).n : ''
@@ -1857,7 +2790,7 @@ function cuerpo (S, base = '') {
         </button>
         <div class="marca-der">
           <span class="chip" id="chipSync">sin señal</span>
-          <span class="chip fmt">${esc(formato(T))} · neto</span>
+          <span class="chip fmt">${esc(nombreDelJuego(T))} · neto</span>
         </div>
       </div>
       ${yo ? `<div class="quien-soy">${esc(yo)}</div>` : ''}
@@ -1873,6 +2806,50 @@ function cuerpo (S, base = '') {
 function pintar (nodo, S, base = '') {
   nodo.innerHTML = cuerpo(S, base)
 }
+
+
+
+
+/* Alta, baja y ajustes de una apuesta. Nada aquí calcula: solo emite
+   hechos. Un número escrito en un formulario llega como texto; se guarda
+   como número para que el motor no tenga que adivinar después. */
+const valorCfg = (v) => {
+  if (typeof v === 'number' || typeof v === 'boolean') return v
+  const s = String(v ?? '').trim()
+  if (s !== '' && /^-?\d+$/.test(s)) return parseInt(s, 10)
+  return s
+}
+
+/* Cuatro caracteres, no diez: con `a.<aid>.c.empate` ya vamos en 15 de los
+   16 que el servidor v1 respeta. 32^4 es un millón; un torneo tiene un
+   puñado de apuestas. */
+function nuevaApuesta (T, { tipo, d, grupo, cfg = {} }, ahora = Date.now()) {
+  const aid = sortear(4)
+  emitir(T, `a.${aid}.t`, String(tipo), ahora)
+  emitir(T, `a.${aid}.d`, Number(d) || 0, ahora)
+  emitir(T, `a.${aid}.g`, Number(grupo) || 0, ahora)
+  for (const k in cfg) emitir(T, llaveCfg(aid, k), valorCfg(cfg[k]), ahora)
+  return aid
+}
+
+/* Quitar no borra: pone la baja. Los hechos no se pueden retirar del
+   servidor, y un borrado local reaparecería en la próxima bajada. */
+const quitarApuesta = (T, aid) => emitir(T, `a.${aid}.x`, 1)
+const ponCfg = (T, aid, k, v) => emitir(T, llaveCfg(aid, k), valorCfg(v))
+const ponLado = (T, aid, jid, lado) => emitir(T, llaveLado(aid, jid), lado ? 1 : 0)
+
+/* Los 18 hoyos de un jugador viajan en UN hecho: una máscara de bits. Es
+   el precio del límite de 16 caracteres de la llave, y se paga en
+   granularidad de fusión -dos teléfonos marcando para el mismo jugador a
+   la vez se pisan-, que es aceptable: cada quien marca los suyos. */
+function marcarOnces (T, aid, h, jid, v) {
+  const antes = mascaraOnces(T, aid, jid)
+  const despues = v ? (antes | (1 << h)) : (antes & ~(1 << h))
+  emitir(T, llaveOnces(aid, jid), despues)
+}
+
+
+
 
 
 
@@ -1998,6 +2975,28 @@ const ACCIONES = {
   copiarFicha: () => { const t = T(); copiarFicha(t, 0, t.d || 0); salvar(); programar() },
   setCorto: (d, el) => { ponCorto(T(), d.jid, el.value); salvar(); programar() },
   setFormato: (d, el) => { ponFormato(T(), el.value); salvar(); programar() },
+  /* El juego es del TORNEO, no de una apuesta: lo suyo se escribe con el
+     aid sintético del primer grupo, que es lo que manda los hechos a
+     t.j.*, t.l.* y t.o.* (ver selectores.js, aidSintetico). */
+  setCfgJuego: (d, el) => { ponCfg(T(), formato(T()) + '-0', d.k, el.value); salvar(); programar() },
+  setLadoJuego: d => {
+    const t = T()
+    /* `ladoVisible` es el mismo bando que pinta la pantalla. Antes esto
+       suponía 0 y la vista derivaba el suyo de la posición, así que el
+       primer toque sobre alguien del bando 2 no hacía nada. */
+    const A = apuestasDelDia(t, t.d || 0).find(x => x.id === d.aid)
+    if (!A) return
+    ponLado(t, A.id, d.jid, ladoVisible(t, A, d.jid) === 0 ? 1 : 0)
+    salvar(); programar()
+  },
+  /* El aid viaja en el chip porque en Hoy puede haber una apuesta de
+     Onces dada de alta además de la del torneo. */
+  marcaOnce: d => {
+    const t = T()
+    const h = t.hoyo || 0
+    marcarOnces(t, d.aid, h, d.jid, !marcaOnces(t, d.aid, h, d.jid))
+    salvar(); programar()
+  },
   setPresOn: (d, el) => { ponPresOn(T(), el.checked); salvar(); programar() },
   setPresIda: (d, el) => { ponPresIda(T(), el.value); salvar(); programar() },
   setPresVuelta: (d, el) => { ponPresVuelta(T(), el.value); salvar(); programar() },
