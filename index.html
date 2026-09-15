@@ -2175,6 +2175,153 @@ function evaluarOnces (T, A, hasta = HOYOS - 1) {
 
 
 
+/* Medal: stroke play de toda la vida. Se suman los golpes netos y el más
+   bajo gana. Lo que cambia respecto a la Tabla —que ya lleva el neto de
+   todos— es que aquí hay dinero, y en esta app el dinero es siempre entre
+   dos: cada pareja de la mesa liquida su monto, así que en un grupo de
+   cuatro el que gana cobra tres veces y el último paga tres.
+
+   Se comparan SOLO los hoyos que los dos jugaron. A media ronda, sumar
+   totales enteros diría que va ganando el que menos hoyos lleva. */
+function evaluarMedal (T, A, hasta = HOYOS - 1) {
+  const p = participantes(T, A)
+  const monto = Math.max(0, Math.round(Number(cfgDe(T, A.id, 'monto', 100)) || 0))
+  const tope = Math.min(hasta, HOYOS - 1)
+  const netos = p.map(jid => Array.from({ length: HOYOS }, (_, h) => (h <= tope ? netoJuego(T, A, jid, h) : null)))
+
+  const lineas = []
+  for (let i = 0; i < p.length; i++) {
+    for (let j = i + 1; j < p.length; j++) {
+      let ta = 0, tb = 0, comunes = 0
+      for (let h = 0; h < HOYOS; h++) {
+        if (netos[i][h] === null || netos[j][h] === null) continue
+        ta += netos[i][h]; tb += netos[j][h]; comunes++
+      }
+      if (!comunes || ta === tb || !monto) continue
+      const [gana, pierde] = ta < tb ? [p[i], p[j]] : [p[j], p[i]]
+      lineas.push({ de: pierde, a: gana, monto, motivo: 'Medal' })
+    }
+  }
+
+  const porHoyo = Array.from({ length: HOYOS }, (_, h) =>
+    (netos.some(n => n[h] !== null) ? netos.map(n => n[h]) : null))
+  const totales = netos.map(n => n.reduce((s, x) => s + (x ?? 0), 0))
+  return { lineas, vivo: { forma: 'puntos', titulo: 'Neto', jugadores: p, porHoyo, totales } }
+}
+
+
+
+/* Skins: cada hoyo vale un skin. Lo gana quien haga la bola neta más baja
+   ÉL SOLO; si empatan los dos mejores, no lo gana nadie y el skin se
+   acumula al hoyo siguiente. Quien lo gana le cobra su valor a cada uno de
+   los demás, que es lo que hace que un skin de dos hoyos acumulados en un
+   grupo de cuatro duela de verdad.
+
+   Los skins que queden acumulados al acabar la ronda se pierden: es la
+   regla de la casa en todas partes, y es lo que hace que el 18 con tres
+   acumulados sea el mejor hoyo del día. */
+function evaluarSkins (T, A, hasta = HOYOS - 1) {
+  const p = participantes(T, A)
+  const monto = Math.max(0, Math.round(Number(cfgDe(T, A.id, 'monto', 50)) || 0))
+  const acumula = Number(cfgDe(T, A.id, 'carry', 1)) !== 0
+  const tope = Math.min(hasta, HOYOS - 1)
+
+  const lineas = []
+  const porHoyo = new Array(HOYOS).fill(null)
+  const totales = p.map(() => 0)
+  let bote = 1
+
+  for (let h = 0; h <= tope; h++) {
+    const netos = p.map(jid => netoJuego(T, A, jid, h))
+    if (netos.every(n => n === null)) continue
+    const mejor = Math.min(...netos.filter(n => n !== null))
+    const cuantos = netos.filter(n => n === mejor).length
+    const fila = p.map(() => 0)
+    if (cuantos === 1) {
+      const g = netos.indexOf(mejor)
+      const valor = monto * bote
+      for (let k = 0; k < p.length; k++) {
+        if (k === g) continue
+        fila[k] = -valor
+        totales[k] -= valor
+        if (valor) lineas.push({ de: p[k], a: p[g], monto: valor, motivo: `Skin del ${h + 1}` })
+      }
+      fila[g] = valor * (p.length - 1)
+      totales[g] += fila[g]
+      bote = 1
+    } else {
+      /* Nadie lo gana: se acumula. Sin acumulado, el skin simplemente se
+         pierde y el siguiente vuelve a valer uno. */
+      bote = acumula ? bote + 1 : 1
+    }
+    porHoyo[h] = fila
+  }
+  return { lineas, vivo: { forma: 'puntos', titulo: 'Skins', jugadores: p, porHoyo, totales } }
+}
+
+
+
+
+/* Chicago: cada quien empieza debiendo una cuota que sale de su hándicap
+   —39 menos los golpes que recibe— y la va pagando con puntos: bogey 1,
+   par 2, birdie 4, eagle 8; doble bogey o peor, nada. Gana quien más pase
+   su cuota.
+
+   Aquí el hándicap NO reparte golpes hoyo por hoyo: entra por la cuota, y
+   los puntos se cuentan del score bruto contra el par. Es lo que hace que
+   Chicago se sienta distinto de un Stableford neto aunque se parezcan en
+   la tabla: al que juega mejor se le pide más, no se le quita menos. */
+const CUOTA_BASE = 39
+const puntosChicago = (golpes, parHoyo) => {
+  if (golpes === null || golpes === undefined) return null
+  const dif = golpes - parHoyo
+  if (dif <= -2) return 8
+  if (dif === -1) return 4
+  if (dif === 0) return 2
+  if (dif === 1) return 1
+  return 0
+}
+const cuotaDe = (T, jid, base) => Math.max(0, Math.round(base - hcpCampo(T, jid)))
+function evaluarChicago (T, A, hasta = HOYOS - 1) {
+  const p = participantes(T, A)
+  const monto = Math.max(0, Math.round(Number(cfgDe(T, A.id, 'monto', 20)) || 0))
+  const base = Math.round(Number(cfgDe(T, A.id, 'cuota', CUOTA_BASE)) || CUOTA_BASE)
+  const tope = Math.min(hasta, HOYOS - 1)
+
+  const pts = p.map(jid => Array.from({ length: HOYOS }, (_, h) =>
+    (h <= tope ? puntosChicago(golpe(T, A.d, jid, h), par(T, A.d, h)) : null)))
+  const cuotas = p.map(jid => cuotaDe(T, jid, base))
+  const sobre = p.map((_, i) => pts[i].reduce((s, x) => s + (x ?? 0), 0) - cuotas[i])
+
+  const lineas = []
+  for (let i = 0; i < p.length; i++) {
+    for (let j = i + 1; j < p.length; j++) {
+      const dif = sobre[i] - sobre[j]
+      if (!dif || !monto) continue
+      const cuanto = Math.abs(dif) * monto
+      if (dif > 0) lineas.push({ de: p[j], a: p[i], monto: cuanto, motivo: 'Chicago' })
+      else lineas.push({ de: p[i], a: p[j], monto: cuanto, motivo: 'Chicago' })
+    }
+  }
+
+  const porHoyo = Array.from({ length: HOYOS }, (_, h) =>
+    (pts.some(x => x[h] !== null) ? pts.map(x => x[h]) : null))
+  return {
+    lineas,
+    vivo: {
+      forma: 'puntos',
+      titulo: 'Puntos sobre la cuota',
+      /* Con nombre: cuatro cuotas sueltas no dicen de quién es cada una. */
+      pie: cuotas.map(c => `cuota ${c}`),
+      jugadores: p,
+      porHoyo,
+      totales: sobre
+    }
+  }
+}
+
+
+
 /* Presiones no se da de alta: mientras el torneo las juegue, el libro
    sintetiza una apuesta por grupo. Su id no es de sortear -no hay hechos
    `a.` detrás- y por eso lleva su propia forma. */
@@ -2204,6 +2351,9 @@ function evaluarPresiones (T, A, hasta) {
    Ajustes. `etiqueta` es cómo cabe en la barra de pestañas, que a 390 px
    reparte unos 55 px por pestaña: "Hoyo por hoyo" ahí se partía en dos
    renglones y empujaba a Sliding fuera de la pantalla. */
+
+
+
 
 
 
@@ -2274,6 +2424,40 @@ const JUEGOS = {
     alta: true,
     cfg: [{ k: 'monto', et: 'Monto', def: 100 }, HCP],
     evaluar: evaluarOnces
+  },
+  medal: {
+    nombre: 'Medal',
+    etiqueta: 'Medal',
+    min: 2,
+    max: 5,
+    lados: false,
+    alta: true,
+    cfg: [{ k: 'monto', et: 'Monto', def: 100 }, HCP],
+    evaluar: evaluarMedal
+  },
+  skins: {
+    nombre: 'Skins',
+    etiqueta: 'Skins',
+    min: 2,
+    max: 5,
+    lados: false,
+    alta: true,
+    cfg: [{ k: 'monto', et: 'Monto del skin', def: 50 },
+      { k: 'carry', et: 'Se acumula al empatar', def: 1, opciones: [{ v: 1, et: 'Sí' }, { v: 0, et: 'No' }] }, HCP],
+    evaluar: evaluarSkins
+  },
+  chicago: {
+    nombre: 'Chicago',
+    etiqueta: 'Chicago',
+    min: 2,
+    max: 5,
+    lados: false,
+    alta: true,
+    /* Sin HCP: en Chicago el hándicap entra por la cuota, no repartiendo
+       golpes hoyo por hoyo. Los puntos salen del score bruto contra el par. */
+    cfg: [{ k: 'monto', et: 'Monto por punto', def: 20 }, { k: 'cuota', et: 'Cuota base', def: 39 }],
+    cuenta: 'bruto contra la cuota',
+    evaluar: evaluarChicago
   }
 }
 
@@ -2815,8 +2999,8 @@ function vistaDias (T) {
    HTML y no lo suelta: Paulino publicó cinco veces y siguió viendo la
    versión vieja. Con esto la app se entera sola y ofrece pasar a la nueva,
    en vez de que cada quien tenga que adivinar cómo forzar a su iOS. */
-const VERSION = '2026-09-15·a835247'
-const VERSION_DEL_ARMADO = '2026-09-15·a835247'
+const VERSION = '2026-09-15·409dd2e'
+const VERSION_DEL_ARMADO = '2026-09-15·409dd2e'
 
 /* El nombre de la constante es el ancla que se busca en el HTML servido.
    Se escribe partido para que esta línea no se encuentre a sí misma. */
@@ -3243,15 +3427,25 @@ function tablaDeTramos (T, A, vivo) {
 
 function tablaDePuntos (T, A, vivo) {
   const cab = '<th>Hoyo</th>' + Array.from({ length: HOYOS }, (_, h) => `<th>${h + 1}</th>`).join('') + '<th>TOT</th>'
+  const redondo = (x) => Math.round(x * 10) / 10
   const filas = vivo.jugadores.map((jid, i) => {
-    const celdas = vivo.porHoyo.map(p => `<td>${p === null ? '' : esc(Math.round(p[i] * 10) / 10)}</td>`).join('')
-    return `<tr><td class="nom-col">${esc(corto(T, jid))}</td>${celdas}<td class="tot">${esc(Math.round(vivo.totales[i] * 10) / 10)}</td></tr>`
+    /* Una celda vacía es un hoyo que ese jugador no ha jugado. Sin esto
+       salía un 0, que en Skins y en Chicago se lee como "aquí no sacó
+       nada" y es una cosa bien distinta. */
+    const celdas = vivo.porHoyo.map(p => {
+      const v = p === null ? null : p[i]
+      return `<td>${v === null || v === undefined ? '' : esc(redondo(v))}</td>`
+    }).join('')
+    return `<tr><td class="nom-col">${esc(corto(T, jid))}</td>${celdas}<td class="tot">${esc(redondo(vivo.totales[i]))}</td></tr>`
   }).join('')
   return `<div class="rejilla"><table>
       <tr>${cabezaHoyos()}</tr>
       ${vivo.jugadores.map(j => filaDeGolpes(T, A, j)).join('')}
     </table></div>
-    <h2>Puntos</h2><div class="rejilla"><table><tr>${cab}</tr>${filas}</table></div>`
+    <h2>${esc(vivo.titulo || 'Puntos')}</h2><div class="rejilla"><table><tr>${cab}</tr>${filas}</table></div>
+    ${vivo.pie
+      ? `<p class="guia">${vivo.pie.map((t, i) => `${esc(corto(T, vivo.jugadores[i]))} ${esc(t)}`).join(' · ')}</p>`
+      : ''}`
 }
 
 function tablaDeOnces (T, A, vivo) {
@@ -3339,6 +3533,16 @@ const exigenciaDe = (juego) =>
    la llave interna ('match · neto') en una app que por lo demás está toda
    en español. */
 const nombreDelJuego = (T) => (JUEGOS[formato(T)] || {}).nombre || 'Stableford'
+
+/* Cómo se cuenta ese juego, para el chip de la cabecera. Decía «neto»
+   siempre, y en Chicago es mentira: ahí se cuenta el BRUTO contra el par y
+   el hándicap entra por la cuota. Un chip que miente sobre con qué se
+   está jugando es de las cosas que se descubren al pagar. */
+function comoSeCuenta (T) {
+  const j = JUEGOS[formato(T)]
+  if (j && j.cuenta) return ' · ' + j.cuenta
+  return ' · neto'
+}
 function vistaJuego (T) {
   const tipo = formato(T)
   const juego = JUEGOS[tipo]
@@ -3465,7 +3669,7 @@ function cuerpo (S, base = '', versionNueva = null) {
         </button>
         <div class="marca-der">
           <span class="chip" id="chipSync">sin señal</span>
-          <span class="chip fmt">${esc(nombreDelJuego(T))} · neto</span>
+          <span class="chip fmt">${esc(nombreDelJuego(T))}${esc(comoSeCuenta(T))}</span>
         </div>
       </div>
       ${yo ? `<div class="quien-soy">${esc(yo)}</div>` : ''}
