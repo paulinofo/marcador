@@ -7,14 +7,17 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Golf</title>
 <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect fill='%2316181C' width='180' height='180'/%3E%3Ccircle cx='90' cy='90' r='70' fill='%237FB08A'/%3E%3Ccircle cx='90' cy='70' r='8' fill='%2316181C'/%3E%3Cpath d='M90 78 L85 120 Q90 125 95 120 Z' fill='%2316181C'/%3E%3C/svg%3E">
-<style>/* Sistema tomado de las apps anteriores de Paulino, no inventado: los nombres
+<style>/* Sistema tomado de las apps anteriores de Paulino, no inventado. La paleta
+   es la del Invitacional Acapulco -petróleo en vez del grafito de Santa Fe-,
+   elegida por él el 15-sep-2026; el resto de los tokens son idénticos en las
+   dos apps. Los nombres
    son del dominio —tarjeta, tinta, latón, bandera, cal, verde por el green— y
    la idea es una tarjeta de papel sobre un teléfono que se lee al sol. */
 :root{
-  --verde:#2B2E33; --verde-hondo:#16181C; --verde-linea:#3C4149;
+  --verde:#0B4F5E; --verde-hondo:#04272F; --verde-linea:#167C8C;
   --tarjeta:#F4EFE3; --tarjeta-linea:#DDD4C0;
   --tinta:#1A1D19; --tinta-suave:#5C6459;
-  --laton:#C9A227; --bandera:#C0392B; --cal:#A8AEB8; --ok:#3E7D5A;
+  --laton:#C9A227; --bandera:#C0392B; --cal:#92B8BE; --ok:#3E7D5A;
   --r:10px;
   --safe-t:env(safe-area-inset-top,0px);
   --safe-b:env(safe-area-inset-bottom,0px);
@@ -2238,8 +2241,8 @@ function vistaDias (T) {
    HTML y no lo suelta: Paulino publicó cinco veces y siguió viendo la
    versión vieja. Con esto la app se entera sola y ofrece pasar a la nueva,
    en vez de que cada quien tenga que adivinar cómo forzar a su iOS. */
-const VERSION = '2026-09-15·ec10a81'
-const VERSION_DEL_ARMADO = '2026-09-15·ec10a81'
+const VERSION = '2026-09-15·7a546f1'
+const VERSION_DEL_ARMADO = '2026-09-15·7a546f1'
 
 /* El nombre de la constante es el ancla que se busca en el HTML servido.
    Se escribe partido para que esta línea no se encuentre a sí misma. */
