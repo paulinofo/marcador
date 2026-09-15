@@ -166,9 +166,17 @@ nav button.on::before{background:var(--laton)}
   border-radius:9px;padding:13px;color:var(--cal);font-weight:600;font-size:15px}
 
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* Un fallo en el teléfono tiene que verse. Antes, una acción que no hacía
+   nada -o que tronaba- dejaba la pantalla igual y no había forma de saber
+   por qué desde el campo. */
+#aviso{position:fixed;left:8px;right:8px;top:calc(var(--safe-t) + 8px);z-index:60;margin:0;
+  background:var(--bandera);color:#fff;border-radius:var(--r);padding:12px 14px;
+  font-size:15px;font-weight:600;box-shadow:0 6px 20px rgba(0,0,0,.35)}
 </style>
 </head>
 <body>
+<p id="aviso" role="alert" hidden></p>
 <div id="app"></div>
 <script type="module">const LLAVE = 'golf.v1'
 
@@ -1244,9 +1252,13 @@ const ACCIONES = {
      campo) no pasa nada — sincronizar() lo vuelve a intentar en cada
      ciclo mientras el torneo no tenga código. */
   crearDesdeForm: async () => {
-    const nom = document.getElementById('nomTorneo').value.trim()
+    const campo = document.getElementById('nomTorneo')
+    const nom = campo.value.trim()
     const dd = Math.max(1, parseInt(document.getElementById('diasTorneo').value, 10) || 1)
-    if (!nom) return
+    /* Sin esto el botón se tragaba el toque en silencio, y el recuadro
+       muestra "Santa Fe 2026" en gris: parece un nombre ya escrito. */
+    if (!nom) { avisar('Ponle un nombre al torneo'); if (campo.focus) campo.focus(); return }
+    avisar('')
     const t = crearDesdeFormulario(S, { nombre: nom, dias: dd })
     S.vista = 'grupos'
     salvar()
@@ -1294,12 +1306,33 @@ const ACCIONES = {
    en espacios de nombres distintos a propósito: si compartieran uno, un
    toque sobre un input dispararía su acción antes de que el usuario
    escribiera nada. */
+/* Un fallo que no se ve es un fallo que no se puede arreglar desde el
+   campo: sin esto, una acción que tronaba dejaba la pantalla idéntica y
+   el teléfono no daba ninguna pista. */
+function avisar (mensaje) {
+  const nodo = typeof document !== 'undefined' && document.getElementById('aviso')
+  if (!nodo) return
+  nodo.textContent = mensaje || ''
+  nodo.hidden = !mensaje
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('error', e => avisar('Algo falló: ' + (e.message || e.error)))
+  window.addEventListener('unhandledrejection', e => avisar('Algo falló: ' + ((e.reason && e.reason.message) || e.reason)))
+}
+
 function delegar (evento, atributo) {
   document.addEventListener(evento, e => {
     const el = e.target.closest(`[data-${atributo}]`)
     if (!el) return
     const f = ACCIONES[el.dataset[atributo]]
-    if (f) f(el.dataset, el)
+    if (!f) return
+    try {
+      const r = f(el.dataset, el)
+      if (r && r.catch) r.catch(x => avisar('Algo falló: ' + (x && x.message ? x.message : x)))
+    } catch (x) {
+      avisar('Algo falló: ' + (x && x.message ? x.message : x))
+    }
   })
 }
 delegar('click', 'accion')
