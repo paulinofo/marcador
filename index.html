@@ -35,7 +35,7 @@ html,body{margin:0;padding:0}
 body{background:var(--verde-hondo);color:var(--tarjeta);font-family:var(--ui);
   font-size:17px;line-height:1.4;-webkit-font-smoothing:antialiased;
   overscroll-behavior-y:none}
-button,input,select{font-family:inherit;font-size:17px}
+button,input,select,textarea{font-family:inherit;font-size:17px}
 button{cursor:pointer;border:none;background:none;color:inherit}
 :focus-visible{outline:2px solid var(--laton);outline-offset:2px}
 
@@ -123,12 +123,21 @@ h2{font-size:12px;font-family:var(--mono);letter-spacing:.12em;text-transform:up
 .fila .acciones button{background:var(--verde-linea);color:var(--tarjeta);
   border-radius:8px;min-width:44px;height:42px;padding:0 9px;font-size:14px;font-weight:600}
 .fila input.corto{margin:6px 0 0;padding:8px 10px;font-size:15px;max-width:180px}
+/* El renglón del sliding: el nombre manda —es lo que se busca al mirar la
+   lista— y el número cabe justo, con sitio para el signo y dos cifras. */
+.fila input.slide{margin:0;width:66px;padding:10px 8px;text-align:center;
+  font-family:var(--mono);font-size:16px}
 
 /* ── Controles ──────────────────────────────────────────────── */
-input,select{background:var(--verde);border:1px solid var(--verde-linea);border-radius:8px;
+input,select,textarea{background:var(--verde);border:1px solid var(--verde-linea);border-radius:8px;
   padding:12px;color:var(--tarjeta);width:100%;margin:0 0 8px}
+textarea{font-family:var(--mono);font-size:15px;line-height:1.5;resize:vertical}
+/* Dos recuadros en un renglón: el nombre manda y el número se queda con lo
+   justo, que es como se lee una lista de sliding en papel. */
+.fila-alta{display:grid;grid-template-columns:1fr 92px;gap:7px}
+.fila-alta input{margin:0 0 8px}
 input::placeholder{color:var(--tinta-suave)}
-input:focus,select:focus{outline:2px solid var(--laton);outline-offset:1px}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--laton);outline-offset:1px}
 .btn{display:block;width:100%;padding:13px;border-radius:9px;background:var(--laton);color:var(--verde-hondo);
   font-weight:700;font-size:17px;margin-top:9px}
 .btn.sec{background:transparent;border:1px solid var(--verde-linea);color:var(--tarjeta)}
@@ -422,6 +431,9 @@ function quitarTorneo (S, tid) {
 function indiceDeGente (S, nombre) {
   const g = (S.gente || []).find(x => x.n === nombre)
   return g ? g.i : 0
+}
+function olvidarGente (S, nombre) {
+  S.gente = (S.gente || []).filter(g => g.n !== nombre)
 }
 function recordarGente (S, nombre, idx) {
   const i = S.gente.findIndex(g => g.n === nombre)
@@ -944,6 +956,7 @@ function vistaArranque (S) {
     <h2>${lista ? 'Otra vez' : 'Empieza'}</h2>
     <button class="btn" data-accion="abrirAsistente">Partida o torneo nuevo</button>
     <button class="btn sec" data-accion="irVista" data-vista="unirme">Unirme a uno</button>
+    <button class="btn sec" data-accion="irVista" data-vista="sliding">Golf Sliding</button>
     ${cerrados ? `<h2>Terminados</h2>${cerrados}` : ''}
   </div>`
 }
@@ -1119,6 +1132,95 @@ function usaCampo (T, d, ficha) {
 
 
 
+/* Golf Sliding: con cuántos golpes juega cada uno de los suyos. Es lo que
+   Paulino lleva apuntado de años en una nota del teléfono, y lo que evita
+   volver a teclear las mismas ventajas cada sábado. Vive solo en este
+   teléfono —es la libreta local puesta a la vista— y no viaja al grupo.
+
+   EL SIGNO, que es lo único que hay que entender aquí: el número es lo que
+   esa persona DA. Javier Gordillo +7 da siete golpes; Ramón −3 recibe
+   tres; entre ellos se dan diez, que es la resta. Cada quien tiene el
+   suyo, así que la lista sirve aunque el dueño del teléfono no juegue.
+
+   Por dentro el motor usa lo contrario —el hándicap de golf de toda la
+   vida, donde el número son los golpes que uno RECIBE— porque es lo que
+   entienden el Stableford, las presiones y los juegos. La conversión es
+   una resta y vive aquí, en el borde: `deSliding` al escribir, `aSliding`
+   al leer. En ningún otro sitio del programa se le cambia el signo a
+   nada. */
+const aSliding = (indiceDeGolf) => -(Number(indiceDeGolf) || 0)
+const deSliding = (sliding) => -(Number(sliding) || 0)
+
+/* Con el signo siempre a la vista: un "+7" se lee de un vistazo, un "7"
+   suelto obliga a acordarse de qué significaba. */
+const signo = (v) => (Number(v) > 0 ? '+' + v : String(v))
+function comoSeLee (sliding) {
+  const n = Number(sliding) || 0
+  if (!n) return 'a la par'
+  const g = Math.abs(n) === 1 ? 'golpe' : 'golpes'
+  return n > 0 ? `da ${Math.abs(n)} ${g}` : `recibe ${Math.abs(n)} ${g}`
+}
+
+/* Una línea de la lista tal como está escrita en la nota del teléfono:
+   "Ramón  -3", "Juan Pablo Fer +10 Blancas.", "Jorge Martínez (bro) +7".
+   El número es el primer ±entero que aparece; lo que va antes es el
+   nombre y lo que va después es un apunte suyo que no nos toca. */
+function leeLinea (linea) {
+  const t = String(linea ?? '').trim()
+  if (!t) return null
+  const m = /^(.*?)\s*([+-]\s?\d+(?:\.\d+)?)(?:\s|$)/.exec(t)
+  if (!m) return null
+  const n = m[1].trim().replace(/[.,;:]+$/, '')
+  if (!n) return null
+  return { n, sliding: Number(m[2].replace(/\s/g, '')) }
+}
+function leeLista (texto) {
+  return String(texto ?? '').split(/\r?\n/).map(leeLinea).filter(Boolean)
+}
+function listaSliding (S) {
+  return (S.gente || [])
+    .filter(g => g && g.n)
+    .map(g => ({ n: g.n, sliding: aSliding(g.i) }))
+    .sort((a, b) => b.sliding - a.sliding || a.n.localeCompare(b.n, 'es'))
+}
+function vistaSliding (S) {
+  const lista = listaSliding(S)
+  /* La lista es del teléfono, no del torneo: se abre también sin ninguna
+     ronda empezada, cuando uno la pone al día en su casa. Ahí no hay barra
+     de pestañas abajo, así que la pantalla se pone su propia salida. */
+  const suelta = !activo(S)
+  const filas = lista.map(g => `<div class="fila">
+      <div class="quien"><span class="nom">${esc(g.n)}</span>
+        <span class="tenue">${esc(comoSeLee(g.sliding))}</span></div>
+      <div class="acciones">
+        <input class="slide" value="${esc(signo(g.sliding))}" inputmode="text"
+          data-cambio="setSliding" data-quien="${esc(g.n)}" aria-label="sliding de ${esc(g.n)}">
+        <button data-accion="quitaSliding" data-quien="${esc(g.n)}" aria-label="quitar a ${esc(g.n)}">✕</button>
+      </div>
+    </div>`).join('')
+  return `<div class="hoja">
+    <h1>Golf Sliding</h1>
+    <p class="guia">Con cuántos golpes juega cada quien. El número es lo que esa persona <b>da</b>: <b>+7</b> da siete, <b>−3</b> recibe tres, y entre esos dos se dan diez. Vive solo en este teléfono y no lo ve nadie más del grupo.</p>
+    <p class="guia">Cuando des de alta a alguien en una ronda, entra con su número ya puesto.</p>
+    <h2>${lista.length ? `La lista <span class="tenue">${lista.length}</span>` : 'La lista'}</h2>
+    ${filas || '<p class="guia">Todavía no hay nadie. Pega tu lista aquí abajo, o agrégalos de uno en uno.</p>'}
+    <h2>Agregar uno</h2>
+    <div class="fila-alta">
+      <input id="slidingNom" placeholder="nombre" autocapitalize="words">
+      <input id="slidingVal" placeholder="+3" inputmode="text">
+    </div>
+    <button class="btn sec" data-accion="altaSliding">Agregar</button>
+    <h2>Pegar la lista entera</h2>
+    <p class="guia">Un renglón por persona, el nombre y su número: <i>Ramón −3</i>. Lo que escribas después del número (la salida, una nota) se respeta y no entra. Los que ya estén se actualizan; los demás se quedan como están.</p>
+    <textarea id="slidingPega" rows="6" placeholder="Ramón -3
+Javier Gordillo +7
+Juan Pablo Fer +10 Blancas."></textarea>
+    <button class="btn" data-accion="pegaSliding">Cargar la lista</button>
+    ${suelta ? '<button class="btn sec" data-accion="irVista" data-vista="inicio">Volver</button>' : ''}`
+}
+
+
+
 /* ============================================================
    La lectura de una tarjeta en blanco: revisarla, decidir si se
    puede guardar y convertirla en hechos. Puro: ni DOM ni red.
@@ -1276,6 +1378,7 @@ function bloqueFoto (T, S) {
 
 
 
+
 /* El asistente: las cinco preguntas que uno hace de verdad al llegar al
    campo, en el orden en que las hace. Antes la app abría con un formulario
    de nombre y rondas -lenguaje de torneo- y todo lo demás había que ir a
@@ -1315,7 +1418,8 @@ function paso1 (T, S) {
     <button class="btn sec" data-accion="asisTorneo">Crear el torneo</button>
     <h2>O entrar a uno que ya existe</h2>
     <button class="btn sec" data-accion="irVista" data-vista="unirme">Unirme con una liga</button>
-    ${hay ? '<button class="btn sec" data-accion="irVista" data-vista="inicio">Ver mis torneos</button>' : ''}`
+    ${hay ? '<button class="btn sec" data-accion="irVista" data-vista="inicio">Ver mis torneos</button>' : ''}
+    <button class="enlace" data-accion="irVista" data-vista="sliding">Golf Sliding: con cuánto juega cada quien</button>`
 }
 
 function paso2 (T, S) {
@@ -1378,10 +1482,11 @@ function paso4 (T, S) {
 function paso5 (T, S) {
   const jug = jugadores(T)
   if (!jug.length) return '<h2>¿Qué ventajas se dan?</h2><p class="guia">Antes hay que poner los nombres.</p>'
-  const filas = jug.map(j => `<label class="cfg-juego"><span>${esc(j.n)}</span>
-      <input value="${esc(j.i)}" inputmode="numeric" data-cambio="setVentaja" data-jid="${esc(j.id)}"></label>`).join('')
+  const filas = jug.map(j => `<label class="cfg-juego"><span>${esc(j.n)} <span class="tenue">${esc(comoSeLee(aSliding(j.i)))}</span></span>
+      <input value="${esc(aSliding(j.i))}" inputmode="text" data-cambio="setVentaja" data-jid="${esc(j.id)}"></label>`).join('')
   return `<h2>¿Qué ventajas se dan?</h2>
-    <p class="guia">Con signo: <b>5</b> son los golpes que le dan, <b>−3</b> los que da. El que ni da ni recibe va en cero. Se reparten hoyo por hoyo según el índice de dificultad del campo: los que se reciben empiezan por el hoyo más difícil, los que se dan por el más fácil.</p>
+    <p class="guia">El número es lo que esa persona <b>da</b>, igual que en tu lista de Golf Sliding: <b>+7</b> da siete golpes, <b>−3</b> recibe tres, y entre esos dos se dan diez. El que ni da ni recibe va en cero.</p>
+    <p class="guia">Se reparten hoyo por hoyo según el índice de dificultad del campo: los que se reciben empiezan por el hoyo más difícil, los que se dan por el más fácil.</p>
     ${filas}
     <button class="btn" data-accion="asisListo">Empezar a anotar</button>`
 }
@@ -2546,20 +2651,20 @@ function ponNombreJugador (T, jid, v) {
   if (n && n !== nomJug(T, jid)) emitir(T, `j.${jid}.n`, n)
 }
 
-/* La ventaja, con signo: **+5 son los golpes que le DAN, −3 los que DA**.
-   Es el mismo hecho que el índice -`j.<jid>.i`-, que es de donde el motor
-   reparte los golpes hoyo por hoyo, y que ya entendía los negativos
-   (`golpesEnHoyo` devuelve golpes empezando por los hoyos más fáciles).
-   Lo que no los entendía era esta casilla: se tragaba "-3" en silencio y
-   dejaba el número anterior, sin decir nada.
+/* El sliding de un jugador, en el signo de la lista de Paulino: el número
+   es lo que esa persona DA. Se guarda en el hecho del índice -`j.<jid>.i`-,
+   que es de donde el motor reparte los golpes hoyo por hoyo, y que va al
+   revés a propósito: ahí es el hándicap de golf de toda la vida, los
+   golpes que uno RECIBE. Por eso `deSliding` le cambia el signo, y por eso
+   ese cambio de signo solo ocurre aquí y al leer en `ui/sliding.js`.
 
-   Un número ilegible sigue sin emitirse: quien teclea pasa por el vacío
-   antes de llegar a lo que quiere, y un 0 accidental le quitaría las
-   ventajas a alguien sin que se note. */
-function ponVentaja (T, jid, v) {
-  const s = String(v ?? '').trim()
+   Un número ilegible no se emite: quien teclea pasa por el vacío antes de
+   llegar a lo que quiere, y un 0 accidental le quitaría las ventajas a
+   alguien sin que se note. */
+function ponSlidingJug (T, jid, v) {
+  const s = String(v ?? '').trim().replace(/\s/g, '')
   if (!/^[+-]?\d+(\.\d+)?$/.test(s)) return
-  emitir(T, `j.${jid}.i`, Number(s))
+  emitir(T, `j.${jid}.i`, deSliding(s))
 }
 function vistaRoster (T, S) {
   const d = T.d || 0
@@ -2575,7 +2680,7 @@ function vistaRoster (T, S) {
      siguiente. */
   const filas = jug.map(j => `<div class="fila">
       <div class="quien"><span class="nom">${esc(j.n)}</span>
-        <div class="tenue">índice ${esc(j.i)} · grupo ${esc(grupo(T, d, j.id) + 1)}</div>
+        <div class="tenue">sliding ${esc(aSliding(j.i) > 0 ? '+' + aSliding(j.i) : aSliding(j.i))} · ${esc(comoSeLee(aSliding(j.i)))} · grupo ${esc(grupo(T, d, j.id) + 1)}</div>
         <input class="corto" value="${esc(cortoEscrito(T, j.id))}"
           placeholder="${esc(cortoAuto(j.n))}" data-cambio="setCorto" data-jid="${esc(j.id)}"
           aria-label="nombre corto"></div>
@@ -2699,8 +2804,8 @@ function vistaDias (T) {
    HTML y no lo suelta: Paulino publicó cinco veces y siguió viendo la
    versión vieja. Con esto la app se entera sola y ofrece pasar a la nueva,
    en vez de que cada quien tenga que adivinar cómo forzar a su iOS. */
-const VERSION = '2026-09-15·686c4f5'
-const VERSION_DEL_ARMADO = '2026-09-15·686c4f5'
+const VERSION = '2026-09-15·f250d71'
+const VERSION_DEL_ARMADO = '2026-09-15·f250d71'
 
 /* El nombre de la constante es el ancla que se busca en el HTML servido.
    Se escribe partido para que esta línea no se encuentre a sí misma. */
@@ -3257,6 +3362,7 @@ function vistaJuego (T) {
 
 
 
+
 /* Los iconos de la barra, como en la app de Santa Fe: trazo de 1.7 sobre
    currentColor, 21 px, sin relleno. Van en el marcado y no en el CSS
    porque cada pestaña lleva el suyo. */
@@ -3266,8 +3372,12 @@ const ICONOS = {
   tarjeta: svg('<rect x="3.5" y="4.5" width="17" height="15" rx="2"/><path d="M3.5 9.5h17M9 9.5V19"/>'),
   tabla: svg('<path d="M5 20V11M12 20V5M19 20v-6"/>'),
   presiones: svg('<path d="M12 3v18M7 8l5-5 5 5M7 16l5 5 5-5"/>'),
-  juegos: svg('<path d="M12 3v18M7 8l5-5 5 5M7 16l5 5 5-5"/>'),
+  /* La clave tiene que ser la MISMA que la de VISTAS -'juego', no
+     'juegos'-: con la otra, la pestaña del juego salía sin icono y su
+     etiqueta quedaba flotando media pestaña más arriba que las demás. */
+  juego: svg('<rect x="4" y="4" width="16" height="16" rx="3"/><circle cx="9" cy="9" r="1.1"/><circle cx="12" cy="12" r="1.1"/><circle cx="15" cy="15" r="1.1"/>'),
   grupos: svg('<circle cx="9" cy="8" r="3"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0"/><path d="M16 6.5a3 3 0 0 1 0 5.8M17.5 19a5.5 5.5 0 0 0-2-4.2"/>'),
+  sliding: svg('<path d="M4 8.5h13M13.5 5 17 8.5 13.5 12"/><path d="M20 15.5H7M10.5 12 7 15.5 10.5 19"/>'),
   ajustes: svg('<circle cx="12" cy="12" r="3.2"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M18.4 5.6L17 7M7 17l-1.4 1.4"/>')
 }
 
@@ -3276,12 +3386,16 @@ const ICONOS = {
    es uno del registro. La etiqueta 'Juego' es solo el hueco -en la barra
    se pinta el nombre del juego que se está jugando-. */
 const VISTAS = [
-  ['hoy', 'Hoy'], ['tarjeta', 'Tarjeta'], ['tabla', 'Tabla'], ['juego', 'Juego'], ['presiones', 'Presiones'], ['grupos', 'Grupos']
+  ['hoy', 'Hoy'], ['tarjeta', 'Tarjeta'], ['tabla', 'Tabla'], ['juego', 'Juego'], ['presiones', 'Presiones'], ['grupos', 'Grupos'], ['sliding', 'Sliding']
 ]
 function cuerpo (S, base = '', versionNueva = null) {
   /* Las pantallas de arranque van ANTES de mirar el torneo activo: se llega
      a ellas tanto sin torneos como teniendo uno abierto. */
   if (S.vista === 'unirme') return vistaUnirme(S)
+  /* Golf Sliding es del teléfono y no del torneo: se abre aunque no haya
+     ninguna ronda empezada. Con torneo abierto es una pestaña más de la
+     barra y cae en el pintor de abajo. */
+  if (S.vista === 'sliding' && !activo(S)) return vistaSliding(S)
   const T = activo(S)
   /* El asistente sí mira el torneo: desde su segunda pregunta ya hay uno
      creado y cada respuesta se escribe dentro de él. */
@@ -3305,6 +3419,7 @@ function cuerpo (S, base = '', versionNueva = null) {
     presiones: () => vistaPresiones(T),
     juego: () => vistaJuego(T),
     grupos: () => vistaRoster(T, S),
+    sliding: () => vistaSliding(S),
     ajustes: () => vistaAjustes(T, S, base)
   }
   /* Una pestaña de juego que el torneo no juega no existe: ni en la barra
@@ -3526,6 +3641,7 @@ function marcarOnces (T, aid, h, jid, v) {
 
 
 
+
 const S = typeof localStorage !== 'undefined' ? cargar(localStorage) : estadoInicial()
 const T = () => activo(S)
 const base = location.origin + location.pathname
@@ -3699,7 +3815,7 @@ const ACCIONES = {
      con esa persona entra con ella puesta en vez de en cero. */
   setVentaja: (d, el) => {
     const t = T()
-    ponVentaja(t, d.jid, el.value)
+    ponSlidingJug(t, d.jid, el.value)
     const j = jugadores(t).find(x => x.id === d.jid)
     if (j) recordarGente(S, j.n, j.i)
     salvar(); programar()
@@ -3808,6 +3924,33 @@ const ACCIONES = {
     const h = t.hoyo || 0
     marcarOnces(t, d.aid, h, d.jid, !marcaOnces(t, d.aid, h, d.jid))
     salvar(); programar()
+  },
+  /* ── Golf Sliding ─────────────────────────────────────────────────
+     La lista de este teléfono: con cuántos golpes juega cada quien. No es
+     del torneo ni viaja al grupo; es de donde salen puestos los números
+     cuando se da de alta a alguien en una ronda. */
+  setSliding: (d, el) => {
+    const s = String(el.value || '').trim().replace(/\s/g, '')
+    if (!/^[+-]?\d+(\.\d+)?$/.test(s)) return
+    recordarGente(S, d.quien, deSliding(s))
+    salvar()
+  },
+  quitaSliding: d => { olvidarGente(S, d.quien); salvar() },
+  altaSliding: () => {
+    const nom = String(document.getElementById('slidingNom').value || '').trim()
+    if (!nom) { avisar('Ponle un nombre'); return }
+    avisar('')
+    recordarGente(S, nom, deSliding(String(document.getElementById('slidingVal').value || '0').replace(/\s/g, '')))
+    salvar()
+  },
+  /* Pegar la nota del teléfono entera en vez de teclear veinticinco
+     renglones. Lo que ya está se actualiza; a nadie se le borra. */
+  pegaSliding: () => {
+    const leidos = leeLista(document.getElementById('slidingPega').value)
+    if (!leidos.length) { avisar('No encontré ningún nombre con su número'); return }
+    for (const g of leidos) recordarGente(S, g.n, deSliding(g.sliding))
+    avisar(`Cargué ${leidos.length} de tu lista`)
+    salvar()
   },
   setPresOn: (d, el) => { ponPresOn(T(), el.checked); salvar(); programar() },
   setPresIda: (d, el) => { ponPresIda(T(), el.value); salvar(); programar() },
