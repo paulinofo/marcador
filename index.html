@@ -227,6 +227,16 @@ function cargar (almacen) {
   } catch (e) {}
   return estadoInicial()
 }
+
+/* Quitar es LOCAL: los hechos no se pueden retirar del servidor, así que
+   esto solo vacía este teléfono. Si alguien reenvía la liga, el torneo
+   vuelve entero. La interfaz lo dice con esas mismas palabras. */
+function quitarTorneo (S, tid) {
+  const quedan = Object.create(null)
+  for (const k in S.torneos) if (k !== tid) quedan[k] = S.torneos[k]
+  S.torneos = quedan
+  if (S.activo === tid) S.activo = null
+}
 function recordarGente (S, nombre, idx) {
   const i = S.gente.findIndex(g => g.n === nombre)
   if (i >= 0) S.gente[i].i = idx
@@ -404,6 +414,11 @@ function miGrupo (T, d) {
   return gruposDe(T, d).find(g => g.includes(T.yo)) || null
 }
 
+/* Un torneo cerrado es un torneo terminado: viaja como hecho, así que todo
+   el grupo lo ve terminado, se guarda para consultarlo y deja de
+   sincronizar cada 1.8 s. Se puede reabrir. */
+const torneoCerrado = (T) => (T.h['t.cerrado'] ?? 0) !== 0
+
 
 const LOTE = 200
 const enVuelo = new Set()
@@ -569,11 +584,15 @@ const esc = (s) => String(s ?? '')
   .replace(/&/g, '&amp;').replace(/</g, '&lt;')
   .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;')
 function vistaArranque (S) {
-  const lista = Object.values(S.torneos)
-    .map(T => `<div class="fila" data-accion="abrirTorneo" data-tid="${esc(T.tid)}">
+  const fila = (T) => `<div class="fila" data-accion="abrirTorneo" data-tid="${esc(T.tid)}">
         <div class="quien"><span class="nom">${esc(nombre(T))}</span></div>
         <span class="tenue">${esc(dias(T))} ronda(s)</span>
-      </div>`).join('')
+      </div>`
+  /* Los terminados no desaparecen: bajan a su propia sección, donde se
+     siguen pudiendo abrir para consultar la tarjeta y la tabla. */
+  const todos = Object.values(S.torneos)
+  const lista = todos.filter(T => !torneoCerrado(T)).map(fila).join('')
+  const cerrados = todos.filter(T => torneoCerrado(T)).map(fila).join('')
   return `<div class="hoja">
     <h1>Golf</h1>
     <p class="guia">Marcador de torneos. Se crea aquí, se comparte con una liga y funciona sin señal.</p>
@@ -581,6 +600,7 @@ function vistaArranque (S) {
     <h2>${lista ? 'Otro torneo' : 'Empieza'}</h2>
     <button class="btn" data-accion="irVista" data-vista="nuevo">Torneo nuevo</button>
     <button class="btn sec" data-accion="irVista" data-vista="unirme">Unirme a uno</button>
+    ${cerrados ? `<h2>Terminados</h2>${cerrados}` : ''}
   </div>`
 }
 function vistaNuevo (S) {
@@ -987,6 +1007,7 @@ const ponSi = (T, d, h, v) => emitir(T, `c.${d}.si.${h}`, parseInt(v, 10) || h +
 const ponCampo = (T, d, v) => emitir(T, `c.${d}.n`, String(v))
 const ponFecha = (T, d, v) => emitir(T, `c.${d}.iso`, String(v ?? '').trim())
 const ponSalida = (T, d, v) => emitir(T, `c.${d}.salida`, String(v ?? '').trim())
+const ponCerrado = (T, v) => emitir(T, 't.cerrado', v ? 1 : 0)
 
 /* `base` entra como argumento y no se lee de `location` aquí dentro:
    en Node no existe, y la prueba que pinta esta vista reventaría. */
@@ -1010,6 +1031,13 @@ function vistaAjustes (T, S, base = '') {
      crear otro nunca más. Lo encontró Paulino en su teléfono el 14-sep. */
   return `<h2>Mis torneos</h2>
     <button class="btn sec" data-accion="irVista" data-vista="inicio">Ver todos mis torneos</button>
+    ${torneoCerrado(T)
+      ? `<button class="btn sec" data-accion="reabrirTorneo">Reabrir el torneo</button>
+         <p class="guia">Está terminado: no sincroniza y vive en "Terminados".</p>`
+      : `<button class="btn sec" data-accion="cerrarTorneo">Cerrar el torneo</button>
+         <p class="guia">Lo marca como terminado para todo el grupo y deja de sincronizar. Se guarda y se puede reabrir.</p>`}
+    <button class="btn sec" data-accion="quitarDeAqui">Quitar de este teléfono</button>
+    <p class="guia">Solo de este teléfono. Los datos siguen en el servidor y en los demás; si te reenvían la liga, vuelve.</p>
     <h2>Día ${d + 1} de ${esc(dias(T))}</h2>
     <p class="guia">Editas la ficha del día activo. Cambia de día tocando el nombre del torneo arriba.</p>
     ${vacio ? `<button class="btn sec" data-accion="copiarFicha">Copiar la ficha del día 1</button>` : ''}
@@ -1208,7 +1236,24 @@ const red = () => ({ url: S.syncUrl, buscar: fetch.bind(globalThis), modo: S.syn
    deja de romper la app. */
 const ACCIONES = {
   irVista: d => { S.vista = d.vista; salvar() },
-  abrirTorneo: d => { S.activo = d.tid; S.vista = 'hoy'; saltarAHoy(T()); salvar() },
+  /* programar() aquí porque el ciclo se detiene con un torneo cerrado:
+     al cambiarse a uno vivo hay que volver a encenderlo. */
+  abrirTorneo: d => { S.activo = d.tid; S.vista = 'hoy'; saltarAHoy(T()); salvar(); programar() },
+  cerrarTorneo: () => { ponCerrado(T(), true); salvar(); programar() },
+  reabrirTorneo: () => { ponCerrado(T(), false); salvar(); programar() },
+  /* Quitar es local y no se puede deshacer desde aquí: se pregunta. El
+     texto dice la verdad -los datos siguen en el servidor- para que nadie
+     crea que borró la ronda del grupo. */
+  quitarDeAqui: () => {
+    const t = T()
+    if (!t) return
+    const seguro = typeof confirm !== 'function' ||
+      confirm(`¿Quitar "${nombre(t)}" de este teléfono?\n\nLos datos siguen en el servidor y en los demás teléfonos. Si te reenvían la liga, vuelve.`)
+    if (!seguro) return
+    quitarTorneo(S, t.tid)
+    S.vista = 'inicio'
+    salvar()
+  },
   toggleDias: () => { T().diasAbierto = !T().diasAbierto; salvar() },
   setDia: d => { const t = T(); setDia(t, Number(d.dia)); t.diasAbierto = false; salvar() },
   soyYo: d => { T().yo = d.jid; salvar() },
@@ -1347,6 +1392,10 @@ const programar = () => {
 async function sincronizar () {
   const t = T()
   if (!t || !t.clave) return
+  /* Un torneo terminado deja de sincronizar: ni red ni batería. Y no se
+     vuelve a programar, así que el ciclo muere hasta que se reabra o se
+     abra otro torneo -los dos llaman a programar(). */
+  if (torneoCerrado(t)) return
   const r = await ciclo(t, red())
   guardar(S, localStorage)
   /* Un hecho fusionado a media sesión puede bajar t.dias por debajo del
