@@ -33,20 +33,10 @@ button{cursor:pointer;border:none;background:none;color:inherit}
 #app{max-width:560px;margin:0 auto;padding:0 0 calc(var(--safe-b) + 82px)}
 
 /* ── Encabezado ─────────────────────────────────────────────── */
-.cabecera{position:sticky;top:0;z-index:30;background:var(--verde);
-  padding:calc(var(--safe-t) + 12px) 16px 12px;border-bottom:1px solid var(--verde-linea);
-  display:flex;align-items:center;justify-content:space-between;gap:10px}
-.cabecera .marca{font-weight:800;letter-spacing:-.01em;line-height:1.15;min-width:0;
-  text-align:left;padding:0;display:flex;flex-direction:column;gap:2px}
-.cabecera .titulo{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 /* El caret vive FUERA de .sub a propósito: si compartiera su contenedor,
    text-overflow:ellipsis en un subtítulo largo se lo tragaría junto con el
    texto recortado, y el usuario perdería la única señal de si el
    desplegable de días está abierto o cerrado. */
-.cabecera .fila-sub{display:flex;align-items:center;gap:4px;min-width:0}
-.cabecera .sub{font-family:var(--mono);font-size:11px;letter-spacing:.06em;color:var(--laton);
-  font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
-.cabecera .caret{flex:0 0 auto;color:var(--laton);font-family:var(--mono);font-size:11px}
 .dias{background:var(--verde);border-bottom:1px solid var(--verde-linea);padding:6px 12px 10px;
   display:flex;flex-direction:column;gap:6px}
 .dias .dia{display:flex;justify-content:space-between;align-items:center;gap:10px;
@@ -97,8 +87,12 @@ h2{font-size:12px;font-family:var(--mono);letter-spacing:.12em;text-transform:up
 .jug .pasos{display:flex;align-items:center;gap:8px;flex:0 0 auto}
 .jug .pasos button{background:var(--verde);color:var(--tarjeta);border-radius:8px;
   width:46px;height:46px;font-size:24px;font-weight:700;line-height:1}
-.jug .marca{font-size:26px;font-weight:800;min-width:34px;text-align:center;
-  font-variant-numeric:tabular-nums}
+/* El número va limpio sobre la tarjeta, sin caja: lo de Santa Fe. Lleva
+   tres clases a propósito — `.jug .pasos button` tiene dos clases y un
+   elemento, y sin esto le ganaba y lo volvía a meter en la caja oscura. */
+.jug .pasos .marca{background:transparent;border:0;color:var(--tinta);min-width:50px;height:50px;
+  display:grid;place-items:center;font-family:var(--mono);font-size:28px;font-weight:700;padding:0}
+.jug .pasos .marca.vacio{color:#B9AF97;font-size:21px;font-weight:600}
 .jug .marca.vacio{color:var(--tarjeta-linea)}
 .chips{display:flex;gap:6px;margin-top:10px}
 .chip-pen{font-family:var(--mono);font-size:11px;letter-spacing:.04em;border:1px solid var(--tarjeta-linea);
@@ -153,12 +147,14 @@ tr.par td{color:var(--tinta-suave);font-family:var(--mono);font-size:12px}
 nav{position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--verde);
   border-top:1px solid var(--verde-linea);display:flex;
   padding:6px 8px calc(var(--safe-b) + 8px)}
-nav button{flex:1;border-radius:8px;padding:8px 2px;font-family:var(--mono);font-size:11px;
-  letter-spacing:.06em;text-transform:uppercase;color:var(--cal);font-weight:600}
-nav button::before{content:"";display:block;height:2px;border-radius:2px;
-  margin:0 auto 6px;width:22px;background:transparent}
+/* Icono encima de la etiqueta, con el trazo tomando el color del botón:
+   es lo que hace la barra de la app de Santa Fe. */
+nav button{flex:1;padding:9px 2px 8px;display:flex;flex-direction:column;align-items:center;gap:3px;
+  font-family:var(--mono);font-size:10px;letter-spacing:.04em;text-transform:uppercase;
+  color:var(--cal);font-weight:600;background:transparent;border:0}
+nav svg{width:21px;height:21px;stroke:currentColor;fill:none;stroke-width:1.7;
+  stroke-linecap:round;stroke-linejoin:round}
 nav button.on{color:var(--laton)}
-nav button.on::before{background:var(--laton)}
 
 /* La navegación de hoyo dentro de Hoy no es la barra de pestañas. */
 .pasos-hoyo{display:flex;gap:8px;margin-top:12px}
@@ -166,6 +162,23 @@ nav button.on::before{background:var(--laton)}
   border-radius:9px;padding:13px;color:var(--cal);font-weight:600;font-size:15px}
 
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+.cabecera{position:sticky;top:0;z-index:30;background:var(--verde);
+  padding:calc(var(--safe-t) + 11px) 14px 10px;border-bottom:1px solid var(--verde-linea)}
+.cabecera .marca{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.cabecera .titulo-btn{background:transparent;border:0;padding:0;text-align:left;min-width:0;flex:1}
+.cabecera .titulo{display:block;color:var(--tarjeta);font-size:18px;font-weight:800;
+  letter-spacing:-.02em;line-height:1.15;text-transform:uppercase}
+.cabecera .marca-der{display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex:none}
+.cabecera .quien-soy{font-family:var(--mono);font-size:11px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--laton);margin-top:5px;text-align:right;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cabecera .fila-sub{display:flex;align-items:center;gap:6px;width:100%;margin-top:6px;
+  background:transparent;border:0;padding:0;min-width:0}
+.cabecera .sub{font-family:var(--mono);font-size:11px;letter-spacing:.06em;color:var(--laton);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;text-align:left}
+.cabecera .caret{flex:0 0 auto;color:var(--laton);font-family:var(--mono);font-size:11px}
+.chip.fmt{color:var(--laton);border-color:var(--laton)}
 
 /* ---- Presiones (nombres tomados de Santa Fe) ---- */
 .segm{display:flex;gap:5px;background:var(--verde-hondo);border-radius:9px;padding:4px;margin:0 0 11px}
@@ -196,6 +209,16 @@ td.nace{background:var(--laton);color:var(--verde-hondo);font-weight:800}
 #aviso{position:fixed;left:8px;right:8px;top:calc(var(--safe-t) + 8px);z-index:60;margin:0;
   background:var(--bandera);color:#fff;border-radius:var(--r);padding:12px 14px;
   font-size:15px;font-weight:600;box-shadow:0 6px 20px rgba(0,0,0,.35)}
+
+/* Los puntos de la ronda van fuera del stepper, a su derecha, como en
+   Santa Fe: dentro del subtítulo hacían que el renglón se partiera en dos. */
+.jug .pts-lado{font-family:var(--mono);font-size:12px;color:var(--tinta-suave);
+  flex:0 0 auto;align-self:center;min-width:24px;text-align:right}
+.jug .meta{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chip.vivo{color:var(--ok);border-color:var(--ok)}
+
+/* Un filete de latón separa la guía del marcador, como en Santa Fe. */
+.jug + .guia,.rejilla + .guia{border-top:1px solid var(--laton);padding-top:11px;margin-top:14px}
 </style>
 </head>
 <body>
@@ -332,6 +355,7 @@ const acotaDias = (v) => {
    sabe guardar. */
 const dias = (T) => acotaDias(T.h['t.dias'])
 const nombre = (T) => T.h['t.n'] ?? 'Torneo'
+const formato = (T) => String(T.h['t.formato'] ?? 'stableford')
 const campo = (T, d) => T.h[`c.${d}.n`] ?? ''
 const fecha = (T, d) => T.h[`c.${d}.iso`] ?? ''
 const salida = (T, d) => T.h[`c.${d}.salida`] ?? ''
@@ -661,7 +685,15 @@ const esc = (s) => String(s ?? '')
   .replace(/&/g, '&amp;').replace(/</g, '&lt;')
   .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;')
 function vistaArranque (S) {
-  const fila = (T) => `<div class="fila" data-accion="abrirTorneo" data-tid="${esc(T.tid)}">
+  /* En modo editar el renglón deja de abrir el torneo: en un teléfono, una
+     ✕ pegada a lo que tocas para entrar se pulsa sin querer. */
+  const editando = !!S.editandoLista
+  const fila = (T) => editando
+    ? `<div class="fila">
+        <div class="quien"><span class="nom">${esc(nombre(T))}</span></div>
+        <div class="acciones"><button data-accion="quitarDeLista" data-tid="${esc(T.tid)}">Quitar</button></div>
+      </div>`
+    : `<div class="fila" data-accion="abrirTorneo" data-tid="${esc(T.tid)}">
         <div class="quien"><span class="nom">${esc(nombre(T))}</span></div>
         <span class="tenue">${esc(dias(T))} ronda(s)</span>
       </div>`
@@ -673,7 +705,8 @@ function vistaArranque (S) {
   return `<div class="hoja">
     <h1>Golf</h1>
     <p class="guia">Marcador de torneos. Se crea aquí, se comparte con una liga y funciona sin señal.</p>
-    ${lista ? `<h2>Mis torneos</h2>${lista}` : ''}
+    ${todos.length ? `<h2>Mis torneos <button class="enlace" data-accion="editarLista">${editando ? 'Listo' : 'Editar'}</button></h2>` : ''}
+    ${lista}
     <h2>${lista ? 'Otro torneo' : 'Empieza'}</h2>
     <button class="btn" data-accion="irVista" data-vista="nuevo">Torneo nuevo</button>
     <button class="btn sec" data-accion="irVista" data-vista="unirme">Unirme a uno</button>
@@ -1134,7 +1167,7 @@ function vistaHoy (T) {
       <div class="jug-fila">
         <div class="quien">
           <span class="nom">${esc(j.c)}${ventaja > 0 ? ` <span class="ventaja">${'▲'.repeat(Math.min(ventaja, 3))}</span>` : ''}</span>
-          <div class="meta">HCP ${esc(String(ch))}${neto === null ? '' : ` · neto ${esc(String(neto))}`} · ${esc(String(r.pts))} pts</div>
+          <div class="meta">HCP ${esc(String(ch))}${neto === null ? '' : ` · neto ${esc(String(neto))}`}</div>
         </div>
         <div class="pasos">
           <button data-accion="golpeMenos" data-jid="${esc(j.id)}" aria-label="un golpe menos">−</button>
@@ -1142,6 +1175,7 @@ function vistaHoy (T) {
             aria-label="${g === null ? 'anotar el par' : 'borrar el hoyo'}">${g === null ? '–' : esc(String(g))}</button>
           <button data-accion="golpeMas" data-jid="${esc(j.id)}" aria-label="un golpe más">+</button>
         </div>
+        <span class="pts-lado">${esc(String(r.pts))}p</span>
       </div>
       ${chipsCastigo(T, d, j.id, h)}
     </div>`
@@ -1285,103 +1319,6 @@ function vistaRoster (T, S) {
     ${bajos ? `<h2 class="tenue">Dados de baja</h2>${bajos}` : ''}`
 }
 
-const ponPar = (T, d, h, v) => emitir(T, `c.${d}.par.${h}`, parseInt(v, 10) || 4)
-const ponSi = (T, d, h, v) => emitir(T, `c.${d}.si.${h}`, parseInt(v, 10) || h + 1)
-const ponCampo = (T, d, v) => emitir(T, `c.${d}.n`, String(v))
-const ponFecha = (T, d, v) => emitir(T, `c.${d}.iso`, String(v ?? '').trim())
-const ponSalida = (T, d, v) => emitir(T, `c.${d}.salida`, String(v ?? '').trim())
-const ponCerrado = (T, v) => emitir(T, 't.cerrado', v ? 1 : 0)
-
-const enteroO = (v, def) => { const n = parseInt(v, 10); return Number.isFinite(n) ? n : def }
-const ponPresOn = (T, v) => emitir(T, 't.pres.on', v ? 1 : 0)
-const ponPresIda = (T, v) => emitir(T, 't.pres.ida', Math.max(0, enteroO(v, 5)))
-const ponPresVuelta = (T, v) => emitir(T, 't.pres.vuelta', Math.max(0, enteroO(v, 5)))
-const ponPresBono = (T, v) => emitir(T, 't.pres.bono', Math.max(0, enteroO(v, 10)))
-const ponPresAl = (T, v) => emitir(T, 't.pres.al', Math.max(1, enteroO(v, 2)))
-const ponPresCarry = (T, v) => emitir(T, 't.pres.carry', v ? 1 : 0)
-const ponPresMatch = (T, v) => emitir(T, 't.pres.match', v === 'suma' ? 'suma' : 'mayoria')
-
-/* `base` entra como argumento y no se lee de `location` aquí dentro:
-   en Node no existe, y la prueba que pinta esta vista reventaría. */
-function vistaAjustes (T, S, base = '') {
-  const d = T.d || 0
-  const rejilla = Array.from({ length: HOYOS }, (_, h) => `<tr>
-      <td>${h + 1}</td>
-      <td><input value="${esc(par(T, d, h))}" inputmode="numeric"
-           data-cambio="setPar" data-hoyo="${h}" style="width:56px"></td>
-      <td><input value="${esc(si(T, d, h))}" inputmode="numeric"
-           data-cambio="setSi" data-hoyo="${h}" style="width:56px"></td>
-    </tr>`).join('')
-
-  /* El día está "vacío" si nadie ha emitido su par: entonces conviene
-     copiar la ficha del día 1 en vez de teclear 36 números otra vez. */
-  const vacio = d > 0 && diaSinFicha(T, d)
-
-  /* La salida. Sin esto la app es una puerta de un solo sentido: creado el
-     primer torneo, ninguna pestaña de la barra vuelve a la lista donde
-     viven "Torneo nuevo" y "Unirme a uno", y quien ya tenía uno no podía
-     crear otro nunca más. Lo encontró Paulino en su teléfono el 14-sep. */
-  return `<h2>Mis torneos</h2>
-    <button class="btn sec" data-accion="irVista" data-vista="inicio">Ver todos mis torneos</button>
-    ${torneoCerrado(T)
-      ? `<button class="btn sec" data-accion="reabrirTorneo">Reabrir el torneo</button>
-         <p class="guia">Está terminado: no sincroniza y vive en "Terminados".</p>`
-      : `<button class="btn sec" data-accion="cerrarTorneo">Cerrar el torneo</button>
-         <p class="guia">Lo marca como terminado para todo el grupo y deja de sincronizar. Se guarda y se puede reabrir.</p>`}
-    <button class="btn sec" data-accion="quitarDeAqui">Quitar de este teléfono</button>
-    <p class="guia">Solo de este teléfono. Los datos siguen en el servidor y en los demás; si te reenvían la liga, vuelve.</p>
-    <h2>Día ${d + 1} de ${esc(dias(T))}</h2>
-    <p class="guia">Editas la ficha del día activo. Cambia de día tocando el nombre del torneo arriba.</p>
-    ${vacio ? `<button class="btn sec" data-accion="copiarFicha">Copiar la ficha del día 1</button>` : ''}
-    <h2>Fecha</h2>
-    <input value="${esc(fecha(T, d))}" placeholder="2026-09-12" inputmode="numeric" data-cambio="setFecha">
-    <h2>Salida</h2>
-    <input value="${esc(salida(T, d))}" placeholder="9:00 · por el 6" data-cambio="setSalida">
-    <h2>El campo</h2>
-    <input value="${esc(campo(T, d))}" placeholder="nombre del campo"
-      data-cambio="setCampo">
-    <div class="rejilla">
-      <table><tr><th>Hoyo</th><th>Par</th><th>SI</th></tr>${rejilla}</table>
-    </div>
-    <h2>Presiones</h2>
-    <label class="casilla"><input type="checkbox"${presOn(T) ? ' checked' : ''} data-cambio="setPresOn"> Se juegan presiones</label>
-    <div class="pres-ajustes">
-      <label>Ida $ <input value="${esc(presIda(T))}" inputmode="numeric" data-cambio="setPresIda"></label>
-      <label>Vuelta $ <input value="${esc(presVuelta(T))}" inputmode="numeric" data-cambio="setPresVuelta"></label>
-      <label>Bono $ <input value="${esc(presBono(T))}" inputmode="numeric" data-cambio="setPresBono"></label>
-      <label>Presión al ir <input value="${esc(presAl(T))}" inputmode="numeric" data-cambio="setPresAl"> abajo</label>
-    </div>
-    <label class="casilla"><input type="checkbox"${presCarry(T) ? ' checked' : ''} data-cambio="setPresCarry"> Carry: si la salida de la ida cierra en cero, la vuelta vale ida + vuelta + bono</label>
-    <label class="casilla">El bono es para
-      <select data-cambio="setPresMatch">
-        <option value="mayoria"${presMatch(T) === 'mayoria' ? ' selected' : ''}>quien junte más apuestas</option>
-        <option value="suma"${presMatch(T) === 'suma' ? ' selected' : ''}>el signo de la suma de las dos salidas</option>
-      </select></label>
-    <h2>Este teléfono</h2>
-    <div class="fila"><div class="quien"><span class="nom">${esc(T.yo ? (jugadores(T).find(j => j.id === T.yo)?.n ?? '—') : (T.yo === '' ? 'Solo miro' : 'Sin decir'))}</span></div>
-      <div class="acciones"><button data-accion="cambiarYo">Cambiar</button></div></div>
-    <h2>Invitar</h2>
-    <p class="guia" style="word-break:break-all">${esc(ligaDe(T, base))}</p>
-    <button class="btn" data-accion="compartirLiga">Compartir la liga</button>
-    ${T.codigo ? `<p class="guia">O dicta el código: <b>${esc(T.codigo)}</b></p>` : ''}`
-}
-
-
-
-/* La puerta de Santa Fe. `T.yo` es local: cada teléfono dice quién es y
-   nadie lo verifica — confianza entre amigos. "Solo miro" deja T.yo en
-   cadena vacía: contestado, distinto de null (no preguntado). */
-function vistaQuien (T) {
-  const botones = jugadores(T).map(j =>
-    `<button class="btn sec" data-accion="soyYo" data-jid="${esc(j.id)}">${esc(j.n)}</button>`).join('')
-  return `<div class="hoja puerta">
-    <h1>¿Quién eres?</h1>
-    <p class="guia">Para mostrarte tu grupo al capturar, en este teléfono.</p>
-    ${botones}
-    <button class="btn sec" data-accion="soyYo" data-jid="">Solo miro</button>
-  </div>`
-}
-
 
 
 
@@ -1447,6 +1384,126 @@ function vistaDias (T) {
     `<button class="dia${d === activo ? ' on' : ''}" data-accion="setDia" data-dia="${d}">
       <b>Día ${d + 1}</b><span>${esc(etiquetaDia(T, d)) || 'sin fecha'}</span>
     </button>`).join('')}</div>`
+}
+
+const ponPar = (T, d, h, v) => emitir(T, `c.${d}.par.${h}`, parseInt(v, 10) || 4)
+const ponSi = (T, d, h, v) => emitir(T, `c.${d}.si.${h}`, parseInt(v, 10) || h + 1)
+const ponCampo = (T, d, v) => emitir(T, `c.${d}.n`, String(v))
+const ponFecha = (T, d, v) => emitir(T, `c.${d}.iso`, String(v ?? '').trim())
+const ponSalida = (T, d, v) => emitir(T, `c.${d}.salida`, String(v ?? '').trim())
+const ponCerrado = (T, v) => emitir(T, 't.cerrado', v ? 1 : 0)
+
+/* El nombre y las rondas se escribían al crear el torneo y no había dónde
+   cambiarlos nunca más. Viajan como hechos: el grupo entero ve el cambio.
+
+   Los dos IGNORAN la entrada ilegible en vez de normalizarla. Un nombre
+   vacío borraría el del grupo, y un número ilegible colapsaría el torneo a
+   una ronda escondiendo los días ya jugados. No emitir es lo correcto:
+   quien teclea pasa por el vacío antes de llegar a lo que quiere. */
+function ponNombre (T, v) {
+  const n = String(v ?? '').trim()
+  if (n) emitir(T, 't.n', n)
+}
+function ponDias (T, v) {
+  const s = String(v ?? '').trim()
+  if (!/^\d+$/.test(s)) return
+  emitir(T, 't.dias', acotaDias(s))
+  acotarDia(T)
+}
+
+const enteroO = (v, def) => { const n = parseInt(v, 10); return Number.isFinite(n) ? n : def }
+const ponPresOn = (T, v) => emitir(T, 't.pres.on', v ? 1 : 0)
+const ponPresIda = (T, v) => emitir(T, 't.pres.ida', Math.max(0, enteroO(v, 5)))
+const ponPresVuelta = (T, v) => emitir(T, 't.pres.vuelta', Math.max(0, enteroO(v, 5)))
+const ponPresBono = (T, v) => emitir(T, 't.pres.bono', Math.max(0, enteroO(v, 10)))
+const ponPresAl = (T, v) => emitir(T, 't.pres.al', Math.max(1, enteroO(v, 2)))
+const ponPresCarry = (T, v) => emitir(T, 't.pres.carry', v ? 1 : 0)
+const ponPresMatch = (T, v) => emitir(T, 't.pres.match', v === 'suma' ? 'suma' : 'mayoria')
+
+/* `base` entra como argumento y no se lee de `location` aquí dentro:
+   en Node no existe, y la prueba que pinta esta vista reventaría. */
+function vistaAjustes (T, S, base = '') {
+  const d = T.d || 0
+  const rejilla = Array.from({ length: HOYOS }, (_, h) => `<tr>
+      <td>${h + 1}</td>
+      <td><input value="${esc(par(T, d, h))}" inputmode="numeric"
+           data-cambio="setPar" data-hoyo="${h}" style="width:56px"></td>
+      <td><input value="${esc(si(T, d, h))}" inputmode="numeric"
+           data-cambio="setSi" data-hoyo="${h}" style="width:56px"></td>
+    </tr>`).join('')
+
+  /* El día está "vacío" si nadie ha emitido su par: entonces conviene
+     copiar la ficha del día 1 en vez de teclear 36 números otra vez. */
+  const vacio = d > 0 && diaSinFicha(T, d)
+
+  /* La salida. Sin esto la app es una puerta de un solo sentido: creado el
+     primer torneo, ninguna pestaña de la barra vuelve a la lista donde
+     viven "Torneo nuevo" y "Unirme a uno", y quien ya tenía uno no podía
+     crear otro nunca más. Lo encontró Paulino en su teléfono el 14-sep. */
+  return `<h2>El torneo</h2>
+    <input value="${esc(nombre(T))}" placeholder="nombre del torneo" data-cambio="setNombreTorneo">
+    <label class="cfg-juego"><span>Cuántas rondas</span>
+      <input value="${esc(dias(T))}" inputmode="numeric" data-cambio="setDiasTorneo"></label>
+    <p class="guia">Los dos los ve todo el grupo. Acortar las rondas no borra lo anotado: esos días vuelven si las alargas otra vez.</p>
+    <h2>Mis torneos</h2>
+    <button class="btn sec" data-accion="irVista" data-vista="inicio">Ver todos mis torneos</button>
+    ${torneoCerrado(T)
+      ? `<button class="btn sec" data-accion="reabrirTorneo">Reabrir el torneo</button>
+         <p class="guia">Está terminado: no sincroniza y vive en "Terminados".</p>`
+      : `<button class="btn sec" data-accion="cerrarTorneo">Cerrar el torneo</button>
+         <p class="guia">Lo marca como terminado para todo el grupo y deja de sincronizar. Se guarda y se puede reabrir.</p>`}
+    <button class="btn sec" data-accion="quitarDeAqui">Quitar de este teléfono</button>
+    <p class="guia">Solo de este teléfono. Los datos siguen en el servidor y en los demás; si te reenvían la liga, vuelve.</p>
+    <h2>Día ${d + 1} de ${esc(dias(T))}</h2>
+    <p class="guia">Editas la ficha del día activo. Cambia de día tocando el nombre del torneo arriba.</p>
+    ${vacio ? `<button class="btn sec" data-accion="copiarFicha">Copiar la ficha del día 1</button>` : ''}
+    <h2>Fecha</h2>
+    <input value="${esc(fecha(T, d))}" placeholder="2026-09-12" inputmode="numeric" data-cambio="setFecha">
+    <h2>Salida</h2>
+    <input value="${esc(salida(T, d))}" placeholder="9:00 · por el 6" data-cambio="setSalida">
+    <h2>El campo</h2>
+    <input value="${esc(campo(T, d))}" placeholder="nombre del campo"
+      data-cambio="setCampo">
+    <div class="rejilla">
+      <table><tr><th>Hoyo</th><th>Par</th><th>SI</th></tr>${rejilla}</table>
+    </div>
+    <h2>Presiones</h2>
+    <label class="casilla"><input type="checkbox"${presOn(T) ? ' checked' : ''} data-cambio="setPresOn"> Se juegan presiones</label>
+    <div class="pres-ajustes">
+      <label>Ida $ <input value="${esc(presIda(T))}" inputmode="numeric" data-cambio="setPresIda"></label>
+      <label>Vuelta $ <input value="${esc(presVuelta(T))}" inputmode="numeric" data-cambio="setPresVuelta"></label>
+      <label>Bono $ <input value="${esc(presBono(T))}" inputmode="numeric" data-cambio="setPresBono"></label>
+      <label>Presión al ir <input value="${esc(presAl(T))}" inputmode="numeric" data-cambio="setPresAl"> abajo</label>
+    </div>
+    <label class="casilla"><input type="checkbox"${presCarry(T) ? ' checked' : ''} data-cambio="setPresCarry"> Carry: si la salida de la ida cierra en cero, la vuelta vale ida + vuelta + bono</label>
+    <label class="casilla">El bono es para
+      <select data-cambio="setPresMatch">
+        <option value="mayoria"${presMatch(T) === 'mayoria' ? ' selected' : ''}>quien junte más apuestas</option>
+        <option value="suma"${presMatch(T) === 'suma' ? ' selected' : ''}>el signo de la suma de las dos salidas</option>
+      </select></label>
+    <h2>Este teléfono</h2>
+    <div class="fila"><div class="quien"><span class="nom">${esc(T.yo ? (jugadores(T).find(j => j.id === T.yo)?.n ?? '—') : (T.yo === '' ? 'Solo miro' : 'Sin decir'))}</span></div>
+      <div class="acciones"><button data-accion="cambiarYo">Cambiar</button></div></div>
+    <h2>Invitar</h2>
+    <p class="guia" style="word-break:break-all">${esc(ligaDe(T, base))}</p>
+    <button class="btn" data-accion="compartirLiga">Compartir la liga</button>
+    ${T.codigo ? `<p class="guia">O dicta el código: <b>${esc(T.codigo)}</b></p>` : ''}`
+}
+
+
+
+/* La puerta de Santa Fe. `T.yo` es local: cada teléfono dice quién es y
+   nadie lo verifica — confianza entre amigos. "Solo miro" deja T.yo en
+   cadena vacía: contestado, distinto de null (no preguntado). */
+function vistaQuien (T) {
+  const botones = jugadores(T).map(j =>
+    `<button class="btn sec" data-accion="soyYo" data-jid="${esc(j.id)}">${esc(j.n)}</button>`).join('')
+  return `<div class="hoja puerta">
+    <h1>¿Quién eres?</h1>
+    <p class="guia">Para mostrarte tu grupo al capturar, en este teléfono.</p>
+    ${botones}
+    <button class="btn sec" data-accion="soyYo" data-jid="">Solo miro</button>
+  </div>`
 }
 
 
@@ -1589,6 +1646,31 @@ function vistaPresiones (T) {
     ${dias(T) > 1 ? acumulado(T, yo) : ''}`
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+/* Los iconos de la barra, como en la app de Santa Fe: trazo de 1.7 sobre
+   currentColor, 21 px, sin relleno. Van en el marcado y no en el CSS
+   porque cada pestaña lleva el suyo. */
+const svg = (d) => `<svg viewBox="0 0 24 24" aria-hidden="true">${d}</svg>`
+const ICONOS = {
+  hoy: svg('<path d="M5 21V4M5 4l9 3-9 3"/><circle cx="5" cy="21" r="1.2"/>'),
+  tarjeta: svg('<rect x="3.5" y="4.5" width="17" height="15" rx="2"/><path d="M3.5 9.5h17M9 9.5V19"/>'),
+  tabla: svg('<path d="M5 20V11M12 20V5M19 20v-6"/>'),
+  presiones: svg('<path d="M12 3v18M7 8l5-5 5 5M7 16l5 5 5-5"/>'),
+  juegos: svg('<path d="M12 3v18M7 8l5-5 5 5M7 16l5 5 5-5"/>'),
+  grupos: svg('<circle cx="9" cy="8" r="3"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0"/><path d="M16 6.5a3 3 0 0 1 0 5.8M17.5 19a5.5 5.5 0 0 0-2-4.2"/>'),
+  ajustes: svg('<circle cx="12" cy="12" r="3.2"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M18.4 5.6L17 7M7 17l-1.4 1.4"/>')
+}
 const VISTAS = [
   ['hoy', 'Hoy'], ['tarjeta', 'Tarjeta'], ['tabla', 'Tabla'], ['presiones', 'Presiones'], ['grupos', 'Grupos']
 ]
@@ -1617,18 +1699,25 @@ function cuerpo (S, base = '') {
   const cual = pintores[S.vista] && (S.vista !== 'presiones' || juega) ? S.vista : 'hoy'
   const TODAS = VISTAS.filter(([k]) => k !== 'presiones' || juega).concat([['ajustes', 'Ajustes']])
   const pestanas = TODAS.map(([k, et]) =>
-    `<button class="${cual === k ? 'on' : ''}" data-accion="irVista" data-vista="${k}">${et}</button>`).join('')
+    `<button class="${cual === k ? 'on' : ''}" data-accion="irVista" data-vista="${k}">${ICONOS[k] || ''}<span>${et}</span></button>`).join('')
   const d = T.d || 0
   const sub = [`Día ${d + 1}`, fecha(T, d), salida(T, d)].filter(Boolean).join(' · ')
+  const yo = T.yo ? (jugadores(T).find(j => j.id === T.yo) || {}).n : ''
   return `<div class="cabecera">
-      <button class="marca" data-accion="toggleDias" aria-expanded="${!!T.diasAbierto}">
-        <span class="titulo">${esc(nombre(T))}</span>
-        <span class="fila-sub">
-          <span class="sub">${esc(sub)}</span>
-          <span class="caret">${T.diasAbierto ? '▴' : '▾'}</span>
-        </span>
+      <div class="marca">
+        <button class="titulo-btn" data-accion="toggleDias" aria-expanded="${!!T.diasAbierto}">
+          <span class="titulo">${esc(nombre(T))}</span>
+        </button>
+        <div class="marca-der">
+          <span class="chip" id="chipSync">sin señal</span>
+          <span class="chip fmt">${esc(formato(T))} · neto</span>
+        </div>
+      </div>
+      ${yo ? `<div class="quien-soy">${esc(yo)}</div>` : ''}
+      <button class="fila-sub" data-accion="toggleDias" aria-expanded="${!!T.diasAbierto}">
+        <span class="sub">${esc(sub)}</span>
+        <span class="caret">cambiar ${T.diasAbierto ? '▴' : '▾'}</span>
       </button>
-      <span class="chip" id="chipSync">sin señal</span>
     </div>
     ${T.diasAbierto ? vistaDias(T) : ''}
     <div class="hoja">${pintores[cual]()}</div>
@@ -1689,6 +1778,22 @@ const ACCIONES = {
   irVista: d => { S.vista = d.vista; salvar() },
   /* programar() aquí porque el ciclo se detiene con un torneo cerrado:
      al cambiarse a uno vivo hay que volver a encenderlo. */
+  setNombreTorneo: (d, el) => { ponNombre(T(), el.value); salvar(); programar() },
+  setDiasTorneo: (d, el) => { ponDias(T(), el.value); salvar(); programar() },
+  editarLista: () => { S.editandoLista = !S.editandoLista; salvar() },
+  /* Quitar desde la lista: local, igual que desde Ajustes, y también
+     pregunta. Sirve para cualquier torneo, no solo para el abierto. */
+  quitarDeLista: d => {
+    const t = S.torneos[d.tid]
+    if (!t) return
+    const comoSeLlama = nombre(t)
+    const seguro = typeof confirm !== 'function' ||
+      confirm(`¿Quitar "${comoSeLlama}" de este teléfono?\n\nLos datos siguen en el servidor y en los demás teléfonos. Si te reenvían la liga, vuelve.`)
+    if (!seguro) return
+    quitarTorneo(S, d.tid)
+    if (!Object.keys(S.torneos).length) S.editandoLista = false
+    salvar()
+  },
   abrirTorneo: d => { S.activo = d.tid; S.vista = 'hoy'; saltarAHoy(T()); salvar(); programar() },
   cerrarTorneo: () => { ponCerrado(T(), true); salvar(); programar() },
   reabrirTorneo: () => { ponCerrado(T(), false); salvar(); programar() },
@@ -1887,6 +1992,9 @@ async function sincronizar () {
       'clave inválida': '○ liga no válida'
     }
     chip.textContent = legible[r.estado] || ('○ ' + r.estado)
+    /* Verde solo cuando de verdad está en línea: el chip es lo que se mira
+       de reojo en el tee para saber si el grupo está viendo lo que anotas. */
+    if (chip.className !== undefined) chip.className = 'chip' + (r.estado === 'en línea' ? ' vivo' : '')
   }
   /* Regla `tecleando` de Santa Fe: si bajó algo mientras el usuario escribe
      en un input, repintar le borraría lo tecleado. El repintado llega con
