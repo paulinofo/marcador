@@ -2254,8 +2254,8 @@ function vistaDias (T) {
    HTML y no lo suelta: Paulino publicó cinco veces y siguió viendo la
    versión vieja. Con esto la app se entera sola y ofrece pasar a la nueva,
    en vez de que cada quien tenga que adivinar cómo forzar a su iOS. */
-const VERSION = '2026-09-15·f9d24a2'
-const VERSION_DEL_ARMADO = '2026-09-15·f9d24a2'
+const VERSION = '2026-09-15·1fa8d14'
+const VERSION_DEL_ARMADO = '2026-09-15·1fa8d14'
 
 /* El nombre de la constante es el ancla que se busca en el HTML servido.
    Se escribe partido para que esta línea no se encuentre a sí misma. */
@@ -2446,25 +2446,59 @@ function bloqueFoto (T, S) {
 
    Es local, como la libreta de jugadores: no viaja por el servidor. */
 
-/* Los campos que la app ya trae puestas. Un campo se teclea una vez en
-   la vida -o se fotografía-, pero el primero de todos no lo tiene nadie:
-   un teléfono recién instalado abría la lista vacía. Estos vienen dentro
-   del armado, así que aparecen desde el primer momento y en el teléfono de
+/* Los campos que la app ya trae puestos. Un campo se teclea una vez en la
+   vida -o se fotografía-, pero el primero de todos no lo tiene nadie: un
+   teléfono recién instalado abría la lista vacía. Estos vienen dentro del
+   armado, así que aparecen desde el primer momento y en el teléfono de
    todo el grupo.
 
-   Chapultepec salió de la tarjeta de papel que fotografió Paulino el
-   15-sep-2026. Los índices son los de las VENTAJAS DORADAS Y BLANCAS, que
-   son las marcas que juega su grupo; la tarjeta trae otros para las negras
-   y azules. Las cuatro sumas impresas en la tarjeta -7439, 7262, 6813 y
-   6503- cuadran con las distancias hoyo por hoyo, que es como se comprobó
-   que las columnas se leyeron alineadas. */
+   De dónde salió cada uno:
+
+   - Chapultepec, de la tarjeta de papel que fotografió Paulino el
+     15-sep-2026. Índices de las VENTAJAS DORADAS Y BLANCAS, que son las
+     marcas que juega su grupo; la tarjeta trae otros para negras y azules.
+     Las cuatro sumas impresas -7439, 7262, 6813 y 6503- cuadran con las
+     distancias hoyo por hoyo: así se comprobó que las columnas se leyeron
+     alineadas.
+   - Los otros seis, de las apps de torneo que ya jugaron: Turtle Dunes,
+     Tres Vidas y Santa Fe de la de Acapulco; Red Sky, Vail y EagleVail de
+     la del viaje a Vail. Son los mismos números con los que se contaron
+     esos torneos.
+
+   `porCotejar` es honestidad, no adorno: en la app de Acapulco quedó
+   anotado que Turtle Dunes se cotejó contra la tarjeta física y que Tres
+   Vidas y Santa Fe salieron de una base de datos de golf. Un índice
+   equivocado reparte mal las ventajas toda la ronda, así que la lista lo
+   dice hasta que alguien fotografíe la tarjeta de la casa club — y en
+   cuanto lo haga, la ficha del teléfono le gana a ésta y la marca se va.
+
+   Congelado a propósito: la lista la comparten todas las pantallas y
+   nadie debe poder escribir dentro de ella por accidente. */
 const CAMPOS_DE_FABRICA = [
-  {
-    n: 'Club de Golf Chapultepec',
+  { n: 'Club de Golf Chapultepec',
     par: [4, 4, 3, 4, 4, 5, 3, 5, 4, 4, 5, 4, 3, 4, 5, 4, 3, 4],
-    si: [17, 7, 11, 1, 5, 3, 9, 15, 13, 4, 16, 12, 8, 2, 14, 6, 18, 10]
-  }
-]
+    si: [17, 7, 11, 1, 5, 3, 9, 15, 13, 4, 16, 12, 8, 2, 14, 6, 18, 10] },
+  { n: 'EagleVail Golf Club',
+    par: [5, 4, 4, 3, 4, 4, 4, 3, 4, 3, 5, 4, 3, 5, 4, 4, 3, 5],
+    si: [9, 3, 11, 15, 7, 5, 13, 17, 1, 18, 4, 12, 14, 10, 2, 8, 16, 6] },
+  { n: 'Red Sky · Fazio',
+    par: [4, 5, 4, 4, 5, 4, 3, 4, 3, 3, 4, 4, 4, 4, 5, 4, 3, 5],
+    si: [11, 9, 15, 3, 1, 13, 7, 5, 17, 4, 2, 16, 10, 8, 14, 6, 18, 12] },
+  { n: 'Santa Fe Social Club',
+    porCotejar: true,
+    par: [4, 5, 3, 4, 4, 3, 5, 4, 4, 4, 4, 3, 5, 4, 5, 4, 3, 4],
+    si: [17, 3, 13, 1, 5, 15, 9, 7, 11, 12, 8, 16, 4, 6, 2, 10, 18, 14] },
+  { n: 'Tres Vidas',
+    porCotejar: true,
+    par: [5, 4, 3, 4, 4, 3, 4, 5, 4, 5, 4, 3, 5, 4, 4, 4, 3, 4],
+    si: [5, 3, 7, 17, 1, 13, 15, 9, 11, 12, 16, 14, 6, 2, 10, 8, 18, 4] },
+  { n: 'Turtle Dunes',
+    par: [4, 5, 4, 3, 4, 5, 4, 3, 4, 4, 4, 5, 4, 4, 3, 4, 3, 5],
+    si: [5, 11, 9, 13, 17, 7, 3, 15, 1, 2, 6, 8, 14, 16, 18, 4, 12, 10] },
+  { n: 'Vail Golf Club',
+    par: [4, 4, 3, 4, 4, 4, 3, 5, 4, 4, 4, 5, 4, 4, 3, 4, 3, 5],
+    si: [7, 5, 13, 11, 9, 1, 15, 17, 3, 16, 4, 14, 8, 6, 18, 2, 10, 12] }
+].map(f => Object.freeze({ ...f, par: Object.freeze(f.par), si: Object.freeze(f.si) }))
 function fichaDelDia (T, d) {
   return {
     n: campo(T, d),
@@ -2620,11 +2654,14 @@ function vistaAjustes (T, S, base = '') {
       data-cambio="setCampo">
     <select data-cambio="usarCampo">
       <option value="">Elegir uno de mis campos…</option>
-      ${biblioteca.map(f => `<option value="${esc(f.n)}">${esc(f.n)}</option>`).join('')}
+      ${biblioteca.map(f => `<option value="${esc(f.n)}">${esc(f.n)}${f.porCotejar ? ' · por cotejar' : ''}</option>`).join('')}
     </select>
     <p class="guia">${fichaCompleta(T, d)
       ? 'Este día ya tiene sus 18 pares y sus 18 índices. Elegir otro campo los reemplaza.'
       : 'Elige uno y sus 18 pares y sus 18 índices entran a este día. La lista crece sola: cada campo que juegues o fotografíes se queda en ella.'}</p>
+    ${biblioteca.some(f => f.porCotejar)
+      ? '<p class="guia">Los que dicen «por cotejar» no salieron de la tarjeta de papel sino de una base de datos de golf. El par suele estar bien; el índice de dificultad es el que baila, y de él dependen las ventajas. Si van a jugar uno, fotografía su tarjeta en la casa club y la corriges para siempre.</p>'
+      : ''}
     <h2>Tipo de juego</h2>
     <select data-cambio="setFormato">${JUEGOS_DEL_TORNEO.map(([k, et]) => `<option value="${k}"${formato(T) === k ? ' selected' : ''}>${et}</option>`).join('')}</select>
     <p class="guia">Presiones enciende su pestaña; Stableford usa la Tabla; los demás abren la suya.</p>
