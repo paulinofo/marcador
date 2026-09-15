@@ -167,6 +167,29 @@ nav button.on::before{background:var(--laton)}
 
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 
+/* ---- Presiones (nombres tomados de Santa Fe) ---- */
+.segm{display:flex;gap:5px;background:var(--verde-hondo);border-radius:9px;padding:4px;margin:0 0 11px}
+.segm button{flex:1;padding:9px 6px;border-radius:6px;font-size:15.5px;font-weight:600;color:var(--cal)}
+.segm button.on{background:var(--tarjeta);color:var(--verde-hondo)}
+td.tot{background:#EAE3D2;font-weight:700}
+td.bajo{color:var(--bandera);font-weight:700}
+td.alto{color:var(--tinta-suave)}
+td.vacia{color:var(--tarjeta-linea)}
+td.nace{background:var(--laton);color:var(--verde-hondo);font-weight:800}
+.arr{color:var(--ok);font-weight:700}
+.aba{color:var(--bandera);font-weight:700}
+.pacto-val{display:inline-block;min-width:76px;text-align:center;font-family:var(--mono);font-size:13px;letter-spacing:.02em}
+.veredicto{font-weight:800;font-size:20px;margin:12px 0 4px;color:var(--tarjeta)}
+.veredicto.arr{color:#6FD39B}
+.veredicto.aba{color:#E8836F}
+.pres-viva{font-style:normal;font-family:var(--mono);margin-left:6px}
+.casilla{display:flex;align-items:center;gap:10px;font-size:16px;margin:6px 0 10px;color:var(--tarjeta)}
+.casilla input{width:22px;height:22px;margin:0}
+.pres-ajustes{display:grid;grid-template-columns:1fr 1fr;gap:8px 12px}
+.pres-ajustes label{font-size:14px;color:var(--cal);display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.pres-ajustes input{width:64px;margin:0;text-align:center}
+.casilla select{flex:1;min-width:0;margin:0}
+
 /* Un fallo en el teléfono tiene que verse. Antes, una acción que no hacía
    nada -o que tronaba- dejaba la pantalla igual y no había forma de saber
    por qué desde el campo. */
@@ -283,61 +306,6 @@ function selloPara (T, ...llaves) {
   return Math.max(Date.now(), ...llaves.map(k => (T.ct[k] || 0) + 1))
 }
 
-
-/* Sin l, o, 0 ni 1: el código corto se dicta en voz alta en el campo. */
-const ALFA = 'abcdefghijkmnpqrstuvwxyz23456789'
-function sortear (n = 10) {
-  const b = new Uint8Array(n)
-  crypto.getRandomValues(b)
-  let s = ''
-  for (const x of b) s += ALFA[x % ALFA.length]
-  return s
-}
-
-/* Un torneo se acuña en el teléfono, sin preguntarle a nadie: existe
-   completo desde el primer segundo, aunque no haya señal. Lo único que
-   necesita red es registrarse para obtener el código corto. */
-function nuevoTorneo ({ nombre, dias, ahora = Date.now() }) {
-  const T = torneoVacio()
-  T.tid = sortear(10)
-  T.clave = sortear(16)
-  T.codigo = null
-  T.yo = null
-  T.d = 0
-  T.hoyo = 0
-  /* El creador nunca "se une": pone sus propias fechas en Ajustes y sigue,
-     nunca recibe un torneo vacío esperando fecha ajena. Ya nace situado
-     -si no, en cuanto bajara CUALQUIER hecho de otro teléfono (sin
-     relación con fechas), sincronizar() vería !t.situado, saltarAHoy
-     encontraría el día de hoy y le arrastraría T.d/T.hoyo mientras revisa
-     otra ronda. unirseA (estado.js) es el único caso donde ese salto
-     diferido tiene sentido: se queda sin este campo. */
-  T.situado = true
-  emitir(T, 't.n', nombre, ahora)
-  emitir(T, 't.dias', dias, ahora)
-  emitir(T, 't.formato', 'stableford', ahora)
-  return T
-}
-function agregarJugador (T, nombre, idx, ahora = Date.now()) {
-  const jid = 'j' + sortear(8)
-  emitir(T, `j.${jid}.n`, nombre, ahora)
-  emitir(T, `j.${jid}.i`, idx, ahora)
-  return jid
-}
-const ligaDe = (T, base) => `${base}#t=${T.tid}.${T.clave}`
-
-/* El tid y la clave de una liga son entrada de afuera: quien construye o
-   modifica la URL a mano controla el contenido de estos dos grupos. Se
-   restringen al mismo alfabeto que sortear() -nunca `[^.]+`- para que un
-   valor como `__proto__` (o `constructor`, `toString`… todos con alguna
-   letra fuera de ALFA) sea rechazado en vez de llegar a torneos.js y de
-   ahí a S.torneos[tid], donde una liga hostil podía apuntar al prototipo. */
-const RE_LIGA = new RegExp(`^#t=([${ALFA}]+)\\.([${ALFA}]+)$`)
-function leerLiga (hash) {
-  const m = RE_LIGA.exec(hash || '')
-  return m ? { tid: m[1], clave: m[2] } : null
-}
-
 /* Las vistas leen el estado SOLO por aquí. Nadie toca T.h a mano. */
 const HOYOS = 18
 const golpe = (T, d, jid, h) => T.h[`s.${d}.${jid}.${h}`] ?? null
@@ -346,7 +314,23 @@ const par = (T, d, h) => T.h[`c.${d}.par.${h}`] ?? 4
 const si = (T, d, h) => T.h[`c.${d}.si.${h}`] ?? h + 1
 const indice = (T, jid) => T.h[`j.${jid}.i`] ?? 0
 const grupo = (T, d, jid) => T.h[`g.${d}.${jid}`] ?? 0
-const dias = (T) => T.h['t.dias'] ?? 1
+
+/* Tope de nueve rondas: el servidor v1 trunca la llave de golpes a 16
+   caracteres, y s.<d>.<jid>.<h> mide 17 en cuanto el día pasa de un dígito
+   (ver el spec, "Techo latente en la familia de golpes"). Nueve es el
+   máximo día de un solo dígito, y de sobra para los torneos reales (dos a
+   cuatro rondas). Se exporta para que nuevoTorneo (torneos.js) acote lo
+   mismo al escribir: un valor menor que 1, no numérico o ausente cae a 1;
+   uno mayor que 9 cae a 9. */
+const acotaDias = (v) => {
+  const n = parseInt(v, 10)
+  return Number.isFinite(n) ? Math.max(1, Math.min(9, n)) : 1
+}
+
+/* Acotado también al leer: un t.dias de un torneo viejo o de otro
+   teléfono no debe poder meter un día de dos dígitos que el servidor no
+   sabe guardar. */
+const dias = (T) => acotaDias(T.h['t.dias'])
 const nombre = (T) => T.h['t.n'] ?? 'Torneo'
 const campo = (T, d) => T.h[`c.${d}.n`] ?? ''
 const fecha = (T, d) => T.h[`c.${d}.iso`] ?? ''
@@ -414,10 +398,103 @@ function miGrupo (T, d) {
   return gruposDe(T, d).find(g => g.includes(T.yo)) || null
 }
 
+/* ---- Presiones: ajustes del torneo y pacto de sliding por pareja ----
+   Los valores por omisión viven aquí (no se emiten al crear el torneo):
+   un torneo viejo los adquiere sin migración. */
+const presOn = (T) => (T.h['t.pres.on'] ?? 1) !== 0
+
+/* Un hecho de t.pres.* mal formado (texto, vacío, NaN) no debe tumbar el
+   cálculo: cae al valor por omisión en vez de propagar NaN. */
+const enteroDeHecho = (v, def) => { const n = parseInt(v, 10); return Number.isFinite(n) ? n : def }
+const presIda = (T) => enteroDeHecho(T.h['t.pres.ida'], 5)
+const presVuelta = (T) => enteroDeHecho(T.h['t.pres.vuelta'], 5)
+const presBono = (T) => enteroDeHecho(T.h['t.pres.bono'], 10)
+const presAl = (T) => enteroDeHecho(T.h['t.pres.al'], 2)
+
+/* Interruptores de Teezr, apagados por omisión (spec, "Interruptores"). */
+const presCarry = (T) => enteroDeHecho(T.h['t.pres.carry'], 0) !== 0
+const presMatch = (T) => (T.h['t.pres.match'] === 'suma' ? 'suma' : 'mayoria')
+
+/* Un id recortado para caber en la llave: el servidor v1 trunca a 16
+   caracteres (ver el spec, "El límite de 16 caracteres"). Cinco caracteres
+   del alfabeto de 32 dan 33 millones por jugador. */
+const jidCorto = (jid) => String(jid).slice(-5)
+
+/* La pareja se nombra con los dos ids ordenados como cadenas, para que los
+   dos teléfonos emitan la MISMA llave, y recortados con jidCorto porque con
+   los ids enteros la llave medía 23 y el pacto nunca habría cruzado el
+   servidor v1. El signo, en cambio, se decide con los ids COMPLETOS, en
+   ponSliding y slidingPactado. */
+const llavePareja = (a, b) => [a, b].sort().map(jidCorto).join('|')
+
+/* El pacto del día visto desde `a`: + = `a` le da golpes a `b`. null si
+   no hay pacto (entonces manda el sugerido, que calcula presiones.js). */
+function slidingPactado (T, d, a, b) {
+  const v = T.h[`v.${d}.${llavePareja(a, b)}`]
+  if (v === null || v === undefined) return null
+  return [a, b].sort()[0] === a ? v : -v
+}
+
 /* Un torneo cerrado es un torneo terminado: viaja como hecho, así que todo
    el grupo lo ve terminado, se guarda para consultarlo y deja de
    sincronizar cada 1.8 s. Se puede reabrir. */
 const torneoCerrado = (T) => (T.h['t.cerrado'] ?? 0) !== 0
+
+
+
+/* Sin l, o, 0 ni 1: el código corto se dicta en voz alta en el campo. */
+const ALFA = 'abcdefghijkmnpqrstuvwxyz23456789'
+function sortear (n = 10) {
+  const b = new Uint8Array(n)
+  crypto.getRandomValues(b)
+  let s = ''
+  for (const x of b) s += ALFA[x % ALFA.length]
+  return s
+}
+
+/* Un torneo se acuña en el teléfono, sin preguntarle a nadie: existe
+   completo desde el primer segundo, aunque no haya señal. Lo único que
+   necesita red es registrarse para obtener el código corto. */
+function nuevoTorneo ({ nombre, dias, ahora = Date.now() }) {
+  const T = torneoVacio()
+  T.tid = sortear(10)
+  T.clave = sortear(16)
+  T.codigo = null
+  T.yo = null
+  T.d = 0
+  T.hoyo = 0
+  /* El creador nunca "se une": pone sus propias fechas en Ajustes y sigue,
+     nunca recibe un torneo vacío esperando fecha ajena. Ya nace situado
+     -si no, en cuanto bajara CUALQUIER hecho de otro teléfono (sin
+     relación con fechas), sincronizar() vería !t.situado, saltarAHoy
+     encontraría el día de hoy y le arrastraría T.d/T.hoyo mientras revisa
+     otra ronda. unirseA (estado.js) es el único caso donde ese salto
+     diferido tiene sentido: se queda sin este campo. */
+  T.situado = true
+  emitir(T, 't.n', nombre, ahora)
+  emitir(T, 't.dias', acotaDias(dias), ahora)
+  emitir(T, 't.formato', 'stableford', ahora)
+  return T
+}
+function agregarJugador (T, nombre, idx, ahora = Date.now()) {
+  const jid = 'j' + sortear(8)
+  emitir(T, `j.${jid}.n`, nombre, ahora)
+  emitir(T, `j.${jid}.i`, idx, ahora)
+  return jid
+}
+const ligaDe = (T, base) => `${base}#t=${T.tid}.${T.clave}`
+
+/* El tid y la clave de una liga son entrada de afuera: quien construye o
+   modifica la URL a mano controla el contenido de estos dos grupos. Se
+   restringen al mismo alfabeto que sortear() -nunca `[^.]+`- para que un
+   valor como `__proto__` (o `constructor`, `toString`… todos con alguna
+   letra fuera de ALFA) sea rechazado en vez de llegar a torneos.js y de
+   ahí a S.torneos[tid], donde una liga hostil podía apuntar al prototipo. */
+const RE_LIGA = new RegExp(`^#t=([${ALFA}]+)\\.([${ALFA}]+)$`)
+function leerLiga (hash) {
+  const m = RE_LIGA.exec(hash || '')
+  return m ? { tid: m[1], clave: m[2] } : null
+}
 
 
 const LOTE = 200
@@ -608,7 +685,7 @@ function vistaNuevo (S) {
     <h1>Torneo nuevo</h1>
     <h2>Nombre</h2>
     <input id="nomTorneo" placeholder="Santa Fe 2026">
-    <h2>Cuántas rondas</h2>
+    <h2>Cuántas rondas <span class="tenue">máximo 9</span></h2>
     <input id="diasTorneo" inputmode="numeric" value="1">
     <button class="btn" data-accion="crearDesdeForm">Crear</button>
     <button class="btn sec" data-accion="irVista" data-vista="inicio">Cancelar</button>
@@ -763,6 +840,191 @@ function ciclaPenal (T, jid, penal) {
 
 
 
+/* ============================================================
+   PRESIONES · match play por nueves, presión automática al ir
+   `t.pres.al` abajo (2 por omisión). Cada apuesta lleva su marcador
+   y genera la suya al llegar ahí; ninguna se cierra: corren hasta el
+   9 y hasta el 18. Reglas copiadas de presionesMatch() de la app de
+   Santa Fe. Todo se calcula desde el punto de vista de `a`.
+   ============================================================ */
+const NUEVES = [[0, 8, 'Ida'], [9, 17, 'Vuelta']]
+const signoPres = (v) => (v > 0 ? 1 : (v < 0 ? -1 : 0))
+const acotaSliding = (v) => Math.max(-36, Math.min(36, parseInt(v, 10) || 0))
+
+/* El rodado solo cuenta los días en que los dos iban en el MISMO grupo:
+   comparar en frío dos tarjetas de grupos distintos inventa un match que
+   nunca se jugó, y ese dinero fantasma movería los golpes del día
+   siguiente. Es la primera línea del bucle de slidingRodado en Santa Fe
+   (`const g=(S.grupos[p]||[]).find(...); if(!g) continue;`). */
+const jugaronJuntos = (T, d, a, b) => gruposDe(T, d).some(g => g.includes(a) && g.includes(b))
+
+/* El dinero sin bono del día `p` contra ese rival, o null cuando el rodado
+   no se mueve: los dos `continue` de slidingRodado —no iban en el mismo
+   grupo, o jugaron juntos pero nadie capturó—. `prev` es el sliding
+   vigente ese día; se recibe ya calculado para no volver a pedirlo. */
+function dineroRodado (T, p, a, b, prev) {
+  if (!jugaronJuntos(T, p, a, b)) return null
+  const q = dineroConSliding(T, p, a, b, prev)
+  return q.capturado ? q.ida + q.vuelta : null
+}
+
+/* Un día de rodado: del sliding `prev` del día `p` al del día `p + 1`. */
+const rodar = (T, p, a, b, prev) => {
+  const din = dineroRodado(T, p, a, b, prev)
+  return din === null ? prev : acotaSliding(prev + signoPres(din))
+}
+
+/* Sugerencia de Santa Fe: quien perdió el día anterior contra ese rival
+   recibe un golpe más. Se mide sin el bono, como en la app original. */
+function slidingSugerido (T, d, a, b) {
+  if (d <= 0) return 0
+  return rodar(T, d - 1, a, b, slidingDe(T, d - 1, a, b))
+}
+
+/* El sliding vigente del día `d`, arrastrado desde el día 0 hacia arriba.
+   Escrito como recursión costaba el doble por cada día: pedía
+   slidingDe(d−1) una vez para `prev` y otra vez dentro del dinero de ese
+   mismo día, así que 18 días tardaban casi un segundo y el alta no pone
+   tope al número de días. Iterando sale lo mismo en tiempo lineal. */
+function slidingDe (T, d, a, b) {
+  let v = 0
+  for (let p = 0; p <= d; p++) {
+    const pac = slidingPactado(T, p, a, b)
+    if (pac !== null) v = acotaSliding(pac)
+    else if (p > 0) v = rodar(T, p - 1, a, b, v)
+  }
+  return v
+}
+function motivoSliding (T, d, a, b) {
+  if (slidingPactado(T, d, a, b) !== null) return 'pactado'
+  if (d <= 0) return 'parejos'
+  const din = dineroRodado(T, d - 1, a, b, slidingDe(T, d - 1, a, b))
+  if (din === null || din === 0) return slidingDe(T, d, a, b) === 0 ? 'parejos' : 'como ayer'
+  return din > 0 ? 'ayer ganaste' : 'ayer perdiste'
+}
+function ponSliding (T, d, a, b, v) {
+  const val = acotaSliding(v)
+  emitir(T, `v.${d}.${llavePareja(a, b)}`, [a, b].sort()[0] === a ? val : -val)
+}
+const ajustaSliding = (T, d, a, b, delta) => ponSliding(T, d, a, b, slidingDe(T, d, a, b) + delta)
+function presionesMatch (T, d, a, b, hasta = 17) {
+  return matchConSliding(T, d, a, b, hasta, slidingDe(T, d, a, b))
+}
+
+/* El match con el sliding ya resuelto (`sv`: + = a le da golpes a b).
+   Separado de presionesMatch para que el rodado, que viene arrastrando el
+   sliding de ese día, no lo mande a recalcular. */
+function matchConSliding (T, d, a, b, hasta, sv) {
+  const al = Math.max(1, presAl(T))
+  const neto = (jid, h) => {
+    const g = golpe(T, d, jid, h)
+    if (g === null) return null
+    const recibe = jid === a ? (sv < 0 ? -sv : 0) : (sv > 0 ? sv : 0)
+    return g - (recibe ? golpesEnHoyo(recibe, si(T, d, h)) : 0)
+  }
+  const apuestas = []
+  const porNueve = []
+  for (const [ini, fin, nom] of NUEVES) {
+    let aps = [{ et: nom + ' · salida', ini, fin, st: 0, p: false, hist: new Array(18).fill(null) }]
+    apuestas.push(aps[0])
+    let nPres = 0
+    for (let h = ini; h <= Math.min(fin, hasta); h++) {
+      const na = neto(a, h), nb = neto(b, h)
+      if (na === null || nb === null) continue
+      const r = na < nb ? 1 : (na > nb ? -1 : 0)
+      for (const ap of aps) if (h >= ap.ini) { ap.st += r; ap.hist[h] = ap.st }
+      const nuevas = []
+      for (const ap of aps) {
+        if (!ap.p && Math.abs(ap.st) >= al && h >= ap.ini && h < fin) {
+          ap.p = true
+          nPres++
+          nuevas.push({ et: nom + ' · presión ' + nPres, ini: h + 1, fin, st: 0, p: false, hist: new Array(18).fill(null) })
+        }
+      }
+      aps = aps.concat(nuevas)
+      apuestas.push(...nuevas)
+    }
+    porNueve.push(aps.reduce((t, ap) => t + signoPres(ap.st), 0))
+  }
+  for (const ap of apuestas) ap.unidad = signoPres(ap.st)
+  /* Carry (Teezr): la salida de la ida cerró en cero con sus nueve hoyos
+     evaluados (hist sin huecos hasta el 9). Apagado por omisión. */
+  const salidaIda = apuestas[0]
+  const carry = presCarry(T) && salidaIda.hist.slice(0, 9).every(v => v !== null) && salidaIda.st === 0
+  return { apuestas, porNueve, unidades: porNueve[0] + porNueve[1], carry }
+}
+
+const diaCapturado = (m) => m.apuestas.some(x => x.hist.some(v => v !== null))
+
+/* Bono de Santa Fe: para quien junte más apuestas ganadas en el día. */
+function bonoMayoria (T, m) {
+  let ga = 0, gb = 0
+  for (const x of m.apuestas) { if (x.unidad > 0) ga++; else if (x.unidad < 0) gb++ }
+  return ga > gb ? presBono(T) : (gb > ga ? -presBono(T) : 0)
+}
+
+/* Match de Teezr: el signo de salida de la ida + salida de la vuelta.
+   Solo con los 18 hoyos evaluados y algún hoyo ganado en cada nueve. */
+function matchSuma (T, m) {
+  const sIda = m.apuestas.find(x => x.ini === 0), sVta = m.apuestas.find(x => x.ini === 9)
+  const completo = sIda.hist.slice(0, 9).concat(sVta.hist.slice(9)).every(v => v !== null)
+  const abiertas = sIda.hist.some(v => v) && sVta.hist.some(v => v)
+  if (!completo || !abiertas) return 0
+  return signoPres(sIda.st + sVta.st) * presBono(T)
+}
+
+/* Dinero del día desglosado. Con carry cada apuesta de la vuelta vale
+   ida + vuelta + bono y el tercer monto ya no se paga aparte; sin carry,
+   el tercero va por t.pres.match: 'mayoria' (Santa Fe) o 'suma' (Teezr). */
+function dineroDesglosado (T, d, a, b) {
+  return dineroConSliding(T, d, a, b, slidingDe(T, d, a, b))
+}
+
+function dineroConSliding (T, d, a, b, sv) {
+  const m = matchConSliding(T, d, a, b, 17, sv)
+  const precioIda = presIda(T)
+  const precioVuelta = m.carry ? presIda(T) + presVuelta(T) + presBono(T) : presVuelta(T)
+  const ida = m.porNueve[0] * precioIda
+  const vuelta = m.porNueve[1] * precioVuelta
+  const tercero = m.carry ? 0 : (presMatch(T) === 'suma' ? matchSuma(T, m) : bonoMayoria(T, m))
+  return { capturado: diaCapturado(m), carry: m.carry, precioIda, precioVuelta, ida, vuelta, tercero, total: ida + vuelta + tercero }
+}
+
+/* Dinero del día: null si nadie capturó. */
+function dineroMatch (T, d, a, b) {
+  const q = dineroDesglosado(T, d, a, b)
+  return q.capturado ? q.total : null
+}
+
+/* Cuenta acumulada del torneo contra cada rival que te tocó en tu grupo.
+   porRival es un Map: los ids vienen de los hechos y un objeto literal
+   con llave "__proto__" sería una puerta abierta. */
+function cuentaPresiones (T, jid) {
+  const porRival = new Map()
+  const porDia = []
+  let gran = 0
+  for (let d = 0; d < dias(T); d++) {
+    const g = gruposDe(T, d).find(x => x.includes(jid))
+    let dDia = null
+    if (g) {
+      for (const rid of g) {
+        if (rid === jid) continue
+        const din = dineroMatch(T, d, jid, rid)
+        if (din === null) continue
+        porRival.set(rid, (porRival.get(rid) || 0) + din)
+        gran += din
+        dDia = (dDia || 0) + din
+      }
+    }
+    porDia.push(dDia)
+  }
+  return { porRival, porDia, gran }
+}
+
+
+
+
+
 
 
 /* Un hoyo vacío arranca en el par: en el campo casi nadie teclea un
@@ -835,6 +1097,26 @@ function bloqueStableford (T, d, h, visibles) {
   return `<div class="rejilla bloque"><table>
     <tr><th colspan="3">STABLEFORD · HOYO ${h + 1} · RONDA</th></tr>${filas}</table></div>`
 }
+
+/* Las apuestas vivas del nueve en curso contra cada rival de mi grupo,
+   hasta el hoyo activo: lo que en Santa Fe se miraba antes de pegarle. */
+function bloquePresiones (T, d, h) {
+  if (!presOn(T) || !T.yo) return ''
+  const g = miGrupo(T, d)
+  const rivales = g ? g.filter(id => id !== T.yo) : []
+  if (!rivales.length) return ''
+  const fin = h < 9 ? 8 : 17
+  const filas = rivales.map(rid => {
+    const m = presionesMatch(T, d, T.yo, rid, h)
+    const vivas = m.apuestas.filter(a => a.fin === fin && a.ini <= h)
+    const marc = vivas.length
+      ? vivas.map(a => `<i class="pres-viva${a.st > 0 ? ' arr' : (a.st < 0 ? ' aba' : '')}">${esc(a.st > 0 ? '+' + a.st : String(a.st))}</i>`).join('')
+      : '<i class="pres-viva">—</i>'
+    return `<tr><td>${esc(corto(T, rid))}</td><td>${marc}</td></tr>`
+  }).join('')
+  return `<div class="rejilla bloque"><table>
+    <tr><th colspan="2">PRESIONES · ${h < 9 ? 'LA IDA' : 'LA VUELTA'}</th></tr>${filas}</table></div>`
+}
 function vistaHoy (T) {
   const d = T.d || 0
   const h = T.hoyo || 0
@@ -875,6 +1157,7 @@ function vistaHoy (T) {
     </div>
     ${filas || '<p class="guia">Agrega jugadores en la pestaña Grupos.</p>'}
     ${filas ? bloqueStableford(T, d, h, visibles) : ''}
+    ${filas ? bloquePresiones(T, d, h) : ''}
     ${filas ? '<p class="guia">Toca el guion para anotar el par, ajusta con − y +, y toca el número para borrar el hoyo.</p>' : ''}
     ${T.yo && miGrupo(T, d) ? `<p class="guia"><button class="enlace" data-accion="verTodos">${T.todos ? 'Ver solo mi grupo' : 'Ver a todos'}</button></p>` : ''}`
 }
@@ -1009,6 +1292,15 @@ const ponFecha = (T, d, v) => emitir(T, `c.${d}.iso`, String(v ?? '').trim())
 const ponSalida = (T, d, v) => emitir(T, `c.${d}.salida`, String(v ?? '').trim())
 const ponCerrado = (T, v) => emitir(T, 't.cerrado', v ? 1 : 0)
 
+const enteroO = (v, def) => { const n = parseInt(v, 10); return Number.isFinite(n) ? n : def }
+const ponPresOn = (T, v) => emitir(T, 't.pres.on', v ? 1 : 0)
+const ponPresIda = (T, v) => emitir(T, 't.pres.ida', Math.max(0, enteroO(v, 5)))
+const ponPresVuelta = (T, v) => emitir(T, 't.pres.vuelta', Math.max(0, enteroO(v, 5)))
+const ponPresBono = (T, v) => emitir(T, 't.pres.bono', Math.max(0, enteroO(v, 10)))
+const ponPresAl = (T, v) => emitir(T, 't.pres.al', Math.max(1, enteroO(v, 2)))
+const ponPresCarry = (T, v) => emitir(T, 't.pres.carry', v ? 1 : 0)
+const ponPresMatch = (T, v) => emitir(T, 't.pres.match', v === 'suma' ? 'suma' : 'mayoria')
+
 /* `base` entra como argumento y no se lee de `location` aquí dentro:
    en Node no existe, y la prueba que pinta esta vista reventaría. */
 function vistaAjustes (T, S, base = '') {
@@ -1026,7 +1318,7 @@ function vistaAjustes (T, S, base = '') {
   const vacio = d > 0 && diaSinFicha(T, d)
 
   /* La salida. Sin esto la app es una puerta de un solo sentido: creado el
-     primer torneo, ninguna de las cinco pestañas vuelve a la lista donde
+     primer torneo, ninguna pestaña de la barra vuelve a la lista donde
      viven "Torneo nuevo" y "Unirme a uno", y quien ya tenía uno no podía
      crear otro nunca más. Lo encontró Paulino en su teléfono el 14-sep. */
   return `<h2>Mis torneos</h2>
@@ -1051,6 +1343,20 @@ function vistaAjustes (T, S, base = '') {
     <div class="rejilla">
       <table><tr><th>Hoyo</th><th>Par</th><th>SI</th></tr>${rejilla}</table>
     </div>
+    <h2>Presiones</h2>
+    <label class="casilla"><input type="checkbox"${presOn(T) ? ' checked' : ''} data-cambio="setPresOn"> Se juegan presiones</label>
+    <div class="pres-ajustes">
+      <label>Ida $ <input value="${esc(presIda(T))}" inputmode="numeric" data-cambio="setPresIda"></label>
+      <label>Vuelta $ <input value="${esc(presVuelta(T))}" inputmode="numeric" data-cambio="setPresVuelta"></label>
+      <label>Bono $ <input value="${esc(presBono(T))}" inputmode="numeric" data-cambio="setPresBono"></label>
+      <label>Presión al ir <input value="${esc(presAl(T))}" inputmode="numeric" data-cambio="setPresAl"> abajo</label>
+    </div>
+    <label class="casilla"><input type="checkbox"${presCarry(T) ? ' checked' : ''} data-cambio="setPresCarry"> Carry: si la salida de la ida cierra en cero, la vuelta vale ida + vuelta + bono</label>
+    <label class="casilla">El bono es para
+      <select data-cambio="setPresMatch">
+        <option value="mayoria"${presMatch(T) === 'mayoria' ? ' selected' : ''}>quien junte más apuestas</option>
+        <option value="suma"${presMatch(T) === 'suma' ? ' selected' : ''}>el signo de la suma de las dos salidas</option>
+      </select></label>
     <h2>Este teléfono</h2>
     <div class="fila"><div class="quien"><span class="nom">${esc(T.yo ? (jugadores(T).find(j => j.id === T.yo)?.n ?? '—') : (T.yo === '' ? 'Solo miro' : 'Sin decir'))}</span></div>
       <div class="acciones"><button data-accion="cambiarYo">Cambiar</button></div></div>
@@ -1143,8 +1449,148 @@ function vistaDias (T) {
     </button>`).join('')}</div>`
 }
 
+
+
+
+const conSigno = (v) => (v > 0 ? '+' + v : String(v))
+const claseSigno = (v) => (v > 0 ? 'arr' : (v < 0 ? 'aba' : ''))
+const sumaGolpes = (T, d, jid, de, a) => {
+  let t = 0, n = 0
+  for (let h = de; h < a; h++) { const g = golpe(T, d, jid, h); if (g !== null) { t += g; n++ } }
+  return n ? String(t) : '·'
+}
+const sumaPar = (T, d, de, a) => { let t = 0; for (let h = de; h < a; h++) t += par(T, d, h); return t }
+
+/* Fila de golpes de la tabla 1: bajo/alto contra el par, OUT, IN, TOT. */
+function filaGolpes (T, d, jid) {
+  const celda = (h) => {
+    const g = golpe(T, d, jid, h)
+    if (g === null) return '<td></td>'
+    const p = par(T, d, h)
+    return `<td class="${g < p ? 'bajo' : (g > p ? 'alto' : '')}">${esc(g)}</td>`
+  }
+  let f = `<td class="nom-col">${esc(corto(T, jid))}</td>`
+  for (let h = 0; h < 9; h++) f += celda(h)
+  f += `<td class="tot">${esc(sumaGolpes(T, d, jid, 0, 9))}</td>`
+  for (let h = 9; h < HOYOS; h++) f += celda(h)
+  f += `<td class="tot">${esc(sumaGolpes(T, d, jid, 9, 18))}</td><td class="tot">${esc(sumaGolpes(T, d, jid, 0, 18))}</td>`
+  return `<tr>${f}</tr>`
+}
+
+/* Celda de la tabla 2: el marcador acumulado de esa apuesta en ese hoyo;
+   `nace` donde la presión arranca (nunca en el 1 ni en el 10). */
+function celdaApuesta (ap, h) {
+  if (!ap || ap.hist[h] === null) return '<td class="vacia"></td>'
+  const v = ap.hist[h]
+  const nace = h === ap.ini && h !== 0 && h !== 9
+  return `<td class="${nace ? 'nace' : claseSigno(v)}">${esc(conSigno(v))}</td>`
+}
+
+function pactos (T, d, yo, rivales) {
+  return rivales.map(rid => {
+    const v = slidingDe(T, d, yo, rid)
+    const texto = v < 0 ? `te da ${-v}` : (v > 0 ? `le das ${v}` : 'parejos')
+    return `<div class="fila">
+      <div class="quien"><span class="nom">${esc(corto(T, rid))}</span>
+        <div class="meta">${esc(motivoSliding(T, d, yo, rid))}</div></div>
+      <div class="acciones">
+        <button data-accion="slidingMenos" data-rid="${esc(rid)}" aria-label="un golpe menos">−</button>
+        <span class="pacto-val ${v < 0 ? 'arr' : (v > 0 ? 'aba' : '')}">${esc(texto)}</span>
+        <button data-accion="slidingMas" data-rid="${esc(rid)}" aria-label="un golpe más">+</button>
+      </div></div>`
+  }).join('')
+}
+
+function acumulado (T, yo) {
+  const q = cuentaPresiones(T, yo)
+  if (q.porDia.filter(x => x !== null).length < 2) return ''
+  const filas = [...q.porRival].map(([rid, v]) =>
+    `<tr><td class="nom-col">${esc(corto(T, rid))}</td><td class="${claseSigno(v)}">${esc(conSigno(v))}</td></tr>`).join('')
+  return `<h2>Acumulado del torneo</h2>
+    <div class="rejilla"><table>${filas}
+      <tr><td class="nom-col"><b>Total</b></td><td class="tot ${claseSigno(q.gran)}">${esc(conSigno(q.gran))}</td></tr>
+    </table></div>`
+}
+function vistaPresiones (T) {
+  if (!T.yo) {
+    return `<h2>Presiones</h2><p class="guia">Di quién eres para ver tus presiones.</p>
+      <button class="btn sec" data-accion="cambiarYo">Decir quién soy</button>`
+  }
+  const d = T.d || 0
+  const yo = T.yo
+  const g = miGrupo(T, d)
+  const rivales = g ? g.filter(id => id !== yo) : []
+  if (!rivales.length) return '<h2>Presiones</h2><p class="guia">No hay rivales en tu grupo.</p>'
+  const rival = rivales.includes(T.rival) ? T.rival : rivales[0]
+  const nomR = corto(T, rival)
+
+  const segm = rivales.map(id =>
+    `<button class="${id === rival ? 'on' : ''}" data-accion="setRival" data-rid="${esc(id)}">${esc(corto(T, id))}</button>`).join('')
+
+  let cab = '<th>Hoyo</th>'
+  for (let h = 0; h < 9; h++) cab += `<th>${h + 1}</th>`
+  cab += '<th>OUT</th>'
+  for (let h = 9; h < HOYOS; h++) cab += `<th>${h + 1}</th>`
+  cab += '<th>IN</th><th>TOT</th>'
+  let fp = '<td class="nom-col">Par</td>'
+  for (let h = 0; h < 9; h++) fp += `<td>${esc(par(T, d, h))}</td>`
+  fp += `<td class="tot">${esc(sumaPar(T, d, 0, 9))}</td>`
+  for (let h = 9; h < HOYOS; h++) fp += `<td>${esc(par(T, d, h))}</td>`
+  fp += `<td class="tot">${esc(sumaPar(T, d, 9, 18))}</td><td class="tot">${esc(sumaPar(T, d, 0, 18))}</td>`
+
+  const m = presionesMatch(T, d, yo, rival)
+  const idaAps = m.apuestas.filter(x => x.fin === 8)
+  const vtaAps = m.apuestas.filter(x => x.fin === 17)
+  const q = dineroDesglosado(T, d, yo, rival)
+  const ida = q.precioIda, vuelta = q.precioVuelta
+  let filasP = ''
+  for (let k = 0; k < Math.max(idaAps.length, vtaAps.length); k++) {
+    const a = idaAps[k], b = vtaAps[k]
+    const u = (a ? a.unidad * ida : 0) + (b ? b.unidad * vuelta : 0)
+    let f = `<td class="nom-col">${k === 0 ? 'Salida' : 'Presión ' + k}</td>`
+    for (let h = 0; h < 9; h++) f += celdaApuesta(a, h)
+    f += `<td class="tot ${a ? claseSigno(a.st) : ''}">${a ? esc(conSigno(a.st)) : ''}</td>`
+    for (let h = 9; h < HOYOS; h++) f += celdaApuesta(b, h)
+    f += `<td class="tot ${b ? claseSigno(b.st) : ''}">${b ? esc(conSigno(b.st)) : ''}</td>`
+    f += `<td class="tot ${claseSigno(u)}">${u === 0 ? '—' : esc(conSigno(u))}</td>`
+    filasP += `<tr>${f}</tr>`
+  }
+  const dIda = q.ida, dVta = q.vuelta
+  let fd = '<td class="nom-col">Dinero</td>'
+  for (let h = 0; h < 9; h++) fd += '<td></td>'
+  fd += `<td class="tot ${claseSigno(dIda)}">${esc(conSigno(dIda))}</td>`
+  for (let h = 9; h < HOYOS; h++) fd += '<td></td>'
+  fd += `<td class="tot ${claseSigno(dVta)}">${esc(conSigno(dVta))}</td><td class="tot ${claseSigno(dIda + dVta)}">${esc(conSigno(dIda + dVta))}</td>`
+
+  const dinero = q.total
+  const terceroTxt = q.carry
+    ? `hay carry: la ida cerró en cero y cada apuesta de la vuelta vale ${esc(vuelta)}`
+    : (presMatch(T) === 'suma' ? 'el match es el signo de la suma de las dos salidas' : 'el bono es para quien junte más')
+  const veredicto = dinero === 0 ? `Tablas con ${esc(nomR)}`
+    : (dinero > 0 ? `Te debe ${esc(dinero)} ${esc(nomR)}` : `Le debes ${esc(-dinero)} a ${esc(nomR)}`)
+
+  return `<h2>Hoy juegas con</h2>
+    ${pactos(T, d, yo, rivales)}
+    <h2>El match</h2>
+    <div class="segm">${segm}</div>
+    <div class="rejilla"><table>
+      <tr>${cab}</tr>
+      <tr class="par">${fp}</tr>
+      ${filaGolpes(T, d, yo)}
+      ${filaGolpes(T, d, rival)}
+    </table></div>
+    <div class="rejilla bloque"><table>
+      <tr>${cab}</tr>
+      ${filasP}
+      <tr>${fd}</tr>
+    </table></div>
+    <p class="veredicto ${claseSigno(dinero)}">${veredicto}</p>
+    <p class="guia">Ida ${esc(ida)} · vuelta ${esc(vuelta)} por apuesta; ${terceroTxt}. Presión automática al ir abajo.</p>
+    ${dias(T) > 1 ? acumulado(T, yo) : ''}`
+}
+
 const VISTAS = [
-  ['hoy', 'Hoy'], ['tarjeta', 'Tarjeta'], ['tabla', 'Tabla'], ['grupos', 'Grupos']
+  ['hoy', 'Hoy'], ['tarjeta', 'Tarjeta'], ['tabla', 'Tabla'], ['presiones', 'Presiones'], ['grupos', 'Grupos']
 ]
 function cuerpo (S, base = '') {
   /* Las pantallas de arranque van ANTES de mirar el torneo activo: se llega
@@ -1161,11 +1607,15 @@ function cuerpo (S, base = '') {
     hoy: () => vistaHoy(T),
     tarjeta: () => vistaTarjeta(T),
     tabla: () => vistaTabla(T),
+    presiones: () => vistaPresiones(T),
     grupos: () => vistaRoster(T, S),
     ajustes: () => vistaAjustes(T, S, base)
   }
-  const cual = pintores[S.vista] ? S.vista : 'hoy'
-  const TODAS = VISTAS.concat([['ajustes', 'Ajustes']])
+  /* Si el torneo no juega presiones, la pestaña no existe: ni en la
+     barra ni como vista guardada (caería en Hoy). */
+  const juega = presOn(T)
+  const cual = pintores[S.vista] && (S.vista !== 'presiones' || juega) ? S.vista : 'hoy'
+  const TODAS = VISTAS.filter(([k]) => k !== 'presiones' || juega).concat([['ajustes', 'Ajustes']])
   const pestanas = TODAS.map(([k, et]) =>
     `<button class="${cual === k ? 'on' : ''}" data-accion="irVista" data-vista="${k}">${et}</button>`).join('')
   const d = T.d || 0
@@ -1187,6 +1637,7 @@ function cuerpo (S, base = '') {
 function pintar (nodo, S, base = '') {
   nodo.innerHTML = cuerpo(S, base)
 }
+
 
 
 
@@ -1259,6 +1710,9 @@ const ACCIONES = {
   soyYo: d => { T().yo = d.jid; salvar() },
   cambiarYo: () => { T().yo = null; S.vista = 'hoy'; salvar() },
   verTodos: () => { T().todos = !T().todos; salvar() },
+  setRival: d => { T().rival = d.rid; salvar() },
+  slidingMas: d => { const t = T(); ajustaSliding(t, t.d || 0, t.yo, d.rid, 1); salvar(); programar() },
+  slidingMenos: d => { const t = T(); ajustaSliding(t, t.d || 0, t.yo, d.rid, -1); salvar(); programar() },
   ponerPar: d => { abrirEnPar(T(), d.jid); salvar(); programar() },
   borrarHoyo: d => { borraHoyo(T(), d.jid); salvar(); programar() },
   golpeMas: d => { cambiaGolpe(T(), d.jid, 1); salvar(); programar() },
@@ -1291,6 +1745,13 @@ const ACCIONES = {
   setSalida: (d, el) => { ponSalida(T(), T().d || 0, el.value); salvar(); programar() },
   copiarFicha: () => { const t = T(); copiarFicha(t, 0, t.d || 0); salvar(); programar() },
   setCorto: (d, el) => { ponCorto(T(), d.jid, el.value); salvar(); programar() },
+  setPresOn: (d, el) => { ponPresOn(T(), el.checked); salvar(); programar() },
+  setPresIda: (d, el) => { ponPresIda(T(), el.value); salvar(); programar() },
+  setPresVuelta: (d, el) => { ponPresVuelta(T(), el.value); salvar(); programar() },
+  setPresBono: (d, el) => { ponPresBono(T(), el.value); salvar(); programar() },
+  setPresAl: (d, el) => { ponPresAl(T(), el.value); salvar(); programar() },
+  setPresCarry: (d, el) => { ponPresCarry(T(), el.checked); salvar(); programar() },
+  setPresMatch: (d, el) => { ponPresMatch(T(), el.value); salvar(); programar() },
   /* Crear no necesita red: el torneo existe desde ya. El registro para
      obtener el código corto se intenta aquí mismo, para tenerlo lo antes
      posible; si falla (sin señal, típicamente en el estacionamiento del
@@ -1392,10 +1853,13 @@ const programar = () => {
 async function sincronizar () {
   const t = T()
   if (!t || !t.clave) return
-  /* Un torneo terminado deja de sincronizar: ni red ni batería. Y no se
-     vuelve a programar, así que el ciclo muere hasta que se reabra o se
-     abra otro torneo -los dos llaman a programar(). */
-  if (torneoCerrado(t)) return
+  /* Un torneo terminado deja de sincronizar: ni red ni batería. Pero NO
+     antes de vaciar la cola: en ella está el propio hecho del cierre -y
+     con él lo último que se anotó-. Sin esta vuelta final, cerrar el
+     torneo al salir del 18 dejaría los golpes del 18 y el cierre varados
+     en este teléfono, y el grupo no lo vería terminado nunca. */
+  const cerrado = torneoCerrado(t)
+  if (cerrado && !t.pend.length) return
   const r = await ciclo(t, red())
   guardar(S, localStorage)
   /* Un hecho fusionado a media sesión puede bajar t.dias por debajo del
@@ -1448,7 +1912,11 @@ async function sincronizar () {
       if (await registrar(t, red())) guardar(S, localStorage)
     } catch (e) {}
   }
-  programar()
+  /* Mientras quede algo por subir se sigue programando aunque esté
+     cerrado: si la vuelta final se fue sin señal hay que reintentarla.
+     Cuando la cola queda vacía, el ciclo muere de verdad; lo reencienden
+     reabrirTorneo y abrirTorneo. */
+  if (!cerrado || t.pend.length) programar()
 }
 
 if (T()) saltarAHoy(T())
