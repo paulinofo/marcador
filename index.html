@@ -317,6 +317,11 @@ td.fuera{color:var(--tarjeta-linea)}
   margin:0 0 10px;font-size:15px;font-weight:600}
 td.dudoso input{border-color:var(--bandera);color:var(--bandera);font-weight:700;background:#FFF3F0}
 .rejilla button[disabled],.btn[disabled]{opacity:.45}
+
+/* El aviso de versión nueva: lo primero que se ve, y se toca entero. */
+.version-nueva{display:block;width:100%;background:var(--laton);color:var(--verde-hondo);
+  border:0;padding:12px 14px;font-size:15px;font-weight:700;text-align:center;
+  padding-top:calc(var(--safe-t) + 12px)}
 </style>
 </head>
 <body>
@@ -2226,6 +2231,37 @@ function vistaDias (T) {
     </button>`).join('')}</div>`
 }
 
+/* La versión de este armado. `armar.js` sustituye el 'dev' por la fecha y
+   el commit al coser el HTML; en el código fuente se queda como está.
+
+   Existe porque un teléfono con la app en su pantalla de inicio guarda el
+   HTML y no lo suelta: Paulino publicó cinco veces y siguió viendo la
+   versión vieja. Con esto la app se entera sola y ofrece pasar a la nueva,
+   en vez de que cada quien tenga que adivinar cómo forzar a su iOS. */
+const VERSION = '2026-09-15·ec10a81'
+const VERSION_DEL_ARMADO = '2026-09-15·ec10a81'
+
+/* El nombre de la constante es el ancla que se busca en el HTML servido.
+   Se escribe partido para que esta línea no se encuentre a sí misma. */
+const MARCA_VERSION = 'VERSION' + '_DEL_ARMADO'
+function leeVersion (html) {
+  const m = new RegExp(MARCA_VERSION + "\\s*=\\s*'([^']+)'").exec(String(html ?? ''))
+  return m ? m[1] : null
+}
+
+/* Pregunta por el propio HTML con algo que el caché no reconozca y compara
+   versiones. Nunca lanza: sin señal simplemente no hay novedad. */
+async function hayVersionNueva (actual, buscar, url = '') {
+  try {
+    const r = await buscar(`${url}?v=${Date.now()}`, { cache: 'no-store' })
+    if (!r || !r.ok) return null
+    const v = leeVersion(await r.text())
+    return v && v !== actual ? v : null
+  } catch (e) {
+    return null
+  }
+}
+
 
 
 /* ============================================================
@@ -2513,6 +2549,8 @@ function vistaAjustes (T, S, base = '') {
     <div class="fila"><div class="quien"><span class="nom">${esc(T.yo ? (jugadores(T).find(j => j.id === T.yo)?.n ?? '—') : (T.yo === '' ? 'Solo miro' : 'Sin decir'))}</span></div>
       <div class="acciones"><button data-accion="cambiarYo">Cambiar</button></div></div>
     ${bloqueClaveIa(S)}
+    <h2>Esta app</h2>
+    <p class="guia">Versión ${esc(VERSION)}. Si publicamos algo nuevo, la app te avisa arriba.</p>
     <h2>Invitar</h2>
     <p class="guia" style="word-break:break-all">${esc(ligaDe(T, base))}</p>
     <button class="btn" data-accion="compartirLiga">Compartir la liga</button>
@@ -2930,7 +2968,7 @@ const ICONOS = {
 const VISTAS = [
   ['hoy', 'Hoy'], ['tarjeta', 'Tarjeta'], ['tabla', 'Tabla'], ['juego', 'Juego'], ['presiones', 'Presiones'], ['grupos', 'Grupos']
 ]
-function cuerpo (S, base = '') {
+function cuerpo (S, base = '', versionNueva = null) {
   /* Las pantallas de arranque van ANTES de mirar el torneo activo: se llega
      a ellas tanto sin torneos como teniendo uno abierto. */
   if (S.vista === 'nuevo') return vistaNuevo(S)
@@ -2966,7 +3004,12 @@ function cuerpo (S, base = '') {
   const d = T.d || 0
   const sub = [`Día ${d + 1}`, fecha(T, d), salida(T, d)].filter(Boolean).join(' · ')
   const yo = T.yo ? (jugadores(T).find(j => j.id === T.yo) || {}).n : ''
-  return `<div class="cabecera">
+  /* Arriba del todo y en dorado: es lo primero que hay que ver, y no
+     estorba a lo que se está anotando. */
+  const avisoVersion = versionNueva
+    ? '<button class="version-nueva" data-accion="actualizar">Hay una versión nueva de la app · tocar para pasar a ella</button>'
+    : ''
+  return `${avisoVersion}<div class="cabecera">
       <div class="marca">
         <button class="titulo-btn" data-accion="toggleDias" aria-expanded="${!!T.diasAbierto}">
           <span class="titulo">${esc(nombre(T))}</span>
@@ -2986,8 +3029,8 @@ function cuerpo (S, base = '') {
     <div class="hoja">${pintores[cual]()}</div>
     <nav>${pestanas}</nav>`
 }
-function pintar (nodo, S, base = '') {
-  nodo.innerHTML = cuerpo(S, base)
+function pintar (nodo, S, base = '', versionNueva = null) {
+  nodo.innerHTML = cuerpo(S, base, versionNueva)
 }
 
 /* ============================================================
@@ -3161,10 +3204,15 @@ function marcarOnces (T, aid, h, jid, v) {
 
 
 
+
 const S = typeof localStorage !== 'undefined' ? cargar(localStorage) : estadoInicial()
 const T = () => activo(S)
 const base = location.origin + location.pathname
-const dibujar = () => pintar(document.getElementById('app'), S, base)
+/* Se declara aquí, antes del primer `dibujar()`: al abrir una liga con un
+   torneo en el hash, la app pinta antes de llegar a las acciones, y una
+   `let` más abajo reventaría por acceso anticipado. */
+let versionNueva = null
+const dibujar = () => pintar(document.getElementById('app'), S, base, versionNueva)
 const salvar = () => { guardar(S, localStorage); dibujar() }
 
 /* Una liga en la barra de direcciones gana sobre lo que hubiera abierto.
@@ -3196,7 +3244,26 @@ const red = () => ({ url: S.syncUrl, buscar: fetch.bind(globalThis), modo: S.syn
    las entidades del atributo ANTES de parsear el JS, así que escapar la
    comilla no sirve de nada ahí. Y de paso, un apellido con apóstrofo
    deja de romper la app. */
+/* Un teléfono con la app en su pantalla de inicio guarda el HTML y no lo
+   suelta: se publica una versión nueva y sigue viéndose la vieja, sin que
+   nada lo diga. La app pregunta por sí misma con una liga que el caché no
+   reconoce; si hay algo nuevo, lo ofrece. No se recarga sola: eso podría
+   pasar a media ronda, con el teclado abierto. */
+async function revisarVersion () {
+  if (typeof location === 'undefined' || typeof fetch === 'undefined') return
+  /* Solo tiene sentido preguntar cuando hay un servidor al que preguntar:
+     una app abierta desde un archivo no se actualiza sola. */
+  if (!/^https?:$/.test(location.protocol || '')) return
+  versionNueva = await hayVersionNueva(VERSION, fetch.bind(globalThis), location.pathname)
+  if (versionNueva) dibujar()
+}
+
 const ACCIONES = {
+  /* A una liga distinta el teléfono no puede responder con la copia vieja:
+     es lo único que de verdad funciona en iOS. */
+  actualizar: () => {
+    if (versionNueva) location.replace(location.pathname + '?v=' + versionNueva)
+  },
   irVista: d => { S.vista = d.vista; salvar() },
   /* programar() aquí porque el ciclo se detiene con un torneo cerrado:
      al cambiarse a uno vivo hay que volver a encenderlo. */
@@ -3522,7 +3589,7 @@ async function sincronizar () {
 }
 
 if (T()) saltarAHoy(T())
-if (typeof document !== 'undefined') { dibujar(); programar() }
+if (typeof document !== 'undefined') { dibujar(); programar(); revisarVersion() }
 </script>
 </body>
 </html>
