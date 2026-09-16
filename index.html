@@ -2863,8 +2863,8 @@ function vistaDias (T) {
    HTML y no lo suelta: Paulino publicó cinco veces y siguió viendo la
    versión vieja. Con esto la app se entera sola y ofrece pasar a la nueva,
    en vez de que cada quien tenga que adivinar cómo forzar a su iOS. */
-const VERSION = '2026-09-16·3c28940'
-const VERSION_DEL_ARMADO = '2026-09-16·3c28940'
+const VERSION = '2026-09-16·e2abb26'
+const VERSION_DEL_ARMADO = '2026-09-16·e2abb26'
 
 /* El nombre de la constante es el ancla que se busca en el HTML servido.
    Se escribe partido para que esta línea no se encuentre a sí misma. */
@@ -3259,8 +3259,8 @@ function vistaAsistente (S, T) {
    recibe el score ya lo trae sumado y no vuelve a sumar. Dos teléfonos
    marcando el mismo OB tampoco lo cuentan doble: gana un hecho por llave. */
 const PENALES = [
-  { id: 'ob', desp: 5, golpes: 2, et: '⛔ OB' },
-  { id: 'hazard', desp: 7, golpes: 1, et: '💧 hazard' }
+  { id: 'ob', desp: 5, golpes: 2, et: '⛔', nom: 'OB' },
+  { id: 'hazard', desp: 7, golpes: 1, et: '💧', nom: 'Hazard' }
 ]
 const TOPE_PENAL = 3
 const MASCARA_PENAL = 480          // bits 5-8: los dos contadores
@@ -3441,7 +3441,8 @@ function chipsCastigo (T, d, jid, h) {
   const x = extra(T, d, jid, h)
   return PENALES.map(p => {
     const n = cuentaPenal(x, p.desp)
-    return `<button class="chip-pen${n ? ' on' : ''}" data-accion="castigo" data-jid="${esc(jid)}" data-penal="${p.id}">${p.et}${n > 1 ? ` ×${n}` : ''}</button>`
+    return `<button class="chip-pen${n ? ' on' : ''}" data-accion="castigo" data-jid="${esc(jid)}" data-penal="${p.id}"
+      title="${esc(p.nom)}, +${esc(String(p.golpes))} golpe${p.golpes > 1 ? 's' : ''}">${p.et}${n > 1 ? ` ×${n}` : ''}</button>`
   }).join('')
 }
 
