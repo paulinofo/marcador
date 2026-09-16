@@ -95,10 +95,13 @@ h2{font-size:12px;font-family:var(--mono);letter-spacing:.12em;text-transform:up
   padding:10px 12px;margin:0 0 7px;display:block}
 .jug-fila{display:flex;align-items:center;gap:10px}
 .jug .quien{flex:1 1 auto;min-width:0}
-.jug .nom{font-weight:700;font-size:18px;display:block;
+/* Dos renglones y no tres: arriba el nombre con el hándicap al lado -el
+   nombre se recorta si no cabe, el hándicap nunca-, abajo los chips. */
+.jug .tope{display:flex;align-items:baseline;gap:8px;min-width:0}
+.jug .nom{font-weight:700;font-size:18px;flex:0 1 auto;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .jug .meta{font-family:var(--mono);font-size:12px;color:var(--tinta-suave);
-  letter-spacing:.04em;margin-top:2px}
+  letter-spacing:.04em;flex:0 0 auto;white-space:nowrap}
 .jug .pasos{display:flex;align-items:center;gap:8px;flex:0 0 auto}
 .jug .pasos button{width:44px;height:44px;border-radius:8px;background:#E5DDC9;color:var(--tinta);
   font-size:23px;font-weight:700;display:grid;place-items:center;border:0}
@@ -2863,8 +2866,8 @@ function vistaDias (T) {
    HTML y no lo suelta: Paulino publicó cinco veces y siguió viendo la
    versión vieja. Con esto la app se entera sola y ofrece pasar a la nueva,
    en vez de que cada quien tenga que adivinar cómo forzar a su iOS. */
-const VERSION = '2026-09-16·e2abb26'
-const VERSION_DEL_ARMADO = '2026-09-16·e2abb26'
+const VERSION = '2026-09-16·e33497d'
+const VERSION_DEL_ARMADO = '2026-09-16·e33497d'
 
 /* El nombre de la constante es el ancla que se busca en el HTML servido.
    Se escribe partido para que esta línea no se encuentre a sí misma. */
@@ -3599,9 +3602,7 @@ function vistaHoy (T) {
     return `<div class="jug">
       <div class="jug-fila">${ventaja > 0 ? `<i class="tri t${Math.min(ventaja, 3)}" title="${esc(String(ventaja))} golpe${ventaja > 1 ? 's' : ''} de ventaja"></i>` : ''}
         <div class="quien">
-          <span class="nom">${esc(j.c)}</span>
-          <div class="meta">HCP ${esc(String(ch))}${neto === null ? '' : ` · neto ${esc(String(neto))}`}</div>
-          <div class="chips">${chipsCastigo(T, d, j.id, h)}${chipsOnces(T, d, j.id, h)}${chipsUnidades(T, d, j.id, h)}</div>
+          <div class="tope"><span class="nom">${esc(j.c)}</span><span class="meta">HCP ${esc(String(ch))}${neto === null ? '' : ` · neto ${esc(String(neto))}`}</span></div><div class="chips">${chipsCastigo(T, d, j.id, h)}${chipsOnces(T, d, j.id, h)}${chipsUnidades(T, d, j.id, h)}</div>
         </div>
         <div class="pasos">
           <button data-accion="golpeMenos" data-jid="${esc(j.id)}" aria-label="un golpe menos">−</button>
