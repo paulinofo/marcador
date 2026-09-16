@@ -110,9 +110,11 @@ h2{font-size:12px;font-family:var(--mono);letter-spacing:.12em;text-transform:up
   display:grid;place-items:center;font-family:var(--mono);font-size:28px;font-weight:700;padding:0}
 .jug .pasos .marca.vacio{color:#B9AF97;font-size:21px;font-weight:600}
 .jug .marca.vacio{color:var(--tarjeta-linea)}
-.chips{display:flex;gap:6px;margin-top:8px}
+/* En el renglón del hándicap, no en uno propio: envuelven cuando no caben,
+   que es lo único que los separaba de estorbar. */
+.chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:4px}
 .chip-pen{font-family:var(--mono);font-size:11px;letter-spacing:.04em;border:1px solid var(--tarjeta-linea);
-  border-radius:999px;padding:6px 10px;color:var(--tinta-suave);white-space:nowrap;min-height:30px}
+  border-radius:999px;padding:5px 9px;color:var(--tinta-suave);white-space:nowrap;min-height:28px}
 .chip-pen.on{border-color:var(--bandera);color:var(--bandera);font-weight:700}
 .ventaja{color:var(--bandera);letter-spacing:-1px;font-size:11px;vertical-align:2px}
 
@@ -342,9 +344,9 @@ table.card td sup{color:var(--bandera);font-size:9px;position:absolute;top:2px;r
    recibe en este hoyo. Crece con los golpes. */
 .jug-fila{position:relative;overflow:hidden}
 .tri{position:absolute;top:0;right:0;width:0;height:0;pointer-events:none;
-  border-top:32px solid var(--bandera);border-left:32px solid transparent}
-.tri.t2{border-top-width:42px;border-left-width:42px}
-.tri.t3{border-top-width:52px;border-left-width:52px}
+  border-top:24px solid var(--bandera);border-left:24px solid transparent}
+.tri.t2{border-top-width:32px;border-left-width:32px}
+.tri.t3{border-top-width:40px;border-left-width:40px}
 
 /* ---- La pestaña del juego del torneo ---- */
 .dinero{font-family:var(--mono);font-size:17px;font-weight:700;color:var(--cal);flex:0 0 auto}
@@ -2861,8 +2863,8 @@ function vistaDias (T) {
    HTML y no lo suelta: Paulino publicó cinco veces y siguió viendo la
    versión vieja. Con esto la app se entera sola y ofrece pasar a la nueva,
    en vez de que cada quien tenga que adivinar cómo forzar a su iOS. */
-const VERSION = '2026-09-16·99fd422'
-const VERSION_DEL_ARMADO = '2026-09-16·99fd422'
+const VERSION = '2026-09-16·3c28940'
+const VERSION_DEL_ARMADO = '2026-09-16·3c28940'
 
 /* El nombre de la constante es el ancla que se busca en el HTML servido.
    Se escribe partido para que esta línea no se encuentre a sí misma. */
@@ -3439,7 +3441,7 @@ function chipsCastigo (T, d, jid, h) {
   const x = extra(T, d, jid, h)
   return PENALES.map(p => {
     const n = cuentaPenal(x, p.desp)
-    return `<button class="chip-pen${n ? ' on' : ''}" data-accion="castigo" data-jid="${esc(jid)}" data-penal="${p.id}">${p.et} +${p.golpes}${n > 1 ? ` ×${n}` : ''}</button>`
+    return `<button class="chip-pen${n ? ' on' : ''}" data-accion="castigo" data-jid="${esc(jid)}" data-penal="${p.id}">${p.et}${n > 1 ? ` ×${n}` : ''}</button>`
   }).join('')
 }
 
@@ -3598,6 +3600,7 @@ function vistaHoy (T) {
         <div class="quien">
           <span class="nom">${esc(j.c)}</span>
           <div class="meta">HCP ${esc(String(ch))}${neto === null ? '' : ` · neto ${esc(String(neto))}`}</div>
+          <div class="chips">${chipsCastigo(T, d, j.id, h)}${chipsOnces(T, d, j.id, h)}${chipsUnidades(T, d, j.id, h)}</div>
         </div>
         <div class="pasos">
           <button data-accion="golpeMenos" data-jid="${esc(j.id)}" aria-label="un golpe menos">−</button>
@@ -3607,7 +3610,6 @@ function vistaHoy (T) {
         </div>
         ${conPuntos ? `<span class="pts-lado">${esc(String(resumenRonda(T, d, j.id).pts))}p</span>` : ''}
       </div>
-      <div class="chips">${chipsCastigo(T, d, j.id, h)}${chipsOnces(T, d, j.id, h)}${chipsUnidades(T, d, j.id, h)}</div>
     </div>`
   }).join('')
 
@@ -3648,16 +3650,18 @@ const parTramo = (T, d, de, a) => {
    columnas y sin eso no se sabe de quién es el renglón que estás leyendo. */
 function vistaTarjeta (T) {
   const d = T.d || 0
+  /* La columna PTS es Stableford: va con él, como la pestaña Tabla. */
+  const conPuntos = formato(T) === 'stableford'
   const hoyos = (de, a) => Array.from({ length: a - de }, (_, i) => de + i)
   const cab = `<th class="nom-col">Hoyo</th>` +
     hoyos(0, NUEVE).map(h => `<th>${h + 1}</th>`).join('') + '<th>OUT</th>' +
-    hoyos(NUEVE, HOYOS).map(h => `<th>${h + 1}</th>`).join('') + '<th>IN</th><th>TOT</th><th>PTS</th>'
+    hoyos(NUEVE, HOYOS).map(h => `<th>${h + 1}</th>`).join('') + '<th>IN</th><th>TOT</th>' + (conPuntos ? '<th>PTS</th>' : '')
 
   const filaPar = `<tr class="par"><td class="nom-col">Par</td>` +
     hoyos(0, NUEVE).map(h => `<td>${esc(par(T, d, h))}</td>`).join('') +
     `<td class="tot">${esc(parTramo(T, d, 0, NUEVE))}</td>` +
     hoyos(NUEVE, HOYOS).map(h => `<td>${esc(par(T, d, h))}</td>`).join('') +
-    `<td class="tot">${esc(parTramo(T, d, NUEVE, HOYOS))}</td><td class="tot">${esc(parTramo(T, d, 0, HOYOS))}</td><td></td></tr>`
+    `<td class="tot">${esc(parTramo(T, d, NUEVE, HOYOS))}</td><td class="tot">${esc(parTramo(T, d, 0, HOYOS))}</td>${conPuntos ? '<td></td>' : ''}</tr>`
 
   const filas = jugadores(T).map(j => {
     const ch = hcpCampo(T, j.id)
@@ -3674,7 +3678,7 @@ function vistaTarjeta (T) {
       `<td class="tot">${esc(sumaTramo(T, d, j.id, 0, NUEVE))}</td>` +
       hoyos(NUEVE, HOYOS).map(celda).join('') +
       `<td class="tot">${esc(sumaTramo(T, d, j.id, NUEVE, HOYOS))}</td>` +
-      `<td class="tot">${esc(r.bruto)}</td><td class="tot">${esc(r.pts)}</td></tr>`
+      `<td class="tot">${esc(r.bruto)}</td>${conPuntos ? `<td class="tot">${esc(r.pts)}</td>` : ''}</tr>`
   }).join('')
 
   return `<h2>Tarjeta</h2>
