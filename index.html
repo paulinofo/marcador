@@ -2376,6 +2376,10 @@ function cuentaPresiones (T, jid) {
        veces —su mejor bola y su peor bola son la misma—, y si es él
        quien recibe ventaja, la recibe UNA sola vez: una de sus dos
        bolas va en neto y la otra en bruto.
+     · fija (5): las dos cabezas. Una pareja se mantiene fija toda la
+       ronda y juega TRES partidos en paralelo, uno contra cada una de
+       las tres parejas que se pueden armar con los otros tres. Cada
+       partido lleva sus propias presiones.
 
    La ventaja sale del hándicap de cada quien contra el más bajo de la
    mesa, como en todo lo demás de la app; dentro de una pareja eso deja
@@ -2386,7 +2390,8 @@ const MODOS_PRESIONES = [
   ['ind', 'Individuales', 2, 5],
   ['parejas', 'Parejas 2 contra 2', 4, 4],
   ['mudo', 'Mudo', 3, 3],
-  ['yoyo', 'Yo-Yo', 3, 3]
+  ['yoyo', 'Yo-Yo', 3, 3],
+  ['fija', 'Pareja fija, dos cabezas', 5, 5]
 ]
 const modoCabe = (modo, n) => {
   const m = MODOS_PRESIONES.find(x => x[0] === modo)
@@ -2448,6 +2453,25 @@ function partidosDePresiones (T, A, modo) {
       bolasB: cb.map(bolaDe),
       cuadran: la.length === 2 && lb.length === 2
     }]
+  }
+
+  if (modo === 'fija') {
+    /* Las dos cabezas son las marcadas del lado 1. Si no hay exactamente
+       dos, se toman las dos primeras del carrito y la pantalla lo dice:
+       nunca una cabeza sola ni tres. */
+    const marcadas = p.filter(j => ladoVisible(T, A, j) === 0)
+    const cabezas = marcadas.length === 2 ? marcadas : p.slice(0, 2)
+    const otros = p.filter(j => !cabezas.includes(j))
+    const bolasCab = cabezas.map(bolaDe)
+    const pares = [[otros[0], otros[1]], [otros[0], otros[2]], [otros[1], otros[2]]]
+    return pares.map(par => ({
+      et: 'Cabezas',
+      realesA: cabezas,
+      realesB: par,
+      bolasA: bolasCab,
+      bolasB: par.map(bolaDe),
+      cuadran: marcadas.length === 2
+    }))
   }
 
   return p.map((jid, i) => {
@@ -2760,8 +2784,8 @@ function vistaDias (T) {
    HTML y no lo suelta: Paulino publicó cinco veces y siguió viendo la
    versión vieja. Con esto la app se entera sola y ofrece pasar a la nueva,
    en vez de que cada quien tenga que adivinar cómo forzar a su iOS. */
-const VERSION = '2026-09-16·2eaefdc'
-const VERSION_DEL_ARMADO = '2026-09-16·2eaefdc'
+const VERSION = '2026-09-16·ffd745a'
+const VERSION_DEL_ARMADO = '2026-09-16·ffd745a'
 
 /* El nombre de la constante es el ancla que se busca en el HTML servido.
    Se escribe partido para que esta línea no se encuentre a sí misma. */
@@ -3796,7 +3820,7 @@ function tablaDeEscalera (m, ida, vuelta) {
 
 /* Quién va con quién. Es el mismo bando que usa Hoyo por hoyo -se guarda
    en el torneo, no en la apuesta-, así que marcarlo aquí lo marca allá. */
-function chipsDeBandos (T, A) {
+function chipsDeBandos (T, A, modo) {
   /* Sin guardia de tamaño: solo se llama en la modalidad de parejas, y esa
      modalidad ya exige un grupo de cuatro para siquiera jugarse
      (`modoCabe`). Una guardia que ninguna prueba puede disparar es una
@@ -3806,6 +3830,12 @@ function chipsDeBandos (T, A) {
     const lado = ladoVisible(T, A, j)
     return `<button class="lado-chip${lado === 0 ? ' on' : ''}" data-accion="setLadoJuego" data-aid="${esc(A.id)}" data-jid="${esc(j)}">${esc(corto(T, j))} · ${lado === 0 ? 1 : 2}</button>`
   }).join('')
+  if (modo === 'fija') {
+    const cabezas = p.filter(j => ladoVisible(T, A, j) === 0)
+    return `<h2>Las dos cabezas</h2><div class="chips">${chips}</div>
+      <p class="guia">Las que llevan el 1 son la pareja fija: juegan tres partidos, uno contra cada pareja que se arma con los otros tres.${
+        cabezas.length === 2 ? '' : ' Ahora mismo no hay exactamente dos marcadas, así que se tomaron las dos primeras.'}</p>`
+  }
   return `<h2>Las parejas</h2><div class="chips">${chips}</div>
     <p class="guia">Toca a alguien para cambiarlo de pareja.${bandosCuadran(T, A) ? '' : ' Ahora mismo no están dos y dos, así que se repartió por la mitad.'}</p>`
 }
@@ -3854,7 +3884,7 @@ function vistaPresionesEquipos (T, d, yo, modo) {
      del juego, y esa pestaña no existe si el torneo juega unidades o
      Stableford: se podía elegir «parejas 2 contra 2» en Ajustes y no tener
      dónde decir quién va con quién. */
-  const bandos = modo === 'parejas' ? chipsDeBandos(T, A) : ''
+  const bandos = (modo === 'parejas' || modo === 'fija') ? chipsDeBandos(T, A, modo) : ''
   return `<h2>Presiones · ${esc(nombre)}</h2>
     ${bandos}
     <p class="guia">El hoyo se decide con las dos bolas del equipo: la mejor contra la mejor y la peor contra la peor. Cada comparación vale un punto, así que un hoyo va de −2 a +2 y las presiones se abren más rápido.</p>
