@@ -472,7 +472,12 @@ function estadoInicial () {
     /* La clave de la IA es personal y de pago: vive solo en este teléfono,
        no es un hecho, no viaja por el servidor y no se publica. El token
        del servidor sí va embebido en el HTML porque es compartido. */
-    ia: { clave: '' }
+    ia: { clave: '' },
+    /* Este teléfono da de alta campos con la cámara. Es local y se
+       enciende abriendo la liga con #poli: un secreto entre él y su
+       teléfono, no una contraseña. Sirve para que la app de sus amigos no
+       enseñe una cámara ni pida una clave de IA que no tienen. */
+    dueno: false
   }
 }
 const activo = (S) => (S.activo && S.torneos[S.activo]) || null
@@ -2844,8 +2849,8 @@ function vistaDias (T) {
    HTML y no lo suelta: Paulino publicó cinco veces y siguió viendo la
    versión vieja. Con esto la app se entera sola y ofrece pasar a la nueva,
    en vez de que cada quien tenga que adivinar cómo forzar a su iOS. */
-const VERSION = '2026-09-16·7b21d32'
-const VERSION_DEL_ARMADO = '2026-09-16·7b21d32'
+const VERSION = '2026-09-16·563b0b1'
+const VERSION_DEL_ARMADO = '2026-09-16·563b0b1'
 
 /* El nombre de la constante es el ancla que se busca en el HTML servido.
    Se escribe partido para que esta línea no se encuentre a sí misma. */
@@ -3017,7 +3022,7 @@ function vistaAjustes (T, S, base = '') {
     <input value="${esc(fecha(T, d))}" placeholder="2026-09-12" inputmode="numeric" data-cambio="setFecha">
     <h2>Salida</h2>
     <input value="${esc(salida(T, d))}" placeholder="9:00 · por el 6" data-cambio="setSalida">
-    ${bloqueFoto(T, S)}
+    ${S.dueno ? bloqueFoto(T, S) : ''}
     <h2>El campo</h2>
     <input value="${esc(campo(T, d))}" placeholder="nombre del campo"
       data-cambio="setCampo">
@@ -3041,7 +3046,9 @@ function vistaAjustes (T, S, base = '') {
     <h2>Este teléfono</h2>
     <div class="fila"><div class="quien"><span class="nom">${esc(T.yo ? (jugadores(T).find(j => j.id === T.yo)?.n ?? '—') : (T.yo === '' ? 'Solo miro' : 'Sin decir'))}</span></div>
       <div class="acciones"><button data-accion="cambiarYo">Cambiar</button></div></div>
-    ${bloqueClaveIa(S)}
+    ${S.dueno ? bloqueClaveIa(S) : ''}
+    ${S.dueno ? `<p class="guia">Este teléfono puede dar de alta campos con la cámara.</p>
+      <button class="btn sec" data-accion="quitarDueno">Quitar esa capacidad de este teléfono</button>` : ''}
     <h2>Esta app</h2>
     <p class="guia">Versión ${esc(VERSION)}. Si publicamos algo nuevo, la app te avisa arriba.</p>
     <h2>Invitar</h2>
@@ -3114,15 +3121,18 @@ function paso2 (T, S) {
     <p class="guia">${listo
       ? `Listo: ${esc(campo(T, d))}, con sus 18 pares y sus 18 índices.`
       : 'Al elegirlo entran sus 18 pares y sus 18 índices, que son los que reparten las ventajas.'}</p>
-    ${abreFoto
-      ? (hayClaveIa
-          ? bloqueFoto(T, S)
-          : `<h2>Leer de una foto</h2>
-             <p class="guia">Para leer la tarjeta con la cámara hace falta tu clave de la IA, que es tuya y de pago. Se pone una sola vez en Ajustes, abajo del todo. Mientras tanto puedes seguir sin campo y ponerlo después: lo único que cambia es que las ventajas no se reparten hasta que el campo tenga sus 18 índices.</p>`)
-      : '<button class="btn sec" data-accion="asisFoto">No está en la lista: fotografiar su tarjeta</button>'}
+    ${!S.dueno
+      ? ''
+      : abreFoto
+        ? (hayClaveIa
+            ? bloqueFoto(T, S)
+            : `<h2>Leer de una foto</h2>
+               <p class="guia">Para leer la tarjeta con la cámara hace falta tu clave de la IA, que es tuya y de pago. Se pone una sola vez en Ajustes, abajo del todo. Mientras tanto puedes seguir sin campo y ponerlo después: lo único que cambia es que las ventajas no se reparten hasta que el campo tenga sus 18 índices.</p>`)
+        : '<button class="btn sec" data-accion="asisFoto">No está en la lista: fotografiar su tarjeta</button>'}
     ${listo
       ? '<button class="btn" data-accion="asisSigue">Seguir</button>'
-      : '<button class="enlace" data-accion="asisSigue">Seguir sin campo, lo pongo después</button>'}`
+      : `<button class="enlace" data-accion="asisSigue">Seguir sin campo, lo pongo después</button>${
+          S.dueno ? '' : '<p class="guia">Si el campo no está en la lista, pídele a quien lleva el marcador que lo dé de alta con la cámara: en cuanto lo haga, llega solo.</p>'}`}`
 }
 
 function paso3 (T, S) {
@@ -4652,6 +4662,17 @@ const salvar = () => { guardar(S, localStorage); dibujar() }
    esté unido en memoria. Y sin guardar aquí, el join vive solo en
    memoria hasta que corra el ciclo de sync ~1.8s después: si cierran la
    pestaña antes, se pierde por completo. */
+/* `#poli` en la liga marca ESTE teléfono como el que da de alta campos con
+   la cámara. No es una contraseña -quien tenga la liga con el ancla puede
+   encenderlo- sino la forma de que la app de sus amigos no enseñe una
+   cámara ni pida una clave de IA de pago que no tienen. Se apaga desde
+   Ajustes. */
+if (typeof location !== 'undefined' && location.hash === '#poli') {
+  S.dueno = true
+  salvar()
+  if (typeof history !== 'undefined' && history.replaceState) history.replaceState(null, '', location.pathname)
+}
+
 if (typeof location !== 'undefined' && location.hash) {
   if (unirseConLiga(S, location.hash)) {
     S.vista = 'hoy'
@@ -4851,6 +4872,7 @@ const ACCIONES = {
   /* Quitar es local y no se puede deshacer desde aquí: se pregunta. El
      texto dice la verdad -los datos siguen en el servidor- para que nadie
      crea que borró la ronda del grupo. */
+  quitarDueno: () => { S.dueno = false; salvar() },
   quitarDeAqui: () => {
     const t = T()
     if (!t) return
