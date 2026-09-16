@@ -127,8 +127,25 @@ h2{font-size:12px;font-family:var(--mono);letter-spacing:.12em;text-transform:up
    lista— y el número cabe justo, con sitio para el signo y dos cifras. */
 .fila input.slide{margin:0;width:66px;padding:10px 8px;text-align:center;
   font-family:var(--mono);font-size:16px}
+/* El nombre de la lista de sliding: se ve como texto y se edita al
+   tocarlo. Sin recuadro ni fondo, para que veinticinco renglones sigan
+   leyéndose como una lista y no como un formulario. */
+.fila input.nom-edita{background:transparent;border:0;padding:0;margin:0;width:100%;
+  font-weight:700;font-size:17px;color:var(--tarjeta)}
+.fila input.nom-edita:focus{outline:2px solid var(--laton);outline-offset:3px;border-radius:4px}
+
 /* La ✕ separada del número: son dos toques muy distintos -cambiar un
    golpe y borrar a alguien- y estaban a cinco píxeles. */
+/* Los amigos que se pueden tocar en el asistente: en dos columnas para
+   que veinticinco nombres quepan sin volverse un muro. */
+.chips-amigos{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin:0 0 10px}
+/* El nombre se recorta si hace falta, pero el número NUNCA: es lo que
+   distingue a dos Franciscos y lo que se está eligiendo. */
+.chips-amigos button{width:100%;display:flex;align-items:center;justify-content:space-between;
+  gap:7px;text-align:left}
+.chips-amigos .quien{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.chips-amigos .tenue{flex:0 0 auto}
+.chips-amigos button.on{opacity:.45}
 .fila .acciones button.quitar{margin-left:9px;background:transparent;
   border:1px solid var(--verde-linea);color:var(--cal)}
 
@@ -1278,8 +1295,13 @@ function vistaSliding (S) {
      ronda empezada, cuando uno la pone al día en su casa. Ahí no hay barra
      de pestañas abajo, así que la pantalla se pone su propia salida. */
   const suelta = !activo(S)
+  /* El nombre es un recuadro que parece texto: se lee como la lista de
+     siempre y se puede corregir tocándolo, sin un botón de «editar» que
+     ocupe sitio en veinticinco renglones. */
   const filas = lista.map(g => `<div class="fila">
-      <div class="quien"><span class="nom">${esc(g.n)}</span>
+      <div class="quien"><input class="nom nom-edita" value="${esc(g.n)}"
+          data-cambio="renombraSliding" data-quien="${esc(g.n)}"
+          autocapitalize="words" aria-label="nombre de ${esc(g.n)}">
         <span class="tenue">${esc(comoSeLee(g.sliding))}</span></div>
       <div class="acciones">
         <input class="slide" value="${esc(signo(g.sliding))}" inputmode="text"
@@ -2736,8 +2758,8 @@ function vistaDias (T) {
    HTML y no lo suelta: Paulino publicó cinco veces y siguió viendo la
    versión vieja. Con esto la app se entera sola y ofrece pasar a la nueva,
    en vez de que cada quien tenga que adivinar cómo forzar a su iOS. */
-const VERSION = '2026-09-16·fce5c4b'
-const VERSION_DEL_ARMADO = '2026-09-16·fce5c4b'
+const VERSION = '2026-09-16·94a2cbf'
+const VERSION_DEL_ARMADO = '2026-09-16·94a2cbf'
 
 /* El nombre de la constante es el ancla que se busca en el HTML servido.
    Se escribe partido para que esta línea no se encuentre a sí misma. */
@@ -2931,6 +2953,7 @@ function vistaAjustes (T, S, base = '') {
 
 
 
+
 /* El asistente: las cinco preguntas que uno hace de verdad al llegar al
    campo, en el orden en que las hace. Antes la app abría con un formulario
    de nombre y rondas -lenguaje de torneo- y todo lo demás había que ir a
@@ -3016,15 +3039,27 @@ function paso4 (T, S) {
   const filas = Array.from({ length: n }, (_, i) =>
     `<input id="asisNom${i}" list="laLibreta" placeholder="${i === 0 ? 'Tú' : 'Jugador ' + (i + 1)}"
        autocapitalize="words" value="${esc(jids[i] ? nomJug(T, jids[i]) : '')}">`).join('')
-  const libreta = (S.gente || []).map(g => `<option value="${esc(g.n)}"></option>`).join('')
+  /* Los de Golf Sliding, que es donde está la gente con la que juega de
+     verdad. Antes esto leía solo `S.gente` -lo que este teléfono ha
+     anotado alguna vez-, así que en un teléfono recién instalado no
+     sugería nada aunque la lista estuviera llena. */
+  const amigos = listaSliding(S)
+  const libreta = amigos.map(g => `<option value="${esc(g.n)}"></option>`).join('')
+  const puestos = new Set(jids.map(j => (j ? nomJug(T, j) : '')).filter(Boolean))
+  /* Y tocables: en el tee nadie quiere teclear cuatro nombres. Cada toque
+     cae en la primera casilla vacía, con su ventaja a la vista para no
+     equivocarse de Francisco. */
+  const chips = amigos.map(g => `<button class="chip-pen${puestos.has(g.n) ? ' on' : ''}"
+      data-accion="poneAmigo" data-nombre="${esc(g.n)}"><span class="quien">${esc(g.n)}</span><span class="tenue">${esc(signo(g.sliding))}</span></button>`).join('')
   /* Quien se unió por la liga pudo agregar gente desde su teléfono. El
      asistente no los toca -no son suyos-, pero callarlo haría que el
      usuario los volviera a escribir aquí y quedaran por duplicado. */
   const ajenos = jugadores(T).filter(j => !jids.includes(j.id))
   return `<h2>¿Cómo se llaman?</h2>
-    <p class="guia">El primero eres tú: así la app sabe de quién es la tarjeta en este teléfono. Si ya han jugado contigo, los propone al escribir.</p>
+    <p class="guia">El primero eres tú: así la app sabe de quién es la tarjeta en este teléfono. Escribe y te los propone, o tócalos de tu lista.</p>
     ${filas}
     <datalist id="laLibreta">${libreta}</datalist>
+    ${chips ? `<p class="guia">O tócalos de tu lista de Golf Sliding:</p><div class="chips chips-amigos">${chips}</div>` : ''}
     ${ajenos.length
       ? `<p class="guia">En este torneo ya están ${esc(ajenos.map(j => j.n).join(', '))}, que agregaron desde otro teléfono. No hace falta repetirlos: se suman a los que pongas aquí.</p>`
       : ''}
@@ -4534,6 +4569,16 @@ const ACCIONES = {
     const dd = Math.max(1, parseInt(document.getElementById('asisDias').value, 10) || 1)
     await arrancaTorneo(nom, dd, 'torneo')
   },
+  /* Un toque en un amigo lo pone en la primera casilla vacía. No pasa por
+     el estado ni repinta: si repintara, borraría los nombres que ya están
+     escritos en las otras casillas y que todavía no son hechos. */
+  poneAmigo: d => {
+    for (let i = 0; i < cuantosDe(S); i++) {
+      const el = document.getElementById('asisNom' + i)
+      if (el && !String(el.value || '').trim()) { el.value = d.nombre; return }
+    }
+    avisar('Ya están llenas las casillas. Borra una para cambiarla.')
+  },
   asisCuantos: d => { S.asis = { ...(S.asis || {}), cuantos: Number(d.n), paso: 4 }; salvar() },
   asisNombres: () => {
     const t = T()
@@ -4706,6 +4751,23 @@ const ACCIONES = {
      que es lo que uno toca de verdad, y con veinticinco renglones en una
      pantalla de teléfono el dedo se equivoca. Quitar a alguien se
      recuerda, así que no vuelve solo y hay que escribirlo otra vez. */
+  /* Corregir el nombre de alguien sin perder su ventaja: se le quita el
+     viejo y se le pone el nuevo con el mismo número. Si el viejo venía de
+     fábrica, `olvidarGente` deja anotado que se fue, así que no reaparece
+     al día siguiente con el nombre mal escrito. */
+  renombraSliding: (d, el) => {
+    const nuevo = String(el.value || '').trim()
+    if (!nuevo || nuevo === d.quien) return
+    if (listaSliding(S).some(g => g.n === nuevo)) {
+      avisar(`Ya tienes a ${nuevo} en la lista`)
+      return
+    }
+    avisar('')
+    const valor = indiceDeGente(S, d.quien)
+    olvidarGente(S, d.quien)
+    recordarGente(S, nuevo, valor)
+    salvar()
+  },
   quitaSliding: d => {
     const seguro = typeof confirm !== 'function' ||
       confirm(`¿Quitar a ${d.quien} de tu lista de sliding?\n\nSe puede volver a dar de alta, pero hay que escribirlo otra vez.`)
