@@ -72,7 +72,7 @@ h1{font-size:30px;font-weight:800;letter-spacing:-.02em;margin:0 0 6px}
 h2{font-size:12px;font-family:var(--mono);letter-spacing:.12em;text-transform:uppercase;
   color:var(--cal);font-weight:600;margin:24px 0 8px}
 .hoja > h2:first-child{margin-top:0}
-.guia{color:var(--cal);font-size:14px;margin:10px 0 0;line-height:1.5}
+.guia{color:var(--cal);font-size:14px;margin:7px 0 0;line-height:1.4}
 .puerta{padding-top:40px}
 .enlace{color:var(--laton);text-decoration:underline;padding:0;font-size:14px}
 
@@ -271,7 +271,7 @@ td.nace{background:var(--laton);color:var(--verde-hondo);font-weight:800}
 .chip.vivo{color:var(--ok);border-color:var(--ok)}
 
 /* Un filete de latón separa la guía del marcador, como en Santa Fe. */
-.jug + .guia,.rejilla + .guia{border-top:1px solid var(--laton);padding-top:11px;margin-top:14px}
+.jug + .guia,.rejilla + .guia{border-top:1px solid var(--laton);padding-top:8px;margin-top:10px}
 
 /* ---- La tarjeta de papel, copiada de la app de Santa Fe ----
    Círculo para lo que va bajo par, cuadro para lo que va encima, doble
@@ -1382,7 +1382,7 @@ function vistaSliding (S) {
     </div>`).join('')
   return `<div class="hoja${suelta ? '' : ' en-pestana'}">
     ${suelta ? '<h1>Golf Sliding</h1>' : '<h2>Golf Sliding</h2>'}
-    <p class="guia">Tus amigos y lo que juegas con cada uno. El número es lo que esa persona <b>da</b>: <b>+7</b> da siete, <b>−3</b> recibe tres, y entre esos dos se dan diez. Vive solo en este teléfono y no lo ve nadie más del grupo.</p>
+    <p class="guia">Lo que juegas con cada quien. El número es lo que esa persona <b>da</b>: <b>+7</b> da siete, <b>−3</b> recibe tres. Solo vive en este teléfono.</p>
 
     <h2>Dar de alta uno nuevo</h2>
     <div class="fila-alta">
@@ -1390,15 +1390,15 @@ function vistaSliding (S) {
       <input id="slidingVal" placeholder="+3" inputmode="text">
     </div>
     <button class="btn" data-accion="altaSliding">Agregar a mi lista</button>
-    <p class="guia">También se apuntan solos: cada vez que anotas una ronda con alguien nuevo, entra aquí con la ventaja que le pusiste.</p>
+    <p class="guia">Se apuntan solos: quien juegue una ronda contigo entra con su ventaja.</p>
 
     <h2>Mis amigos ${lista.length ? `<span class="tenue">${lista.length}</span>` : ''}</h2>
     ${lista.length
       ? `<p class="guia">Por orden alfabético. Toca el número para cambiarlo.</p>${filas}`
-      : '<p class="guia">Todavía no hay nadie en tu lista. Da de alta al primero aquí arriba, o pega la lista entera aquí abajo si ya la tienes escrita en una nota.</p>'}
+      : '<p class="guia">No hay nadie todavía. Da de alta arriba, o pega tu lista abajo.</p>'}
 
     <h2>Pegar la lista entera</h2>
-    <p class="guia">Un renglón por persona, el nombre y su número: <i>Ramón −3</i>. Lo que escribas después del número (la salida, una nota) se respeta y no entra. Los que ya estén se actualizan; a nadie se le borra.</p>
+    <p class="guia">Un renglón por persona: <i>Ramón −3</i>. Lo que siga al número no entra. Los que ya estén se actualizan; nadie se borra.</p>
     <textarea id="slidingPega" rows="6" placeholder="Ramón -3
 Javier Gordillo +7
 Juan Pablo Fer +10 Blancas."></textarea>
@@ -2861,8 +2861,8 @@ function vistaDias (T) {
    HTML y no lo suelta: Paulino publicó cinco veces y siguió viendo la
    versión vieja. Con esto la app se entera sola y ofrece pasar a la nueva,
    en vez de que cada quien tenga que adivinar cómo forzar a su iOS. */
-const VERSION = '2026-09-16·9b4f2ff'
-const VERSION_DEL_ARMADO = '2026-09-16·9b4f2ff'
+const VERSION = '2026-09-16·99fd422'
+const VERSION_DEL_ARMADO = '2026-09-16·99fd422'
 
 /* El nombre de la constante es el ancla que se busca en el HTML servido.
    Se escribe partido para que esta línea no se encuentre a sí misma. */
@@ -2970,8 +2970,8 @@ function bloqueUnidades (T) {
     ${uniOn(T)
       ? `<label class="cfg-juego"><span>Vale la unidad</span>
           <input value="${esc(uniMonto(T))}" inputmode="numeric" data-cambio="setUniMonto"></label>
-         <p class="guia">Birdie 1, eagle o mejor 2, sandy 1 con par o mejor, y el oyes 1 para el más cercano en los par 3. Se paga la diferencia contra cada rival del grupo. El sandy y el oyes se marcan en Hoy, con los chips de cada jugador.</p>`
-      : '<p class="guia">Los birdies, los sandies y los oyeses, encima de lo que se esté jugando.</p>'}`
+         <p class="guia">Birdie 1, eagle 2, sandy 1 con par o mejor, oyes 1 al más cercano en los par 3. Se paga la diferencia contra cada rival. Sandy y oyes se marcan en Hoy.</p>`
+      : '<p class="guia">Birdies, sandies y oyeses, encima de lo que jueguen.</p>'}`
 }
 
 /* El bloque de presiones: su casilla, la modalidad y las cantidades. Lo
@@ -2984,7 +2984,7 @@ function ajustesDePresiones (T) {
     <label class="cfg-juego"><span>Y además, por equipos</span>
       <select data-cambio="setPresModo">${MODOS_PRESIONES.map(([k, et]) =>
         `<option value="${k}"${presModo(T) === k ? ' selected' : ''}>${k === 'ind' ? 'Ninguna' : et}</option>`).join('')}</select></label>
-    <p class="guia">Las dos cosas pueden correr a la vez: uno contra uno con cada quien y, encima, el partido del foursome. Parejas es de cuatro; Mudo y Yo-Yo son de tres, para cuando falta el cuarto. En las tres, el hoyo se decide con las dos bolas del equipo.</p>
+    <p class="guia">Corren a la vez: el uno contra uno y, encima, el del foursome. Parejas es de cuatro; Mudo y Yo-Yo de tres. En todas el hoyo se decide con las dos bolas.</p>
     <div class="pres-ajustes">
       <label>Ida $ <input value="${esc(presIda(T))}" inputmode="numeric" data-cambio="setPresIda"></label>
       <label>Vuelta $ <input value="${esc(presVuelta(T))}" inputmode="numeric" data-cambio="setPresVuelta"></label>
@@ -3019,18 +3019,18 @@ function vistaAjustes (T, S, base = '') {
     <input value="${esc(nombre(T))}" placeholder="nombre del torneo" data-cambio="setNombreTorneo">
     <label class="cfg-juego"><span>Cuántas rondas</span>
       <input value="${esc(dias(T))}" inputmode="numeric" data-cambio="setDiasTorneo"></label>
-    <p class="guia">Los dos los ve todo el grupo. Acortar las rondas no borra lo anotado: esos días vuelven si las alargas otra vez.</p>
+    <p class="guia">Los ve todo el grupo. Acortar no borra lo anotado: vuelve al alargar.</p>
     <h2>Mis torneos</h2>
     <button class="btn sec" data-accion="irVista" data-vista="inicio">Ver todos mis torneos</button>
     ${torneoCerrado(T)
       ? `<button class="btn sec" data-accion="reabrirTorneo">Reabrir el torneo</button>
          <p class="guia">Está terminado: no sincroniza y vive en "Terminados".</p>`
       : `<button class="btn sec" data-accion="cerrarTorneo">Cerrar el torneo</button>
-         <p class="guia">Lo marca como terminado para todo el grupo y deja de sincronizar. Se guarda y se puede reabrir.</p>`}
+         <p class="guia">Lo termina para todo el grupo y deja de sincronizar. Se puede reabrir.</p>`}
     <button class="btn sec" data-accion="quitarDeAqui">Quitar de este teléfono</button>
-    <p class="guia">Solo de este teléfono. Los datos siguen en el servidor y en los demás; si te reenvían la liga, vuelve.</p>
+    <p class="guia">Solo de este teléfono. Sigue en el servidor: con la liga vuelve.</p>
     <h2>Día ${d + 1} de ${esc(dias(T))}</h2>
-    <p class="guia">Editas la ficha del día activo. Cambia de día tocando el nombre del torneo arriba.</p>
+    <p class="guia">Editas el día activo. Cambias de día tocando el nombre de arriba.</p>
     ${vacio ? `<button class="btn sec" data-accion="copiarFicha">Copiar la ficha del día 1</button>` : ''}
     <h2>Fecha</h2>
     <input value="${esc(fecha(T, d))}" placeholder="2026-09-12" inputmode="numeric" data-cambio="setFecha">
@@ -3052,7 +3052,7 @@ function vistaAjustes (T, S, base = '') {
       : ''}
     <h2>Tipo de juego</h2>
     <select data-cambio="setFormato">${JUEGOS_DEL_TORNEO.map(([k, et]) => `<option value="${k}"${formato(T) === k ? ' selected' : ''}>${et}</option>`).join('')}</select>
-    <p class="guia">Presiones enciende su pestaña; Stableford usa la Tabla; los demás abren la suya.</p>
+    <p class="guia">Presiones y los demás abren su pestaña; Stableford usa la Tabla.</p>
     ${camposDelJuego(T)}
     ${ajustesDePresiones(T)}
     <h2>Unidades</h2>
@@ -3064,7 +3064,7 @@ function vistaAjustes (T, S, base = '') {
     ${S.dueno ? `<p class="guia">Este teléfono puede dar de alta campos con la cámara.</p>
       <button class="btn sec" data-accion="quitarDueno">Quitar esa capacidad de este teléfono</button>` : ''}
     <h2>Esta app</h2>
-    <p class="guia">Versión ${esc(VERSION)}. Si publicamos algo nuevo, la app te avisa arriba.</p>
+    <p class="guia">Versión ${esc(VERSION)}. Si hay algo nuevo, la app avisa arriba.</p>
     <h2>Invitar</h2>
     <p class="guia" style="word-break:break-all">${esc(ligaDe(T, base))}</p>
     <button class="btn" data-accion="compartirLiga">Compartir la liga</button>
@@ -3109,7 +3109,7 @@ function paso1 (T, S) {
   return `<h1>Golf Poli</h1>
     <p class="guia">¿Qué vas a anotar?</p>
     <button class="btn" data-accion="asisPartida">Una partida de hoy</button>
-    <p class="guia">Una sola ronda, la de hoy. Se comparte con el grupo igual que un torneo.</p>
+    <p class="guia">Una ronda, la de hoy. Se comparte igual que un torneo.</p>
     <h2>O un torneo de varias rondas</h2>
     <input id="asisNombre" placeholder="Invitacional Santa Fe 2026">
     <label class="cfg-juego"><span>Cuántas rondas</span>
@@ -3134,19 +3134,19 @@ function paso2 (T, S) {
     </select>
     <p class="guia">${listo
       ? `Listo: ${esc(campo(T, d))}, con sus 18 pares y sus 18 índices.`
-      : 'Al elegirlo entran sus 18 pares y sus 18 índices, que son los que reparten las ventajas.'}</p>
+      : 'Entran sus 18 pares y sus 18 índices, que reparten las ventajas.'}</p>
     ${!S.dueno
       ? ''
       : abreFoto
         ? (hayClaveIa
             ? bloqueFoto(T, S)
             : `<h2>Leer de una foto</h2>
-               <p class="guia">Para leer la tarjeta con la cámara hace falta tu clave de la IA, que es tuya y de pago. Se pone una sola vez en Ajustes, abajo del todo. Mientras tanto puedes seguir sin campo y ponerlo después: lo único que cambia es que las ventajas no se reparten hasta que el campo tenga sus 18 índices.</p>`)
+               <p class="guia">Hace falta tu clave de la IA, de pago, que se pone una vez en Ajustes. Puedes seguir sin campo: las ventajas esperan a sus 18 índices.</p>`)
         : '<button class="btn sec" data-accion="asisFoto">No está en la lista: fotografiar su tarjeta</button>'}
     ${listo
       ? '<button class="btn" data-accion="asisSigue">Seguir</button>'
       : `<button class="enlace" data-accion="asisSigue">Seguir sin campo, lo pongo después</button>${
-          S.dueno ? '' : '<p class="guia">Si el campo no está en la lista, pídele a quien lleva el marcador que lo dé de alta con la cámara: en cuanto lo haga, llega solo.</p>'}`}`
+          S.dueno ? '' : '<p class="guia">¿No está en la lista? Pídeselo a quien lleva el marcador: en cuanto lo dé de alta, llega solo.</p>'}`}`
 }
 
 function paso3 (T, S) {
@@ -3184,14 +3184,14 @@ function paso4 (T, S) {
      usuario los volviera a escribir aquí y quedaran por duplicado. */
   const ajenos = jugadores(T).filter(j => !jids.includes(j.id))
   return `<h2>¿Cómo se llaman?</h2>
-    <p class="guia">El primero eres tú: así la app sabe de quién es la tarjeta en este teléfono. Escribe y te los propone, o tómalos de tu lista de abajo.</p>
+    <p class="guia">El primero eres tú. Escribe y te los propone, o tómalos de tu lista.</p>
     ${filas}
     <datalist id="laLibreta">${libreta}</datalist>
     ${opciones ? `<select data-cambio="eligeAmigo">
       <option value="">Tomar uno de mi lista…</option>${opciones}
     </select>` : ''}
     ${ajenos.length
-      ? `<p class="guia">En este torneo ya están ${esc(ajenos.map(j => j.n).join(', '))}, que agregaron desde otro teléfono. No hace falta repetirlos: se suman a los que pongas aquí.</p>`
+      ? `<p class="guia">En este torneo ya están ${esc(ajenos.map(j => j.n).join(', '))}, de otro teléfono. No los repitas: se suman a éstos.</p>`
       : ''}
     <button class="btn" data-accion="asisNombres">Seguir</button>`
 }
@@ -3202,8 +3202,8 @@ function paso5 (T, S) {
   const filas = jug.map(j => `<label class="cfg-juego"><span>${esc(j.n)} <span class="tenue">${esc(comoSeLee(aSliding(j.i)))}</span></span>
       <input value="${esc(aSliding(j.i))}" inputmode="text" data-cambio="setVentaja" data-jid="${esc(j.id)}"></label>`).join('')
   return `<h2>¿Qué ventajas se dan?</h2>
-    <p class="guia">El número es lo que esa persona <b>da</b>, igual que en tu lista de Golf Sliding: <b>+7</b> da siete golpes, <b>−3</b> recibe tres, y entre esos dos se dan diez. El que ni da ni recibe va en cero.</p>
-    <p class="guia">Se reparten hoyo por hoyo según el índice de dificultad del campo: los que se reciben empiezan por el hoyo más difícil, los que se dan por el más fácil.</p>
+    <p class="guia">El número es lo que esa persona <b>da</b>: <b>+7</b> da siete, <b>−3</b> recibe tres; entre esos dos se dan diez.</p>
+    <p class="guia">Van por índice de dificultad: los que se reciben desde el hoyo más difícil, los que se dan desde el más fácil.</p>
     ${filas}
     <button class="btn" data-accion="asisSigue">Seguir</button>`
 }
@@ -3217,7 +3217,7 @@ function paso6 (T, S) {
   return `<h2>¿Qué van a jugar?</h2>
     <select data-cambio="setFormato">${JUEGOS_DEL_TORNEO.map(([k, et]) =>
       `<option value="${k}"${formato(T) === k ? ' selected' : ''}>${esc(et)}</option>`).join('')}</select>
-    <p class="guia">Stableford no es una apuesta: es la Tabla de puntos. Los demás llevan su cuenta de dinero y abren su propia pestaña.</p>
+    <p class="guia">Stableford no es apuesta: es la Tabla. Los demás abren su pestaña con su cuenta.</p>
     ${camposDelJuego(T)}
     <h2>Presiones</h2>
     ${ajustesDePresiones(T)}
@@ -3582,6 +3582,9 @@ function vistaHoy (T) {
   const d = T.d || 0
   const h = T.hoyo || 0
   const visibles = visiblesEnHoy(T)
+  /* Los puntos del renglón son Stableford: solo salen cuando eso es lo que
+     se juega, igual que la pestaña Tabla. */
+  const conPuntos = formato(T) === 'stableford'
   /* El neto del hoyo se muestra junto al hándicap porque es el número con
      el que se juega el stableford, y en la app anterior era lo primero que
      se miraba después del golpe. */
@@ -3589,7 +3592,6 @@ function vistaHoy (T) {
     const g = golpe(T, d, j.id, h)
     const ch = hcpCampo(T, j.id)
     const ventaja = golpesEnHoyo(ch, si(T, d, h))
-    const r = resumenRonda(T, d, j.id)
     const neto = g === null ? null : g - ventaja
     return `<div class="jug">
       <div class="jug-fila">${ventaja > 0 ? `<i class="tri t${Math.min(ventaja, 3)}" title="${esc(String(ventaja))} golpe${ventaja > 1 ? 's' : ''} de ventaja"></i>` : ''}
@@ -3603,7 +3605,7 @@ function vistaHoy (T) {
             aria-label="${g === null ? 'anotar el par' : 'borrar el hoyo'}">${g === null ? '–' : `<span class="nota ${notaDe(g, par(T, d, h))}">${esc(String(g))}</span>`}</button>
           <button data-accion="golpeMas" data-jid="${esc(j.id)}" aria-label="un golpe más">+</button>
         </div>
-        <span class="pts-lado">${esc(String(r.pts))}p</span>
+        ${conPuntos ? `<span class="pts-lado">${esc(String(resumenRonda(T, d, j.id).pts))}p</span>` : ''}
       </div>
       <div class="chips">${chipsCastigo(T, d, j.id, h)}${chipsOnces(T, d, j.id, h)}${chipsUnidades(T, d, j.id, h)}</div>
     </div>`
@@ -3621,7 +3623,7 @@ function vistaHoy (T) {
     ${filas ? bloquePresiones(T, d, h) : ''}
     ${filas ? bloqueDelJuego(T, d, h, visibles) : ''}
     ${filas ? bloqueUnidadesHoy(T, d, h, visibles) : ''}
-    ${filas ? '<p class="guia">Toca el guion para anotar el par, ajusta con − y +, y toca el número para borrar el hoyo.</p>' : ''}
+    ${filas ? '<p class="guia">El guion anota el par, − y + lo ajustan, el número lo borra.</p>' : ''}
     ${T.yo && miGrupo(T, d) ? `<p class="guia"><button class="enlace" data-accion="verTodos">${T.todos ? 'Ver solo mi grupo' : 'Ver a todos'}</button></p>` : ''}`
 }
 
@@ -3961,11 +3963,11 @@ function chipsDeBandos (T, A, modo) {
   if (modo === 'fija') {
     const cabezas = p.filter(j => ladoVisible(T, A, j) === 0)
     return `<h2>Las dos cabezas</h2><div class="chips">${chips}</div>
-      <p class="guia">Las que llevan el 1 son la pareja fija: juegan tres partidos, uno contra cada pareja que se arma con los otros tres.${
+      <p class="guia">Las del 1 son la pareja fija: tres partidos, uno contra cada pareja de los otros tres.${
         cabezas.length === 2 ? '' : ' Ahora mismo no hay exactamente dos marcadas, así que se tomaron las dos primeras.'}</p>`
   }
   return `<h2>Las parejas</h2><div class="chips">${chips}</div>
-    <p class="guia">Toca a alguien para cambiarlo de pareja.${bandosCuadran(T, A) ? '' : ' Ahora mismo no están dos y dos, así que se repartió por la mitad.'}</p>`
+    <p class="guia">Toca a alguien para cambiarlo de pareja.${bandosCuadran(T, A) ? '' : ' No están dos y dos: se repartió por la mitad.'}</p>`
 }
 
 /* Las modalidades por equipos: en vez de elegir rival, se ven los partidos
@@ -3994,7 +3996,7 @@ function vistaPresionesEquipos (T, d, yo, modo) {
     const enJuego = pt.realesA.concat(pt.realesB)
     return `<h2>${nombres(pt.realesA, conMudo)} contra ${nombres(pt.realesB, false)}</h2>
       ${doble ? '<p class="guia">Tu score cuenta dos veces: una bola en neto y la otra en bruto.</p>' : ''}
-      ${conMudo ? '<p class="guia">La bola del Mudo es el renglón del par: hace par en los dieciocho y nunca cobra ni paga.</p>' : ''}
+      ${conMudo ? '<p class="guia">El Mudo es el renglón del par: hace par en los dieciocho y ni cobra ni paga.</p>' : ''}
       <div class="rejilla"><table>
         <tr>${cab}</tr>
         <tr class="par">${fp}</tr>
@@ -4015,11 +4017,11 @@ function vistaPresionesEquipos (T, d, yo, modo) {
   const bandos = (modo === 'parejas' || modo === 'fija') ? chipsDeBandos(T, A, modo) : ''
   return `<h2>Presiones · ${esc(nombre)}</h2>
     ${bandos}
-    <p class="guia">El hoyo se decide con las dos bolas del equipo: la mejor contra la mejor y la peor contra la peor. Cada comparación vale un punto, así que un hoyo va de −2 a +2 y las presiones se abren más rápido.</p>
-    ${torcidos ? '<p class="guia">Los bandos no están marcados dos y dos, así que se partió el grupo por la mitad. Se cambian tocando a cada quien en la pestaña del juego.</p>' : ''}
+    <p class="guia">El hoyo se decide con las dos bolas: mejor contra mejor y peor contra peor. Cada una vale un punto, así que el hoyo va de −2 a +2 y la presión nace a 3.</p>
+    ${torcidos ? '<p class="guia">Los bandos no están dos y dos: se partió por la mitad. Se cambian en la pestaña del juego.</p>' : ''}
     ${bloques}
     <p class="veredicto ${claseSigno(mio)}">${mio === 0 ? 'Hoy vas parejo' : (mio > 0 ? `Hoy vas +${esc(mio)}` : `Hoy vas ${esc(mio)}`)}</p>
-    <p class="guia">La modalidad se cambia en Ajustes. El sliding que se pacta a mano es cosa del uno contra uno; aquí las ventajas salen del hándicap de cada quien.</p>`
+    <p class="guia">La modalidad se cambia en Ajustes. Aquí las ventajas salen del hándicap; el sliding pactado es del uno contra uno.</p>`
 }
 function vistaPresiones (T) {
   if (!T.yo) {
@@ -4222,7 +4224,7 @@ function tablaDeOnces (T, A, vivo) {
       ${vivo.jugadores.map(x => filaDeGolpes(T, A, x.jid)).join('')}
     </table></div>
     <div class="rejilla bloque"><table><tr>${cab}</tr>${filas}</table></div>
-    <p class="guia">Se marcan en Hoy, con el chip de cada jugador. Un hoyo se cierra cuando entra el golpe del siguiente.</p>`
+    <p class="guia">Se marcan en Hoy con el chip de cada quien. El hoyo cierra al entrar el golpe del siguiente.</p>`
 }
 
 /* Los bandos, solo donde hay dos de a dos: con dos jugadores cada quien es
@@ -4237,7 +4239,7 @@ function bandosDe (T, A) {
     return `<button class="lado-chip${lado === 0 ? ' on' : ''}" data-accion="setLadoJuego" data-aid="${esc(A.id)}" data-jid="${esc(j)}">${esc(corto(T, j))} · ${lado === 0 ? 1 : 2}</button>`
   }).join('')
   return `<h2>Bandos</h2><div class="chips">${chips}</div>
-    <p class="guia">Toca a alguien para cambiarlo de bando.${bandosCuadran(T, A) ? '' : ' Ahora mismo no están parejos, así que se repartió a la mitad: los bandos se guardan para el torneo y hoy el grupo es otro.'}</p>`
+    <p class="guia">Toca a alguien para cambiarlo de bando.${bandosCuadran(T, A) ? '' : ' No están parejos: se repartió a la mitad. Los bandos son del torneo y hoy el grupo es otro.'}</p>`
 }
 
 
@@ -4306,7 +4308,7 @@ function vistaJuego (T) {
   const tipo = formato(T)
   const juego = JUEGOS[tipo]
   if (!juego || !juego.alta) {
-    return '<h2>Juego</h2><p class="guia">Este torneo no juega ninguno de los juegos de dinero. Se eligen en Ajustes.</p>'
+    return '<h2>Juego</h2><p class="guia">No juegan ningún juego de dinero. Se eligen en Ajustes.</p>'
   }
   const titulo = `<h2>${esc(juego.nombre)}</h2>`
   if (!T.yo) {
@@ -4403,10 +4405,17 @@ function cuerpo (S, base = '', versionNueva = null) {
   /* Una pestaña de juego que el torneo no juega no existe: ni en la barra
      ni como vista guardada (caería en Hoy). Presiones se enciende con su
      interruptor; la del juego, con que el formato sea uno del registro
-     -Stableford usa la Tabla y no abre ninguna-. */
+     -Stableford usa la Tabla y no abre ninguna-. La Tabla es la
+     clasificación por puntos Stableford, así que va con ella: en un torneo
+     de dinero la pestaña no existe. */
   const suyo = JUEGOS[formato(T)]
   const juegoDelTorneo = suyo && suyo.alta ? suyo : null
-  const seJuega = (k) => (k === 'presiones' ? presOn(T) : (k === 'juego' ? !!juegoDelTorneo : true))
+  const seJuega = (k) => {
+    if (k === 'presiones') return presOn(T)
+    if (k === 'juego') return !!juegoDelTorneo
+    if (k === 'tabla') return formato(T) === 'stableford'
+    return true
+  }
   const cual = pintores[S.vista] && seJuega(S.vista) ? S.vista : 'hoy'
   const TODAS = VISTAS.filter(([k]) => seJuega(k))
     .map(([k, et]) => [k, k === 'juego' ? (juegoDelTorneo.etiqueta || juegoDelTorneo.nombre) : et])
