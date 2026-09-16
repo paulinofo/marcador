@@ -1228,22 +1228,27 @@ function vistaSliding (S) {
     </div>`).join('')
   return `<div class="hoja">
     <h1>Golf Sliding</h1>
-    <p class="guia">Con cuántos golpes juega cada quien. El número es lo que esa persona <b>da</b>: <b>+7</b> da siete, <b>−3</b> recibe tres, y entre esos dos se dan diez. Vive solo en este teléfono y no lo ve nadie más del grupo.</p>
-    <p class="guia">Cuando des de alta a alguien en una ronda, entra con su número ya puesto.</p>
-    <h2>${lista.length ? `La lista <span class="tenue">${lista.length}</span>` : 'La lista'}</h2>
-    ${filas || '<p class="guia">Todavía no hay nadie. Pega tu lista aquí abajo, o agrégalos de uno en uno.</p>'}
-    <h2>Agregar uno</h2>
+    <p class="guia">Tus amigos y lo que juegas con cada uno. El número es lo que esa persona <b>da</b>: <b>+7</b> da siete, <b>−3</b> recibe tres, y entre esos dos se dan diez. Vive solo en este teléfono y no lo ve nadie más del grupo.</p>
+
+    <h2>Dar de alta uno nuevo</h2>
     <div class="fila-alta">
       <input id="slidingNom" placeholder="nombre" autocapitalize="words">
       <input id="slidingVal" placeholder="+3" inputmode="text">
     </div>
-    <button class="btn sec" data-accion="altaSliding">Agregar</button>
+    <button class="btn" data-accion="altaSliding">Agregar a mi lista</button>
+    <p class="guia">También se apuntan solos: cada vez que anotas una ronda con alguien nuevo, entra aquí con la ventaja que le pusiste.</p>
+
+    <h2>Mis amigos ${lista.length ? `<span class="tenue">${lista.length}</span>` : ''}</h2>
+    ${lista.length
+      ? `<p class="guia">Del que más da al que más recibe. Toca el número para cambiarlo.</p>${filas}`
+      : '<p class="guia">Todavía no hay nadie en tu lista. Da de alta al primero aquí arriba, o pega la lista entera aquí abajo si ya la tienes escrita en una nota.</p>'}
+
     <h2>Pegar la lista entera</h2>
-    <p class="guia">Un renglón por persona, el nombre y su número: <i>Ramón −3</i>. Lo que escribas después del número (la salida, una nota) se respeta y no entra. Los que ya estén se actualizan; los demás se quedan como están.</p>
+    <p class="guia">Un renglón por persona, el nombre y su número: <i>Ramón −3</i>. Lo que escribas después del número (la salida, una nota) se respeta y no entra. Los que ya estén se actualizan; a nadie se le borra.</p>
     <textarea id="slidingPega" rows="6" placeholder="Ramón -3
 Javier Gordillo +7
 Juan Pablo Fer +10 Blancas."></textarea>
-    <button class="btn" data-accion="pegaSliding">Cargar la lista</button>
+    <button class="btn sec" data-accion="pegaSliding">Cargar la lista</button>
     ${suelta ? '<button class="btn sec" data-accion="irVista" data-vista="inicio">Volver</button>' : ''}`
 }
 
@@ -1403,143 +1408,6 @@ function bloqueFoto (T, S) {
 }
 
 
-
-
-
-
-/* El asistente: las cinco preguntas que uno hace de verdad al llegar al
-   campo, en el orden en que las hace. Antes la app abría con un formulario
-   de nombre y rondas -lenguaje de torneo- y todo lo demás había que ir a
-   buscarlo a Grupos y a Ajustes sabiendo que estaba ahí.
-
-   Las preguntas son:
-     1. ¿partida de hoy o torneo de varias rondas?
-     2. ¿en qué campo estás? (y si no está, se fotografía su tarjeta)
-     3. ¿con cuántos juegas?
-     4. ¿cómo se llaman?
-     5. ¿qué ventajas se dan?
-
-   El torneo se crea en el paso 1, no al final: a partir de ahí cada
-   respuesta es un hecho que ya viaja al grupo, así que quien se salga a
-   medias no pierde lo contestado y quien se una por la liga ve el campo y
-   los jugadores llegar solos. Lo único que vive en el teléfono es por
-   dónde va (`S.asis`). */
-const CUANTOS = [2, 3, 4, 5]
-const PASOS = 5
-const pasoDe = (S) => (S.asis && S.asis.paso) || 1
-const acotaPaso = (v) => {
-  const n = parseInt(v, 10)
-  return Number.isFinite(n) ? Math.max(1, Math.min(PASOS, n)) : 1
-}
-const cuantosDe = (S) => (S.asis && S.asis.cuantos) || 4
-
-function paso1 (T, S) {
-  const hay = Object.keys(S.torneos || {}).length
-  return `<h1>Golf Poli</h1>
-    <p class="guia">¿Qué vas a anotar?</p>
-    <button class="btn" data-accion="asisPartida">Una partida de hoy</button>
-    <p class="guia">Una sola ronda, la de hoy. Se comparte con el grupo igual que un torneo.</p>
-    <h2>O un torneo de varias rondas</h2>
-    <input id="asisNombre" placeholder="Invitacional Santa Fe 2026">
-    <label class="cfg-juego"><span>Cuántas rondas</span>
-      <input id="asisDias" inputmode="numeric" value="2"></label>
-    <button class="btn sec" data-accion="asisTorneo">Crear el torneo</button>
-    <h2>O entrar a uno que ya existe</h2>
-    <button class="btn sec" data-accion="irVista" data-vista="unirme">Unirme con una liga</button>
-    ${hay ? '<button class="btn sec" data-accion="irVista" data-vista="inicio">Ver mis torneos</button>' : ''}
-    <button class="enlace" data-accion="irVista" data-vista="sliding">Golf Sliding: con cuánto juega cada quien</button>`
-}
-
-function paso2 (T, S) {
-  const d = T.d || 0
-  const lista = camposConocidos(S)
-  const listo = fichaCompleta(T, d)
-  const abreFoto = !!(S.asis && S.asis.foto)
-  const hayClaveIa = !!(S.ia && S.ia.clave)
-  return `<h2>¿En qué campo estás?</h2>
-    <select data-cambio="usarCampo">
-      <option value="">Elegir uno de mis campos…</option>
-      ${lista.map(f => `<option value="${esc(f.n)}"${campo(T, d) === f.n ? ' selected' : ''}>${esc(f.n)}${f.porCotejar ? ' · por cotejar' : ''}</option>`).join('')}
-    </select>
-    <p class="guia">${listo
-      ? `Listo: ${esc(campo(T, d))}, con sus 18 pares y sus 18 índices.`
-      : 'Al elegirlo entran sus 18 pares y sus 18 índices, que son los que reparten las ventajas.'}</p>
-    ${abreFoto
-      ? (hayClaveIa
-          ? bloqueFoto(T, S)
-          : `<h2>Leer de una foto</h2>
-             <p class="guia">Para leer la tarjeta con la cámara hace falta tu clave de la IA, que es tuya y de pago. Se pone una sola vez en Ajustes, abajo del todo. Mientras tanto puedes seguir sin campo y ponerlo después: lo único que cambia es que las ventajas no se reparten hasta que el campo tenga sus 18 índices.</p>`)
-      : '<button class="btn sec" data-accion="asisFoto">No está en la lista: fotografiar su tarjeta</button>'}
-    ${listo
-      ? '<button class="btn" data-accion="asisSigue">Seguir</button>'
-      : '<button class="enlace" data-accion="asisSigue">Seguir sin campo, lo pongo después</button>'}`
-}
-
-function paso3 (T, S) {
-  return `<h2>¿Con cuántos juegas?</h2>
-    <p class="guia">Contándote a ti.</p>
-    <div class="segm">${CUANTOS.map(n =>
-      `<button class="${cuantosDe(S) === n ? 'on' : ''}" data-accion="asisCuantos" data-n="${n}">${n}</button>`).join('')}</div>`
-}
-
-function paso4 (T, S) {
-  const n = cuantosDe(S)
-  /* Las casillas se llenan con los jugadores que dio de alta ESTE
-     asistente, por su jid y no por su posición en la lista: así, quien
-     vuelve atrás después de bajar de 5 a 2 encuentra otra vez los nombres
-     de los que había quitado, en su casilla. */
-  const jids = (S.asis && S.asis.jids) || []
-  const filas = Array.from({ length: n }, (_, i) =>
-    `<input id="asisNom${i}" list="laLibreta" placeholder="${i === 0 ? 'Tú' : 'Jugador ' + (i + 1)}"
-       autocapitalize="words" value="${esc(jids[i] ? nomJug(T, jids[i]) : '')}">`).join('')
-  const libreta = (S.gente || []).map(g => `<option value="${esc(g.n)}"></option>`).join('')
-  /* Quien se unió por la liga pudo agregar gente desde su teléfono. El
-     asistente no los toca -no son suyos-, pero callarlo haría que el
-     usuario los volviera a escribir aquí y quedaran por duplicado. */
-  const ajenos = jugadores(T).filter(j => !jids.includes(j.id))
-  return `<h2>¿Cómo se llaman?</h2>
-    <p class="guia">El primero eres tú: así la app sabe de quién es la tarjeta en este teléfono. Si ya han jugado contigo, los propone al escribir.</p>
-    ${filas}
-    <datalist id="laLibreta">${libreta}</datalist>
-    ${ajenos.length
-      ? `<p class="guia">En este torneo ya están ${esc(ajenos.map(j => j.n).join(', '))}, que agregaron desde otro teléfono. No hace falta repetirlos: se suman a los que pongas aquí.</p>`
-      : ''}
-    <button class="btn" data-accion="asisNombres">Seguir</button>`
-}
-
-function paso5 (T, S) {
-  const jug = jugadores(T)
-  if (!jug.length) return '<h2>¿Qué ventajas se dan?</h2><p class="guia">Antes hay que poner los nombres.</p>'
-  const filas = jug.map(j => `<label class="cfg-juego"><span>${esc(j.n)} <span class="tenue">${esc(comoSeLee(aSliding(j.i)))}</span></span>
-      <input value="${esc(aSliding(j.i))}" inputmode="text" data-cambio="setVentaja" data-jid="${esc(j.id)}"></label>`).join('')
-  return `<h2>¿Qué ventajas se dan?</h2>
-    <p class="guia">El número es lo que esa persona <b>da</b>, igual que en tu lista de Golf Sliding: <b>+7</b> da siete golpes, <b>−3</b> recibe tres, y entre esos dos se dan diez. El que ni da ni recibe va en cero.</p>
-    <p class="guia">Se reparten hoyo por hoyo según el índice de dificultad del campo: los que se reciben empiezan por el hoyo más difícil, los que se dan por el más fácil.</p>
-    ${filas}
-    <button class="btn" data-accion="asisListo">Empezar a anotar</button>`
-}
-function vistaAsistente (S, T) {
-  /* Sin torneo no hay nada que preguntar todavía: siempre es el paso 1,
-     aunque el teléfono venga con un paso guardado de otra vez. */
-  /* Un `paso` raro guardado -de una versión vieja, o de un estado a medio
-     escribir- dejaba la app en blanco y sin un solo botón para salir: la
-     vista reventaba, y como la vista y el paso viven en el teléfono,
-     reventaba otra vez en cada recarga. */
-  const paso = T ? acotaPaso(pasoDe(S)) : 1
-  const dentro = [null, paso1, paso2, paso3, paso4, paso5][paso]
-  return `<div class="hoja">
-    ${paso > 1
-      ? `<p class="guia">Paso ${paso} de ${PASOS} · ${esc(nombre(T))}${dias(T) > 1 ? ` · ${esc(dias(T))} rondas` : ''}</p>`
-      : ''}
-    ${dentro(T, S)}
-    ${paso > 1
-      ? `<button class="btn sec" data-accion="asisAtras">Atrás</button>
-         <button class="enlace" data-accion="asisListo">Salir del asistente</button>`
-      : ''}
-  </div>`
-}
-
-
 /* Cuántos golpes de ventaja caen en un hoyo, dado el hándicap de campo
    del jugador (ch) y el índice de dificultad del hoyo (siHoyo).
    Un ch negativo es un jugador "plus": devuelve golpes, y los devuelve
@@ -1595,267 +1463,6 @@ function notaDe (g, parHoyo) {
   if (dif === 1) return 'bogey'
   if (dif >= 2) return 'doble'
   return ''
-}
-
-
-
-/* Portado de Santa Fe. Cada castigo es un CONTADOR de dos bits, porque en
-   un mismo hoyo se puede pegar más de una vez fuera o al agua: OB en los
-   bits 5-6 y hazard en los 7-8 (0 a 3 cada uno), y el bit 9 recuerda si fue
-   un castigo el que abrió el hoyo. Los bits 0-4 quedan libres.
-
-   Los golpes del castigo se EMITEN en s., no se derivan: el teléfono que
-   recibe el score ya lo trae sumado y no vuelve a sumar. Dos teléfonos
-   marcando el mismo OB tampoco lo cuentan doble: gana un hecho por llave. */
-const PENALES = [
-  { id: 'ob', desp: 5, golpes: 2, et: '⛔ OB' },
-  { id: 'hazard', desp: 7, golpes: 1, et: '💧 hazard' }
-]
-const TOPE_PENAL = 3
-const MASCARA_PENAL = 480          // bits 5-8: los dos contadores
-/* bit 9: si fue un castigo el que abrió el hoyo (ver ciclaPenal). Es
-   PEGAJOSO a propósito -no hay dónde más guardarlo- y no se limpia con una
-   corrección manual de golpe: castigo (abre el hoyo, ABRIO=1) → -1 con
-   cambiaGolpe (corrige el golpe, pero no toca ABRIO ni el contador) → el
-   mismo castigo otra vez hasta dar la vuelta (el contador vuelve a 0, y
-   como ABRIO seguía encendido, ciclaPenal vacía el hoyo entero) borra
-   también la corrección manual, no solo el castigo. Idéntico a la app de
-   referencia; se deja así a propósito en este hito. */
-const ABRIO = 512                   // bit 9
-const cuentaPenal = (x, desp) => (x >> desp) & 3
-function ciclaPenal (T, jid, penal) {
-  const d = T.d || 0, h = T.hoyo || 0
-  const x = extra(T, d, jid, h), g = golpe(T, d, jid, h)
-  const n = cuentaPenal(x, penal.desp), n2 = (n + 1) % (TOPE_PENAL + 1)
-  const dif = (n2 - n) * penal.golpes      // entran, o salen si dio la vuelta
-  let nx = (x & ~(3 << penal.desp)) | (n2 << penal.desp)
-  const ks = `s.${d}.${jid}.${h}`, kx = `x.${d}.${jid}.${h}`
-  /* Un sello COMPARTIDO para el par s./x.: sin esto, cada emitir toma el
-     suyo por separado (Math.max(Date.now(), ct[k]+1)), y dos teléfonos
-     ciclando castigos distintos casi al mismo tiempo pueden fusionar el s.
-     de uno con el x. del otro -golpes de OB con el chip de hazard
-     encendido. Con el mismo sello, el par siempre gana o pierde junto. */
-  const t = selloPara(T, ks, kx)
-  if (g === null) {                         // hoyo vacío: el castigo lo abre
-    nx |= ABRIO
-    emitir(T, ks, Math.min(15, par(T, d, h) + dif), t)
-  } else if (!(nx & MASCARA_PENAL) && (x & ABRIO)) {
-    emitir(T, ks, null, t); nx &= ~ABRIO    // se fue el último y él lo abrió: vacío otra vez
-  } else {
-    emitir(T, ks, Math.max(1, Math.min(15, g + dif)), t)
-  }
-  emitir(T, kx, nx, t)
-}
-
-
-
-
-/* ============================================================
-   PRESIONES · match play por nueves, presión automática al ir
-   `t.pres.al` abajo (2 por omisión). Cada apuesta lleva su marcador
-   y genera la suya al llegar ahí; ninguna se cierra: corren hasta el
-   9 y hasta el 18. Reglas copiadas de presionesMatch() de la app de
-   Santa Fe. Todo se calcula desde el punto de vista de `a`.
-   ============================================================ */
-const NUEVES = [[0, 8, 'Ida'], [9, 17, 'Vuelta']]
-const signoPres = (v) => (v > 0 ? 1 : (v < 0 ? -1 : 0))
-const acotaSliding = (v) => Math.max(-36, Math.min(36, parseInt(v, 10) || 0))
-
-/* El rodado solo cuenta los días en que los dos iban en el MISMO grupo:
-   comparar en frío dos tarjetas de grupos distintos inventa un match que
-   nunca se jugó, y ese dinero fantasma movería los golpes del día
-   siguiente. Es la primera línea del bucle de slidingRodado en Santa Fe
-   (`const g=(S.grupos[p]||[]).find(...); if(!g) continue;`). */
-const jugaronJuntos = (T, d, a, b) => gruposDe(T, d).some(g => g.includes(a) && g.includes(b))
-
-/* El dinero sin bono del día `p` contra ese rival, o null cuando el rodado
-   no se mueve: los dos `continue` de slidingRodado —no iban en el mismo
-   grupo, o jugaron juntos pero nadie capturó—. `prev` es el sliding
-   vigente ese día; se recibe ya calculado para no volver a pedirlo. */
-function dineroRodado (T, p, a, b, prev) {
-  if (!jugaronJuntos(T, p, a, b)) return null
-  const q = dineroConSliding(T, p, a, b, prev)
-  return q.capturado ? q.ida + q.vuelta : null
-}
-
-/* Un día de rodado: del sliding `prev` del día `p` al del día `p + 1`. */
-const rodar = (T, p, a, b, prev) => {
-  const din = dineroRodado(T, p, a, b, prev)
-  return din === null ? prev : acotaSliding(prev + signoPres(din))
-}
-
-/* Sugerencia de Santa Fe: quien perdió el día anterior contra ese rival
-   recibe un golpe más. Se mide sin el bono, como en la app original. */
-function slidingSugerido (T, d, a, b) {
-  if (d <= 0) return 0
-  return rodar(T, d - 1, a, b, slidingDe(T, d - 1, a, b))
-}
-
-/* El sliding vigente del día `d`, arrastrado desde el día 0 hacia arriba.
-   Escrito como recursión costaba el doble por cada día: pedía
-   slidingDe(d−1) una vez para `prev` y otra vez dentro del dinero de ese
-   mismo día, así que 18 días tardaban casi un segundo y el alta no pone
-   tope al número de días. Iterando sale lo mismo en tiempo lineal. */
-function slidingDe (T, d, a, b) {
-  let v = 0
-  for (let p = 0; p <= d; p++) {
-    const pac = slidingPactado(T, p, a, b)
-    if (pac !== null) v = acotaSliding(pac)
-    else if (p > 0) v = rodar(T, p - 1, a, b, v)
-  }
-  return v
-}
-function motivoSliding (T, d, a, b) {
-  if (slidingPactado(T, d, a, b) !== null) return 'pactado'
-  if (d <= 0) return 'parejos'
-  const din = dineroRodado(T, d - 1, a, b, slidingDe(T, d - 1, a, b))
-  if (din === null || din === 0) return slidingDe(T, d, a, b) === 0 ? 'parejos' : 'como ayer'
-  return din > 0 ? 'ayer ganaste' : 'ayer perdiste'
-}
-function ponSliding (T, d, a, b, v) {
-  const val = acotaSliding(v)
-  emitir(T, `v.${d}.${llavePareja(a, b)}`, [a, b].sort()[0] === a ? val : -val)
-}
-const ajustaSliding = (T, d, a, b, delta) => ponSliding(T, d, a, b, slidingDe(T, d, a, b) + delta)
-function presionesMatch (T, d, a, b, hasta = 17) {
-  return matchConSliding(T, d, a, b, hasta, slidingDe(T, d, a, b))
-}
-
-/* La escalera de presiones, sin saber CÓMO se decide cada hoyo. Eso lo
-   dice `resultadoDe(h)`: +1 si lo gana el lado A, −1 si lo pierde, 0 si
-   empatan, null si el hoyo todavía no cuenta. En las modalidades por
-   parejas devuelve hasta ±2, porque ahí el hoyo se decide con las dos
-   bolas —la mejor contra la mejor y la peor contra la peor— y cada
-   comparación vale un punto.
-
-   Las reglas de la escalera son las de Teezr: la primera presión no se
-   abre en el tee del 1, se abre en el primer hoyo que alguien gana; la
-   siguiente nace cuando la última abierta llega a `t.pres.al` arriba y
-   arranca en el hoyo siguiente desde cero; todas las abiertas se mueven a
-   la vez; y al cerrar, cada una con marcador distinto de cero paga su
-   monto entero, no la diferencia. */
-function escaleraPresiones (T, resultadoDe, hasta = 17) {
-  const al = Math.max(1, presAl(T))
-  const apuestas = []
-  const porNueve = []
-  for (const [ini, fin, nom] of NUEVES) {
-    let aps = [{ et: nom + ' · salida', ini, fin, st: 0, p: false, hist: new Array(18).fill(null) }]
-    apuestas.push(aps[0])
-    let nPres = 0
-    for (let h = ini; h <= Math.min(fin, hasta); h++) {
-      const r = resultadoDe(h)
-      if (r === null) continue
-      for (const ap of aps) if (h >= ap.ini) { ap.st += r; ap.hist[h] = ap.st }
-      const nuevas = []
-      for (const ap of aps) {
-        if (!ap.p && Math.abs(ap.st) >= al && h >= ap.ini && h < fin) {
-          ap.p = true
-          nPres++
-          nuevas.push({ et: nom + ' · presión ' + nPres, ini: h + 1, fin, st: 0, p: false, hist: new Array(18).fill(null) })
-        }
-      }
-      aps = aps.concat(nuevas)
-      apuestas.push(...nuevas)
-    }
-    porNueve.push(aps.reduce((t, ap) => t + signoPres(ap.st), 0))
-  }
-  for (const ap of apuestas) ap.unidad = signoPres(ap.st)
-  /* Carry (Teezr): la salida de la ida cerró en cero con sus nueve hoyos
-     evaluados (hist sin huecos hasta el 9). Apagado por omisión. */
-  const salidaIda = apuestas[0]
-  const carry = presCarry(T) && salidaIda.hist.slice(0, 9).every(v => v !== null) && salidaIda.st === 0
-  return { apuestas, porNueve, unidades: porNueve[0] + porNueve[1], carry }
-}
-
-/* El match uno contra uno con el sliding ya resuelto (`sv`: + = a le da
-   golpes a b). Separado de presionesMatch para que el rodado, que viene
-   arrastrando el sliding de ese día, no lo mande a recalcular. */
-function matchConSliding (T, d, a, b, hasta, sv) {
-  const neto = (jid, h) => {
-    const g = golpe(T, d, jid, h)
-    if (g === null) return null
-    const recibe = jid === a ? (sv < 0 ? -sv : 0) : (sv > 0 ? sv : 0)
-    return g - (recibe ? golpesEnHoyo(recibe, si(T, d, h)) : 0)
-  }
-  return escaleraPresiones(T, (h) => {
-    const na = neto(a, h), nb = neto(b, h)
-    if (na === null || nb === null) return null
-    return na < nb ? 1 : (na > nb ? -1 : 0)
-  }, hasta)
-}
-
-const diaCapturado = (m) => m.apuestas.some(x => x.hist.some(v => v !== null))
-
-/* Bono de Santa Fe: para quien junte más apuestas ganadas en el día. */
-function bonoMayoria (T, m) {
-  let ga = 0, gb = 0
-  for (const x of m.apuestas) { if (x.unidad > 0) ga++; else if (x.unidad < 0) gb++ }
-  return ga > gb ? presBono(T) : (gb > ga ? -presBono(T) : 0)
-}
-
-/* Match de Teezr: el signo de salida de la ida + salida de la vuelta.
-   Solo con los 18 hoyos evaluados y algún hoyo ganado en cada nueve. */
-function matchSuma (T, m) {
-  const sIda = m.apuestas.find(x => x.ini === 0), sVta = m.apuestas.find(x => x.ini === 9)
-  const completo = sIda.hist.slice(0, 9).concat(sVta.hist.slice(9)).every(v => v !== null)
-  const abiertas = sIda.hist.some(v => v) && sVta.hist.some(v => v)
-  if (!completo || !abiertas) return 0
-  return signoPres(sIda.st + sVta.st) * presBono(T)
-}
-
-/* Dinero del día desglosado. Con carry cada apuesta de la vuelta vale
-   ida + vuelta + bono y el tercer monto ya no se paga aparte; sin carry,
-   el tercero va por t.pres.match: 'mayoria' (Santa Fe) o 'suma' (Teezr). */
-function dineroDesglosado (T, d, a, b) {
-  return dineroConSliding(T, d, a, b, slidingDe(T, d, a, b))
-}
-
-function dineroConSliding (T, d, a, b, sv) {
-  return dineroDeEscalera(T, matchConSliding(T, d, a, b, 17, sv))
-}
-
-/* Lo que vale una escalera ya corrida, venga de un uno contra uno o de un
-   partido por parejas. Con carry cada apuesta de la vuelta vale ida +
-   vuelta + bono y el tercer monto ya no se paga aparte; sin carry, el
-   tercero va por t.pres.match: 'mayoria' (Santa Fe) o 'suma' (Teezr). */
-function dineroDeEscalera (T, m) {
-  const precioIda = presIda(T)
-  const precioVuelta = m.carry ? presIda(T) + presVuelta(T) + presBono(T) : presVuelta(T)
-  const ida = m.porNueve[0] * precioIda
-  const vuelta = m.porNueve[1] * precioVuelta
-  const tercero = m.carry ? 0 : (presMatch(T) === 'suma' ? matchSuma(T, m) : bonoMayoria(T, m))
-  return { capturado: diaCapturado(m), carry: m.carry, precioIda, precioVuelta, ida, vuelta, tercero, total: ida + vuelta + tercero }
-}
-
-/* Dinero del día: null si nadie capturó. */
-function dineroMatch (T, d, a, b) {
-  const q = dineroDesglosado(T, d, a, b)
-  return q.capturado ? q.total : null
-}
-
-/* Cuenta acumulada del torneo contra cada rival que te tocó en tu grupo.
-   porRival es un Map: los ids vienen de los hechos y un objeto literal
-   con llave "__proto__" sería una puerta abierta. */
-function cuentaPresiones (T, jid) {
-  const porRival = new Map()
-  const porDia = []
-  let gran = 0
-  for (let d = 0; d < dias(T); d++) {
-    const g = gruposDe(T, d).find(x => x.includes(jid))
-    let dDia = null
-    if (g) {
-      for (const rid of g) {
-        if (rid === jid) continue
-        const din = dineroMatch(T, d, jid, rid)
-        if (din === null) continue
-        porRival.set(rid, (porRival.get(rid) || 0) + din)
-        gran += din
-        dDia = (dDia || 0) + din
-      }
-    }
-    porDia.push(dDia)
-  }
-  return { porRival, porDia, gran }
 }
 
 
@@ -2452,6 +2059,217 @@ function evaluarUnidades (T, A, hasta = HOYOS - 1) {
 
 
 
+/* ============================================================
+   PRESIONES · match play por nueves, presión automática al ir
+   `t.pres.al` abajo (2 por omisión). Cada apuesta lleva su marcador
+   y genera la suya al llegar ahí; ninguna se cierra: corren hasta el
+   9 y hasta el 18. Reglas copiadas de presionesMatch() de la app de
+   Santa Fe. Todo se calcula desde el punto de vista de `a`.
+   ============================================================ */
+const NUEVES = [[0, 8, 'Ida'], [9, 17, 'Vuelta']]
+const signoPres = (v) => (v > 0 ? 1 : (v < 0 ? -1 : 0))
+const acotaSliding = (v) => Math.max(-36, Math.min(36, parseInt(v, 10) || 0))
+
+/* El rodado solo cuenta los días en que los dos iban en el MISMO grupo:
+   comparar en frío dos tarjetas de grupos distintos inventa un match que
+   nunca se jugó, y ese dinero fantasma movería los golpes del día
+   siguiente. Es la primera línea del bucle de slidingRodado en Santa Fe
+   (`const g=(S.grupos[p]||[]).find(...); if(!g) continue;`). */
+const jugaronJuntos = (T, d, a, b) => gruposDe(T, d).some(g => g.includes(a) && g.includes(b))
+
+/* El dinero sin bono del día `p` contra ese rival, o null cuando el rodado
+   no se mueve: los dos `continue` de slidingRodado —no iban en el mismo
+   grupo, o jugaron juntos pero nadie capturó—. `prev` es el sliding
+   vigente ese día; se recibe ya calculado para no volver a pedirlo. */
+function dineroRodado (T, p, a, b, prev) {
+  if (!jugaronJuntos(T, p, a, b)) return null
+  const q = dineroConSliding(T, p, a, b, prev)
+  return q.capturado ? q.ida + q.vuelta : null
+}
+
+/* Un día de rodado: del sliding `prev` del día `p` al del día `p + 1`. */
+const rodar = (T, p, a, b, prev) => {
+  const din = dineroRodado(T, p, a, b, prev)
+  return din === null ? prev : acotaSliding(prev + signoPres(din))
+}
+
+/* Sugerencia de Santa Fe: quien perdió el día anterior contra ese rival
+   recibe un golpe más. Se mide sin el bono, como en la app original. */
+function slidingSugerido (T, d, a, b) {
+  if (d <= 0) return 0
+  return rodar(T, d - 1, a, b, slidingDe(T, d - 1, a, b))
+}
+
+/* El sliding vigente del día `d`, arrastrado desde el día 0 hacia arriba.
+   Escrito como recursión costaba el doble por cada día: pedía
+   slidingDe(d−1) una vez para `prev` y otra vez dentro del dinero de ese
+   mismo día, así que 18 días tardaban casi un segundo y el alta no pone
+   tope al número de días. Iterando sale lo mismo en tiempo lineal. */
+function slidingDe (T, d, a, b) {
+  let v = 0
+  for (let p = 0; p <= d; p++) {
+    const pac = slidingPactado(T, p, a, b)
+    if (pac !== null) v = acotaSliding(pac)
+    else if (p > 0) v = rodar(T, p - 1, a, b, v)
+  }
+  return v
+}
+function motivoSliding (T, d, a, b) {
+  if (slidingPactado(T, d, a, b) !== null) return 'pactado'
+  if (d <= 0) return 'parejos'
+  const din = dineroRodado(T, d - 1, a, b, slidingDe(T, d - 1, a, b))
+  if (din === null || din === 0) return slidingDe(T, d, a, b) === 0 ? 'parejos' : 'como ayer'
+  return din > 0 ? 'ayer ganaste' : 'ayer perdiste'
+}
+function ponSliding (T, d, a, b, v) {
+  const val = acotaSliding(v)
+  emitir(T, `v.${d}.${llavePareja(a, b)}`, [a, b].sort()[0] === a ? val : -val)
+}
+const ajustaSliding = (T, d, a, b, delta) => ponSliding(T, d, a, b, slidingDe(T, d, a, b) + delta)
+function presionesMatch (T, d, a, b, hasta = 17) {
+  return matchConSliding(T, d, a, b, hasta, slidingDe(T, d, a, b))
+}
+
+/* La escalera de presiones, sin saber CÓMO se decide cada hoyo. Eso lo
+   dice `resultadoDe(h)`: +1 si lo gana el lado A, −1 si lo pierde, 0 si
+   empatan, null si el hoyo todavía no cuenta. En las modalidades por
+   parejas devuelve hasta ±2, porque ahí el hoyo se decide con las dos
+   bolas —la mejor contra la mejor y la peor contra la peor— y cada
+   comparación vale un punto.
+
+   Las reglas de la escalera son las de Teezr: la primera presión no se
+   abre en el tee del 1, se abre en el primer hoyo que alguien gana; la
+   siguiente nace cuando la última abierta llega a `t.pres.al` arriba y
+   arranca en el hoyo siguiente desde cero; todas las abiertas se mueven a
+   la vez; y al cerrar, cada una con marcador distinto de cero paga su
+   monto entero, no la diferencia. */
+function escaleraPresiones (T, resultadoDe, hasta = 17) {
+  const al = Math.max(1, presAl(T))
+  const apuestas = []
+  const porNueve = []
+  for (const [ini, fin, nom] of NUEVES) {
+    let aps = [{ et: nom + ' · salida', ini, fin, st: 0, p: false, hist: new Array(18).fill(null) }]
+    apuestas.push(aps[0])
+    let nPres = 0
+    for (let h = ini; h <= Math.min(fin, hasta); h++) {
+      const r = resultadoDe(h)
+      if (r === null) continue
+      for (const ap of aps) if (h >= ap.ini) { ap.st += r; ap.hist[h] = ap.st }
+      const nuevas = []
+      for (const ap of aps) {
+        if (!ap.p && Math.abs(ap.st) >= al && h >= ap.ini && h < fin) {
+          ap.p = true
+          nPres++
+          nuevas.push({ et: nom + ' · presión ' + nPres, ini: h + 1, fin, st: 0, p: false, hist: new Array(18).fill(null) })
+        }
+      }
+      aps = aps.concat(nuevas)
+      apuestas.push(...nuevas)
+    }
+    porNueve.push(aps.reduce((t, ap) => t + signoPres(ap.st), 0))
+  }
+  for (const ap of apuestas) ap.unidad = signoPres(ap.st)
+  /* Carry (Teezr): la salida de la ida cerró en cero con sus nueve hoyos
+     evaluados (hist sin huecos hasta el 9). Apagado por omisión. */
+  const salidaIda = apuestas[0]
+  const carry = presCarry(T) && salidaIda.hist.slice(0, 9).every(v => v !== null) && salidaIda.st === 0
+  return { apuestas, porNueve, unidades: porNueve[0] + porNueve[1], carry }
+}
+
+/* El match uno contra uno con el sliding ya resuelto (`sv`: + = a le da
+   golpes a b). Separado de presionesMatch para que el rodado, que viene
+   arrastrando el sliding de ese día, no lo mande a recalcular. */
+function matchConSliding (T, d, a, b, hasta, sv) {
+  const neto = (jid, h) => {
+    const g = golpe(T, d, jid, h)
+    if (g === null) return null
+    const recibe = jid === a ? (sv < 0 ? -sv : 0) : (sv > 0 ? sv : 0)
+    return g - (recibe ? golpesEnHoyo(recibe, si(T, d, h)) : 0)
+  }
+  return escaleraPresiones(T, (h) => {
+    const na = neto(a, h), nb = neto(b, h)
+    if (na === null || nb === null) return null
+    return na < nb ? 1 : (na > nb ? -1 : 0)
+  }, hasta)
+}
+
+const diaCapturado = (m) => m.apuestas.some(x => x.hist.some(v => v !== null))
+
+/* Bono de Santa Fe: para quien junte más apuestas ganadas en el día. */
+function bonoMayoria (T, m) {
+  let ga = 0, gb = 0
+  for (const x of m.apuestas) { if (x.unidad > 0) ga++; else if (x.unidad < 0) gb++ }
+  return ga > gb ? presBono(T) : (gb > ga ? -presBono(T) : 0)
+}
+
+/* Match de Teezr: el signo de salida de la ida + salida de la vuelta.
+   Solo con los 18 hoyos evaluados y algún hoyo ganado en cada nueve. */
+function matchSuma (T, m) {
+  const sIda = m.apuestas.find(x => x.ini === 0), sVta = m.apuestas.find(x => x.ini === 9)
+  const completo = sIda.hist.slice(0, 9).concat(sVta.hist.slice(9)).every(v => v !== null)
+  const abiertas = sIda.hist.some(v => v) && sVta.hist.some(v => v)
+  if (!completo || !abiertas) return 0
+  return signoPres(sIda.st + sVta.st) * presBono(T)
+}
+
+/* Dinero del día desglosado. Con carry cada apuesta de la vuelta vale
+   ida + vuelta + bono y el tercer monto ya no se paga aparte; sin carry,
+   el tercero va por t.pres.match: 'mayoria' (Santa Fe) o 'suma' (Teezr). */
+function dineroDesglosado (T, d, a, b) {
+  return dineroConSliding(T, d, a, b, slidingDe(T, d, a, b))
+}
+
+function dineroConSliding (T, d, a, b, sv) {
+  return dineroDeEscalera(T, matchConSliding(T, d, a, b, 17, sv))
+}
+
+/* Lo que vale una escalera ya corrida, venga de un uno contra uno o de un
+   partido por parejas. Con carry cada apuesta de la vuelta vale ida +
+   vuelta + bono y el tercer monto ya no se paga aparte; sin carry, el
+   tercero va por t.pres.match: 'mayoria' (Santa Fe) o 'suma' (Teezr). */
+function dineroDeEscalera (T, m) {
+  const precioIda = presIda(T)
+  const precioVuelta = m.carry ? presIda(T) + presVuelta(T) + presBono(T) : presVuelta(T)
+  const ida = m.porNueve[0] * precioIda
+  const vuelta = m.porNueve[1] * precioVuelta
+  const tercero = m.carry ? 0 : (presMatch(T) === 'suma' ? matchSuma(T, m) : bonoMayoria(T, m))
+  return { capturado: diaCapturado(m), carry: m.carry, precioIda, precioVuelta, ida, vuelta, tercero, total: ida + vuelta + tercero }
+}
+
+/* Dinero del día: null si nadie capturó. */
+function dineroMatch (T, d, a, b) {
+  const q = dineroDesglosado(T, d, a, b)
+  return q.capturado ? q.total : null
+}
+
+/* Cuenta acumulada del torneo contra cada rival que te tocó en tu grupo.
+   porRival es un Map: los ids vienen de los hechos y un objeto literal
+   con llave "__proto__" sería una puerta abierta. */
+function cuentaPresiones (T, jid) {
+  const porRival = new Map()
+  const porDia = []
+  let gran = 0
+  for (let d = 0; d < dias(T); d++) {
+    const g = gruposDe(T, d).find(x => x.includes(jid))
+    let dDia = null
+    if (g) {
+      for (const rid of g) {
+        if (rid === jid) continue
+        const din = dineroMatch(T, d, jid, rid)
+        if (din === null) continue
+        porRival.set(rid, (porRival.get(rid) || 0) + din)
+        gran += din
+        dDia = (dDia || 0) + din
+      }
+    }
+    porDia.push(dDia)
+  }
+  return { porRival, porDia, gran }
+}
+
+
+
+
 
 
 /* ============================================================
@@ -2782,6 +2600,473 @@ function cabeEnGrupo (juego, n) {
    en los ajustes del torneo, no en el alta. */
 const tiposParaGrupo = (n) =>
   Object.keys(JUEGOS).filter(k => JUEGOS[k].alta && n >= JUEGOS[k].min && n <= JUEGOS[k].max)
+
+
+
+
+/* Fecha LOCAL, nunca UTC: a las 23:30 en México, UTC ya cambió de día y
+   la app saltaría a la ronda equivocada. Es la misma cuenta que hacía
+   cargar() en Santa Fe. */
+function hoyISO (ahora = new Date()) {
+  const m = String(ahora.getMonth() + 1).padStart(2, '0')
+  const d = String(ahora.getDate()).padStart(2, '0')
+  return `${ahora.getFullYear()}-${m}-${d}`
+}
+function setDia (T, d) {
+  if (d < 0 || d >= dias(T)) return
+  T.d = d
+  T.hoyo = 0
+}
+
+/* Un hecho remoto fusionado puede bajar t.dias por debajo del día activo
+   -hoy solo alcanzable así, pero alcanzable-: T.d se queda apuntando a un
+   día que ya no existe y ni la cabecera ni Ajustes tienen uno que mostrar.
+   Se acota al último día real. */
+function acotarDia (T) {
+  if ((T.d || 0) >= dias(T)) {
+    T.d = dias(T) - 1
+    T.hoyo = 0
+  }
+}
+
+/* Devuelve true si encontró el día de hoy, false si no -sincronizar() lo usa
+   para saber si ya "situó" al torneo (punto B). setDia solo se llama cuando
+   el día de hoy es DISTINTO del activo: setDia siempre pone T.hoyo = 0, y
+   llamarlo aunque T.d ya fuera ese día resetea el hoyo capturado en cada
+   carga -el bug que este fix cierra: guardas el teléfono en el hoyo 7,
+   recargas, y apareces en el 1. */
+function saltarAHoy (T, iso = hoyISO()) {
+  acotarDia(T)
+  for (let d = 0; d < dias(T); d++) {
+    if (fecha(T, d) !== iso) continue
+    if ((T.d || 0) !== d) setDia(T, d)
+    return true
+  }
+  return false
+}
+
+/* Los torneos de un solo campo son la norma: la ficha del día 1 sirve para
+   el 2. Se emite hecho por hecho, para que viaje como cualquier captura.
+   Copia par, SI y campo -NO la salida: una salida heredada del día 1 se
+   pintaría en la cabecera y en el selector como si fuera la real del día
+   2, y casi nunca lo es (los horarios de salida cambian día a día aunque
+   el campo se repita). */
+function copiarFicha (T, de, a) {
+  for (let h = 0; h < HOYOS; h++) {
+    emitir(T, `c.${a}.par.${h}`, par(T, de, h))
+    emitir(T, `c.${a}.si.${h}`, si(T, de, h))
+  }
+  emitir(T, `c.${a}.n`, campo(T, de))
+}
+
+const etiquetaDia = (T, d) => [fecha(T, d), salida(T, d)].filter(Boolean).join(' · ')
+function vistaDias (T) {
+  const activo = T.d || 0
+  return `<div class="dias">${Array.from({ length: dias(T) }, (_, d) =>
+    `<button class="dia${d === activo ? ' on' : ''}" data-accion="setDia" data-dia="${d}">
+      <b>Día ${d + 1}</b><span>${esc(etiquetaDia(T, d)) || 'sin fecha'}</span>
+    </button>`).join('')}</div>`
+}
+
+/* La versión de este armado. `armar.js` sustituye el 'dev' por la fecha y
+   el commit al coser el HTML; en el código fuente se queda como está.
+
+   Existe porque un teléfono con la app en su pantalla de inicio guarda el
+   HTML y no lo suelta: Paulino publicó cinco veces y siguió viendo la
+   versión vieja. Con esto la app se entera sola y ofrece pasar a la nueva,
+   en vez de que cada quien tenga que adivinar cómo forzar a su iOS. */
+const VERSION = '2026-09-16·10bff2f'
+const VERSION_DEL_ARMADO = '2026-09-16·10bff2f'
+
+/* El nombre de la constante es el ancla que se busca en el HTML servido.
+   Se escribe partido para que esta línea no se encuentre a sí misma. */
+const MARCA_VERSION = 'VERSION' + '_DEL_ARMADO'
+function leeVersion (html) {
+  const m = new RegExp(MARCA_VERSION + "\\s*=\\s*'([^']+)'").exec(String(html ?? ''))
+  return m ? m[1] : null
+}
+
+/* Pregunta por el propio HTML con algo que el caché no reconozca y compara
+   versiones. Nunca lanza: sin señal simplemente no hay novedad. */
+async function hayVersionNueva (actual, buscar, url = '') {
+  try {
+    const r = await buscar(`${url}?v=${Date.now()}`, { cache: 'no-store' })
+    if (!r || !r.ok) return null
+    const v = leeVersion(await r.text())
+    return v && v !== actual ? v : null
+  } catch (e) {
+    return null
+  }
+}
+
+const ponCampo = (T, d, v) => emitir(T, `c.${d}.n`, String(v))
+const ponFecha = (T, d, v) => emitir(T, `c.${d}.iso`, String(v ?? '').trim())
+const ponSalida = (T, d, v) => emitir(T, `c.${d}.salida`, String(v ?? '').trim())
+const ponCerrado = (T, v) => emitir(T, 't.cerrado', v ? 1 : 0)
+
+/* El nombre y las rondas se escribían al crear el torneo y no había dónde
+   cambiarlos nunca más. Viajan como hechos: el grupo entero ve el cambio.
+
+   Los dos IGNORAN la entrada ilegible en vez de normalizarla. Un nombre
+   vacío borraría el del grupo, y un número ilegible colapsaría el torneo a
+   una ronda escondiendo los días ya jugados. No emitir es lo correcto:
+   quien teclea pasa por el vacío antes de llegar a lo que quiere. */
+function ponNombre (T, v) {
+  const n = String(v ?? '').trim()
+  if (n) emitir(T, 't.n', n)
+}
+function ponDias (T, v) {
+  const s = String(v ?? '').trim()
+  if (!/^\d+$/.test(s)) return
+  emitir(T, 't.dias', acotaDias(s))
+  acotarDia(T)
+}
+
+const enteroO = (v, def) => { const n = parseInt(v, 10); return Number.isFinite(n) ? n : def }
+const ponPresOn = (T, v) => emitir(T, 't.pres.on', v ? 1 : 0)
+/* El tipo de juego del torneo. Presiones enciende su pestaña; cualquier
+   otro la apaga -y si es uno del registro, enciende la suya-. La lista se
+   arma desde el registro: un juego nuevo allá aparece aquí solo. */
+/* Primero los juegos de apuesta, con Hoyo por hoyo a la cabeza porque es
+   el que juegan siempre y con el que nace el torneo. Stableford y
+   presiones van después: uno usa la Tabla y el otro su propia pestaña. */
+const JUEGOS_DEL_TORNEO = [
+  ...Object.entries(JUEGOS).filter(([, j]) => j.alta).map(([k, j]) => [k, j.nombre]),
+  ['stableford', 'Stableford'], ['presiones', 'Presiones']]
+/* Elegir el juego ENCIENDE las presiones si es el que se eligió, pero ya
+   no las apaga al elegir otro: se juegan presiones y unidades a la vez, o
+   presiones y hoyo por hoyo, y apagarlas por elegir otra cosa le quitaba
+   al grupo media apuesta sin avisar. Para apagarlas está su casilla. */
+function ponFormato (T, v) {
+  const f = JUEGOS_DEL_TORNEO.some(([k]) => k === v) ? v : 'match'
+  emitir(T, 't.formato', f)
+  if (f === 'presiones') emitir(T, 't.pres.on', 1)
+}
+const ponPresIda = (T, v) => emitir(T, 't.pres.ida', Math.max(0, enteroO(v, 5)))
+const ponPresVuelta = (T, v) => emitir(T, 't.pres.vuelta', Math.max(0, enteroO(v, 5)))
+const ponPresBono = (T, v) => emitir(T, 't.pres.bono', Math.max(0, enteroO(v, 10)))
+const ponPresAl = (T, v) => emitir(T, 't.pres.al', Math.max(1, enteroO(v, 2)))
+const ponPresCarry = (T, v) => emitir(T, 't.pres.carry', v ? 1 : 0)
+const ponPresMatch = (T, v) => emitir(T, 't.pres.match', v === 'suma' ? 'suma' : 'mayoria')
+const ponPresInd = (T, v) => emitir(T, 't.pres.ind', v ? 1 : 0)
+const ponPresModo = (T, v) => emitir(T, 't.pres.modo', MODOS_PRESIONES.some(([k]) => k === v) ? v : 'ind')
+
+/* Lo que se le puede ajustar al juego elegido. Vive en el TORNEO, no en
+   una apuesta -hay un solo juego por torneo-, y por eso se lee y se
+   escribe con el aid sintético del primer grupo: cfgDe lo manda a
+   `t.j.<k>`, que sí cabe en 16 caracteres. */
+function camposDelJuego (T) {
+  const juego = JUEGOS[formato(T)]
+  if (!juego || !juego.cfg.length) return ''
+  const aid = formato(T) + '-0'
+  const campos = juego.cfg.map(c => {
+    const valor = cfgDe(T, aid, c.k, c.def)
+    const control = c.opciones
+      ? `<select data-cambio="setCfgJuego" data-k="${esc(c.k)}">${c.opciones.map(o =>
+          `<option value="${esc(o.v)}"${String(o.v) === String(valor) ? ' selected' : ''}>${esc(o.et)}</option>`).join('')}</select>`
+      : `<input value="${esc(valor)}" inputmode="numeric" data-cambio="setCfgJuego" data-k="${esc(c.k)}">`
+    return `<label class="cfg-juego"><span>${esc(c.et)}</span>${control}</label>`
+  }).join('')
+  return `<p class="guia">Así se juega ${esc(juego.nombre)} en todo el torneo. Su pestaña lleva la cuenta.</p>${campos}`
+}
+
+/* `base` entra como argumento y no se lee de `location` aquí dentro:
+   en Node no existe, y la prueba que pinta esta vista reventaría. */
+/* El bloque de presiones: su casilla, la modalidad y las cantidades. Lo
+   usan Ajustes y la última pregunta del asistente, y tienen que ser el
+   mismo para que lo que se elige al empezar sea lo que se ve después. */
+function bloquePresiones (T) {
+  return `<label class="casilla"><input type="checkbox"${presOn(T) ? ' checked' : ''} data-cambio="setPresOn"> Se juegan presiones</label>
+    ${presOn(T) ? `<h2>Presiones</h2>
+    <label class="casilla"><input type="checkbox"${presInd(T) ? ' checked' : ''} data-cambio="setPresInd"> Individuales: uno contra uno con cada quien</label>
+    <label class="cfg-juego"><span>Y además, por equipos</span>
+      <select data-cambio="setPresModo">${MODOS_PRESIONES.map(([k, et]) =>
+        `<option value="${k}"${presModo(T) === k ? ' selected' : ''}>${k === 'ind' ? 'Ninguna' : et}</option>`).join('')}</select></label>
+    <p class="guia">Las dos cosas pueden correr a la vez: uno contra uno con cada quien y, encima, el partido del foursome. Parejas es de cuatro; Mudo y Yo-Yo son de tres, para cuando falta el cuarto. En las tres, el hoyo se decide con las dos bolas del equipo.</p>
+    <div class="pres-ajustes">
+      <label>Ida $ <input value="${esc(presIda(T))}" inputmode="numeric" data-cambio="setPresIda"></label>
+      <label>Vuelta $ <input value="${esc(presVuelta(T))}" inputmode="numeric" data-cambio="setPresVuelta"></label>
+      <label>Bono $ <input value="${esc(presBono(T))}" inputmode="numeric" data-cambio="setPresBono"></label>
+      <label>Presión al ir <input value="${esc(presAl(T))}" inputmode="numeric" data-cambio="setPresAl"> abajo</label>
+    </div>
+    <label class="casilla"><input type="checkbox"${presCarry(T) ? ' checked' : ''} data-cambio="setPresCarry"> Carry: si la salida de la ida cierra en cero, la vuelta vale ida + vuelta + bono</label>
+    <label class="casilla">El bono es para
+      <select data-cambio="setPresMatch">
+        <option value="mayoria"${presMatch(T) === 'mayoria' ? ' selected' : ''}>quien junte más apuestas</option>
+        <option value="suma"${presMatch(T) === 'suma' ? ' selected' : ''}>el signo de la suma de las dos salidas</option>
+      </select></label>` : ''}`
+}
+function vistaAjustes (T, S, base = '') {
+  const d = T.d || 0
+  /* Los campos que este teléfono ya conoce. Antes aquí había una
+     cuadrícula de 36 casillas que se llenaba a mano hoyo por hoyo, con el
+     teléfono en una mano y la tarjeta en la otra. Un campo se teclea una
+     vez -o se fotografía- y desde entonces se elige de la lista. */
+  const biblioteca = camposConocidos(S)
+
+  /* El día está "vacío" si nadie ha emitido su par: entonces conviene
+     copiar la ficha del día 1 en vez de teclear 36 números otra vez. */
+  const vacio = d > 0 && diaSinFicha(T, d)
+
+  /* La salida. Sin esto la app es una puerta de un solo sentido: creado el
+     primer torneo, ninguna pestaña de la barra vuelve a la lista donde
+     viven "Torneo nuevo" y "Unirme a uno", y quien ya tenía uno no podía
+     crear otro nunca más. Lo encontró Paulino en su teléfono el 14-sep. */
+  return `<h2>El torneo</h2>
+    <input value="${esc(nombre(T))}" placeholder="nombre del torneo" data-cambio="setNombreTorneo">
+    <label class="cfg-juego"><span>Cuántas rondas</span>
+      <input value="${esc(dias(T))}" inputmode="numeric" data-cambio="setDiasTorneo"></label>
+    <p class="guia">Los dos los ve todo el grupo. Acortar las rondas no borra lo anotado: esos días vuelven si las alargas otra vez.</p>
+    <h2>Mis torneos</h2>
+    <button class="btn sec" data-accion="irVista" data-vista="inicio">Ver todos mis torneos</button>
+    ${torneoCerrado(T)
+      ? `<button class="btn sec" data-accion="reabrirTorneo">Reabrir el torneo</button>
+         <p class="guia">Está terminado: no sincroniza y vive en "Terminados".</p>`
+      : `<button class="btn sec" data-accion="cerrarTorneo">Cerrar el torneo</button>
+         <p class="guia">Lo marca como terminado para todo el grupo y deja de sincronizar. Se guarda y se puede reabrir.</p>`}
+    <button class="btn sec" data-accion="quitarDeAqui">Quitar de este teléfono</button>
+    <p class="guia">Solo de este teléfono. Los datos siguen en el servidor y en los demás; si te reenvían la liga, vuelve.</p>
+    <h2>Día ${d + 1} de ${esc(dias(T))}</h2>
+    <p class="guia">Editas la ficha del día activo. Cambia de día tocando el nombre del torneo arriba.</p>
+    ${vacio ? `<button class="btn sec" data-accion="copiarFicha">Copiar la ficha del día 1</button>` : ''}
+    <h2>Fecha</h2>
+    <input value="${esc(fecha(T, d))}" placeholder="2026-09-12" inputmode="numeric" data-cambio="setFecha">
+    <h2>Salida</h2>
+    <input value="${esc(salida(T, d))}" placeholder="9:00 · por el 6" data-cambio="setSalida">
+    ${bloqueFoto(T, S)}
+    <h2>El campo</h2>
+    <input value="${esc(campo(T, d))}" placeholder="nombre del campo"
+      data-cambio="setCampo">
+    <select data-cambio="usarCampo">
+      <option value="">Elegir uno de mis campos…</option>
+      ${biblioteca.map(f => `<option value="${esc(f.n)}">${esc(f.n)}${f.porCotejar ? ' · por cotejar' : ''}</option>`).join('')}
+    </select>
+    <p class="guia">${fichaCompleta(T, d)
+      ? 'Este día ya tiene sus 18 pares y sus 18 índices. Elegir otro campo los reemplaza.'
+      : 'Elige uno y sus 18 pares y sus 18 índices entran a este día. La lista crece sola: cada campo que juegues o fotografíes se queda en ella.'}</p>
+    ${biblioteca.some(f => f.porCotejar)
+      ? '<p class="guia">Los que dicen «por cotejar» no salieron de la tarjeta de papel sino de una base de datos de golf. El par suele estar bien; el índice de dificultad es el que baila, y de él dependen las ventajas. Si van a jugar uno, fotografía su tarjeta en la casa club y la corriges para siempre.</p>'
+      : ''}
+    <h2>Tipo de juego</h2>
+    <select data-cambio="setFormato">${JUEGOS_DEL_TORNEO.map(([k, et]) => `<option value="${k}"${formato(T) === k ? ' selected' : ''}>${et}</option>`).join('')}</select>
+    <p class="guia">Presiones enciende su pestaña; Stableford usa la Tabla; los demás abren la suya.</p>
+    ${camposDelJuego(T)}
+    ${bloquePresiones(T)}
+    <h2>Este teléfono</h2>
+    <div class="fila"><div class="quien"><span class="nom">${esc(T.yo ? (jugadores(T).find(j => j.id === T.yo)?.n ?? '—') : (T.yo === '' ? 'Solo miro' : 'Sin decir'))}</span></div>
+      <div class="acciones"><button data-accion="cambiarYo">Cambiar</button></div></div>
+    ${bloqueClaveIa(S)}
+    <h2>Esta app</h2>
+    <p class="guia">Versión ${esc(VERSION)}. Si publicamos algo nuevo, la app te avisa arriba.</p>
+    <h2>Invitar</h2>
+    <p class="guia" style="word-break:break-all">${esc(ligaDe(T, base))}</p>
+    <button class="btn" data-accion="compartirLiga">Compartir la liga</button>
+    ${T.codigo ? `<p class="guia">O dicta el código: <b>${esc(T.codigo)}</b></p>` : ''}`
+}
+
+
+
+
+
+
+
+/* El asistente: las cinco preguntas que uno hace de verdad al llegar al
+   campo, en el orden en que las hace. Antes la app abría con un formulario
+   de nombre y rondas -lenguaje de torneo- y todo lo demás había que ir a
+   buscarlo a Grupos y a Ajustes sabiendo que estaba ahí.
+
+   Las preguntas son:
+     1. ¿partida de hoy o torneo de varias rondas?
+     2. ¿en qué campo estás? (y si no está, se fotografía su tarjeta)
+     3. ¿con cuántos juegas?
+     4. ¿cómo se llaman?
+     5. ¿qué ventajas se dan?
+
+   El torneo se crea en el paso 1, no al final: a partir de ahí cada
+   respuesta es un hecho que ya viaja al grupo, así que quien se salga a
+   medias no pierde lo contestado y quien se una por la liga ve el campo y
+   los jugadores llegar solos. Lo único que vive en el teléfono es por
+   dónde va (`S.asis`). */
+const CUANTOS = [2, 3, 4, 5]
+const PASOS = 6
+const pasoDe = (S) => (S.asis && S.asis.paso) || 1
+const acotaPaso = (v) => {
+  const n = parseInt(v, 10)
+  return Number.isFinite(n) ? Math.max(1, Math.min(PASOS, n)) : 1
+}
+const cuantosDe = (S) => (S.asis && S.asis.cuantos) || 4
+
+function paso1 (T, S) {
+  const hay = Object.keys(S.torneos || {}).length
+  return `<h1>Golf Poli</h1>
+    <p class="guia">¿Qué vas a anotar?</p>
+    <button class="btn" data-accion="asisPartida">Una partida de hoy</button>
+    <p class="guia">Una sola ronda, la de hoy. Se comparte con el grupo igual que un torneo.</p>
+    <h2>O un torneo de varias rondas</h2>
+    <input id="asisNombre" placeholder="Invitacional Santa Fe 2026">
+    <label class="cfg-juego"><span>Cuántas rondas</span>
+      <input id="asisDias" inputmode="numeric" value="2"></label>
+    <button class="btn sec" data-accion="asisTorneo">Crear el torneo</button>
+    <h2>O entrar a uno que ya existe</h2>
+    <button class="btn sec" data-accion="irVista" data-vista="unirme">Unirme con una liga</button>
+    ${hay ? '<button class="btn sec" data-accion="irVista" data-vista="inicio">Ver mis torneos</button>' : ''}
+    <button class="enlace" data-accion="irVista" data-vista="sliding">Golf Sliding: con cuánto juega cada quien</button>`
+}
+
+function paso2 (T, S) {
+  const d = T.d || 0
+  const lista = camposConocidos(S)
+  const listo = fichaCompleta(T, d)
+  const abreFoto = !!(S.asis && S.asis.foto)
+  const hayClaveIa = !!(S.ia && S.ia.clave)
+  return `<h2>¿En qué campo estás?</h2>
+    <select data-cambio="usarCampo">
+      <option value="">Elegir uno de mis campos…</option>
+      ${lista.map(f => `<option value="${esc(f.n)}"${campo(T, d) === f.n ? ' selected' : ''}>${esc(f.n)}${f.porCotejar ? ' · por cotejar' : ''}</option>`).join('')}
+    </select>
+    <p class="guia">${listo
+      ? `Listo: ${esc(campo(T, d))}, con sus 18 pares y sus 18 índices.`
+      : 'Al elegirlo entran sus 18 pares y sus 18 índices, que son los que reparten las ventajas.'}</p>
+    ${abreFoto
+      ? (hayClaveIa
+          ? bloqueFoto(T, S)
+          : `<h2>Leer de una foto</h2>
+             <p class="guia">Para leer la tarjeta con la cámara hace falta tu clave de la IA, que es tuya y de pago. Se pone una sola vez en Ajustes, abajo del todo. Mientras tanto puedes seguir sin campo y ponerlo después: lo único que cambia es que las ventajas no se reparten hasta que el campo tenga sus 18 índices.</p>`)
+      : '<button class="btn sec" data-accion="asisFoto">No está en la lista: fotografiar su tarjeta</button>'}
+    ${listo
+      ? '<button class="btn" data-accion="asisSigue">Seguir</button>'
+      : '<button class="enlace" data-accion="asisSigue">Seguir sin campo, lo pongo después</button>'}`
+}
+
+function paso3 (T, S) {
+  return `<h2>¿Con cuántos juegas?</h2>
+    <p class="guia">Contándote a ti.</p>
+    <div class="segm">${CUANTOS.map(n =>
+      `<button class="${cuantosDe(S) === n ? 'on' : ''}" data-accion="asisCuantos" data-n="${n}">${n}</button>`).join('')}</div>`
+}
+
+function paso4 (T, S) {
+  const n = cuantosDe(S)
+  /* Las casillas se llenan con los jugadores que dio de alta ESTE
+     asistente, por su jid y no por su posición en la lista: así, quien
+     vuelve atrás después de bajar de 5 a 2 encuentra otra vez los nombres
+     de los que había quitado, en su casilla. */
+  const jids = (S.asis && S.asis.jids) || []
+  const filas = Array.from({ length: n }, (_, i) =>
+    `<input id="asisNom${i}" list="laLibreta" placeholder="${i === 0 ? 'Tú' : 'Jugador ' + (i + 1)}"
+       autocapitalize="words" value="${esc(jids[i] ? nomJug(T, jids[i]) : '')}">`).join('')
+  const libreta = (S.gente || []).map(g => `<option value="${esc(g.n)}"></option>`).join('')
+  /* Quien se unió por la liga pudo agregar gente desde su teléfono. El
+     asistente no los toca -no son suyos-, pero callarlo haría que el
+     usuario los volviera a escribir aquí y quedaran por duplicado. */
+  const ajenos = jugadores(T).filter(j => !jids.includes(j.id))
+  return `<h2>¿Cómo se llaman?</h2>
+    <p class="guia">El primero eres tú: así la app sabe de quién es la tarjeta en este teléfono. Si ya han jugado contigo, los propone al escribir.</p>
+    ${filas}
+    <datalist id="laLibreta">${libreta}</datalist>
+    ${ajenos.length
+      ? `<p class="guia">En este torneo ya están ${esc(ajenos.map(j => j.n).join(', '))}, que agregaron desde otro teléfono. No hace falta repetirlos: se suman a los que pongas aquí.</p>`
+      : ''}
+    <button class="btn" data-accion="asisNombres">Seguir</button>`
+}
+
+function paso5 (T, S) {
+  const jug = jugadores(T)
+  if (!jug.length) return '<h2>¿Qué ventajas se dan?</h2><p class="guia">Antes hay que poner los nombres.</p>'
+  const filas = jug.map(j => `<label class="cfg-juego"><span>${esc(j.n)} <span class="tenue">${esc(comoSeLee(aSliding(j.i)))}</span></span>
+      <input value="${esc(aSliding(j.i))}" inputmode="text" data-cambio="setVentaja" data-jid="${esc(j.id)}"></label>`).join('')
+  return `<h2>¿Qué ventajas se dan?</h2>
+    <p class="guia">El número es lo que esa persona <b>da</b>, igual que en tu lista de Golf Sliding: <b>+7</b> da siete golpes, <b>−3</b> recibe tres, y entre esos dos se dan diez. El que ni da ni recibe va en cero.</p>
+    <p class="guia">Se reparten hoyo por hoyo según el índice de dificultad del campo: los que se reciben empiezan por el hoyo más difícil, los que se dan por el más fácil.</p>
+    ${filas}
+    <button class="btn" data-accion="asisSigue">Seguir</button>`
+}
+
+/* La sexta y última: qué se apuesta y por cuánto. Antes había que ir a
+   buscarlo a Ajustes sabiendo que estaba ahí, y lo normal es que se
+   acuerde en el tee del 1, con los cuatro delante. Los controles son los
+   MISMOS de Ajustes, no una copia: lo que se elige aquí es exactamente lo
+   que se ve después. */
+function paso6 (T, S) {
+  return `<h2>¿Qué van a jugar?</h2>
+    <select data-cambio="setFormato">${JUEGOS_DEL_TORNEO.map(([k, et]) =>
+      `<option value="${k}"${formato(T) === k ? ' selected' : ''}>${esc(et)}</option>`).join('')}</select>
+    <p class="guia">Stableford no es una apuesta: es la Tabla de puntos. Los demás llevan su cuenta de dinero y abren su propia pestaña.</p>
+    ${camposDelJuego(T)}
+    <h2>Presiones</h2>
+    ${bloquePresiones(T)}
+    <button class="btn" data-accion="asisListo">Empezar a anotar</button>`
+}
+function vistaAsistente (S, T) {
+  /* Sin torneo no hay nada que preguntar todavía: siempre es el paso 1,
+     aunque el teléfono venga con un paso guardado de otra vez. */
+  /* Un `paso` raro guardado -de una versión vieja, o de un estado a medio
+     escribir- dejaba la app en blanco y sin un solo botón para salir: la
+     vista reventaba, y como la vista y el paso viven en el teléfono,
+     reventaba otra vez en cada recarga. */
+  const paso = T ? acotaPaso(pasoDe(S)) : 1
+  const dentro = [null, paso1, paso2, paso3, paso4, paso5, paso6][paso]
+  return `<div class="hoja">
+    ${paso > 1
+      ? `<p class="guia">Paso ${paso} de ${PASOS} · ${esc(nombre(T))}${dias(T) > 1 ? ` · ${esc(dias(T))} rondas` : ''}</p>`
+      : ''}
+    ${dentro(T, S)}
+    ${paso > 1
+      ? `<button class="btn sec" data-accion="asisAtras">Atrás</button>
+         <button class="enlace" data-accion="asisListo">Salir del asistente</button>`
+      : ''}
+  </div>`
+}
+
+
+
+/* Portado de Santa Fe. Cada castigo es un CONTADOR de dos bits, porque en
+   un mismo hoyo se puede pegar más de una vez fuera o al agua: OB en los
+   bits 5-6 y hazard en los 7-8 (0 a 3 cada uno), y el bit 9 recuerda si fue
+   un castigo el que abrió el hoyo. Los bits 0-4 quedan libres.
+
+   Los golpes del castigo se EMITEN en s., no se derivan: el teléfono que
+   recibe el score ya lo trae sumado y no vuelve a sumar. Dos teléfonos
+   marcando el mismo OB tampoco lo cuentan doble: gana un hecho por llave. */
+const PENALES = [
+  { id: 'ob', desp: 5, golpes: 2, et: '⛔ OB' },
+  { id: 'hazard', desp: 7, golpes: 1, et: '💧 hazard' }
+]
+const TOPE_PENAL = 3
+const MASCARA_PENAL = 480          // bits 5-8: los dos contadores
+/* bit 9: si fue un castigo el que abrió el hoyo (ver ciclaPenal). Es
+   PEGAJOSO a propósito -no hay dónde más guardarlo- y no se limpia con una
+   corrección manual de golpe: castigo (abre el hoyo, ABRIO=1) → -1 con
+   cambiaGolpe (corrige el golpe, pero no toca ABRIO ni el contador) → el
+   mismo castigo otra vez hasta dar la vuelta (el contador vuelve a 0, y
+   como ABRIO seguía encendido, ciclaPenal vacía el hoyo entero) borra
+   también la corrección manual, no solo el castigo. Idéntico a la app de
+   referencia; se deja así a propósito en este hito. */
+const ABRIO = 512                   // bit 9
+const cuentaPenal = (x, desp) => (x >> desp) & 3
+function ciclaPenal (T, jid, penal) {
+  const d = T.d || 0, h = T.hoyo || 0
+  const x = extra(T, d, jid, h), g = golpe(T, d, jid, h)
+  const n = cuentaPenal(x, penal.desp), n2 = (n + 1) % (TOPE_PENAL + 1)
+  const dif = (n2 - n) * penal.golpes      // entran, o salen si dio la vuelta
+  let nx = (x & ~(3 << penal.desp)) | (n2 << penal.desp)
+  const ks = `s.${d}.${jid}.${h}`, kx = `x.${d}.${jid}.${h}`
+  /* Un sello COMPARTIDO para el par s./x.: sin esto, cada emitir toma el
+     suyo por separado (Math.max(Date.now(), ct[k]+1)), y dos teléfonos
+     ciclando castigos distintos casi al mismo tiempo pueden fusionar el s.
+     de uno con el x. del otro -golpes de OB con el chip de hazard
+     encendido. Con el mismo sello, el par siempre gana o pierde junto. */
+  const t = selloPara(T, ks, kx)
+  if (g === null) {                         // hoyo vacío: el castigo lo abre
+    nx |= ABRIO
+    emitir(T, ks, Math.min(15, par(T, d, h) + dif), t)
+  } else if (!(nx & MASCARA_PENAL) && (x & ABRIO)) {
+    emitir(T, ks, null, t); nx &= ~ABRIO    // se fue el último y él lo abrió: vacío otra vez
+  } else {
+    emitir(T, ks, Math.max(1, Math.min(15, g + dif)), t)
+  }
+  emitir(T, kx, nx, t)
+}
 
 
 
@@ -3253,258 +3538,6 @@ function vistaRoster (T, S) {
     <button class="btn" data-accion="altaNueva">Agregar jugador</button>
     ${libreta ? `<h2 class="tenue">Ya jugaron contigo</h2>${libreta}` : ''}
     ${bajos ? `<h2 class="tenue">Dados de baja</h2>${bajos}` : ''}`
-}
-
-
-
-
-/* Fecha LOCAL, nunca UTC: a las 23:30 en México, UTC ya cambió de día y
-   la app saltaría a la ronda equivocada. Es la misma cuenta que hacía
-   cargar() en Santa Fe. */
-function hoyISO (ahora = new Date()) {
-  const m = String(ahora.getMonth() + 1).padStart(2, '0')
-  const d = String(ahora.getDate()).padStart(2, '0')
-  return `${ahora.getFullYear()}-${m}-${d}`
-}
-function setDia (T, d) {
-  if (d < 0 || d >= dias(T)) return
-  T.d = d
-  T.hoyo = 0
-}
-
-/* Un hecho remoto fusionado puede bajar t.dias por debajo del día activo
-   -hoy solo alcanzable así, pero alcanzable-: T.d se queda apuntando a un
-   día que ya no existe y ni la cabecera ni Ajustes tienen uno que mostrar.
-   Se acota al último día real. */
-function acotarDia (T) {
-  if ((T.d || 0) >= dias(T)) {
-    T.d = dias(T) - 1
-    T.hoyo = 0
-  }
-}
-
-/* Devuelve true si encontró el día de hoy, false si no -sincronizar() lo usa
-   para saber si ya "situó" al torneo (punto B). setDia solo se llama cuando
-   el día de hoy es DISTINTO del activo: setDia siempre pone T.hoyo = 0, y
-   llamarlo aunque T.d ya fuera ese día resetea el hoyo capturado en cada
-   carga -el bug que este fix cierra: guardas el teléfono en el hoyo 7,
-   recargas, y apareces en el 1. */
-function saltarAHoy (T, iso = hoyISO()) {
-  acotarDia(T)
-  for (let d = 0; d < dias(T); d++) {
-    if (fecha(T, d) !== iso) continue
-    if ((T.d || 0) !== d) setDia(T, d)
-    return true
-  }
-  return false
-}
-
-/* Los torneos de un solo campo son la norma: la ficha del día 1 sirve para
-   el 2. Se emite hecho por hecho, para que viaje como cualquier captura.
-   Copia par, SI y campo -NO la salida: una salida heredada del día 1 se
-   pintaría en la cabecera y en el selector como si fuera la real del día
-   2, y casi nunca lo es (los horarios de salida cambian día a día aunque
-   el campo se repita). */
-function copiarFicha (T, de, a) {
-  for (let h = 0; h < HOYOS; h++) {
-    emitir(T, `c.${a}.par.${h}`, par(T, de, h))
-    emitir(T, `c.${a}.si.${h}`, si(T, de, h))
-  }
-  emitir(T, `c.${a}.n`, campo(T, de))
-}
-
-const etiquetaDia = (T, d) => [fecha(T, d), salida(T, d)].filter(Boolean).join(' · ')
-function vistaDias (T) {
-  const activo = T.d || 0
-  return `<div class="dias">${Array.from({ length: dias(T) }, (_, d) =>
-    `<button class="dia${d === activo ? ' on' : ''}" data-accion="setDia" data-dia="${d}">
-      <b>Día ${d + 1}</b><span>${esc(etiquetaDia(T, d)) || 'sin fecha'}</span>
-    </button>`).join('')}</div>`
-}
-
-/* La versión de este armado. `armar.js` sustituye el 'dev' por la fecha y
-   el commit al coser el HTML; en el código fuente se queda como está.
-
-   Existe porque un teléfono con la app en su pantalla de inicio guarda el
-   HTML y no lo suelta: Paulino publicó cinco veces y siguió viendo la
-   versión vieja. Con esto la app se entera sola y ofrece pasar a la nueva,
-   en vez de que cada quien tenga que adivinar cómo forzar a su iOS. */
-const VERSION = '2026-09-16·cef9161'
-const VERSION_DEL_ARMADO = '2026-09-16·cef9161'
-
-/* El nombre de la constante es el ancla que se busca en el HTML servido.
-   Se escribe partido para que esta línea no se encuentre a sí misma. */
-const MARCA_VERSION = 'VERSION' + '_DEL_ARMADO'
-function leeVersion (html) {
-  const m = new RegExp(MARCA_VERSION + "\\s*=\\s*'([^']+)'").exec(String(html ?? ''))
-  return m ? m[1] : null
-}
-
-/* Pregunta por el propio HTML con algo que el caché no reconozca y compara
-   versiones. Nunca lanza: sin señal simplemente no hay novedad. */
-async function hayVersionNueva (actual, buscar, url = '') {
-  try {
-    const r = await buscar(`${url}?v=${Date.now()}`, { cache: 'no-store' })
-    if (!r || !r.ok) return null
-    const v = leeVersion(await r.text())
-    return v && v !== actual ? v : null
-  } catch (e) {
-    return null
-  }
-}
-
-const ponCampo = (T, d, v) => emitir(T, `c.${d}.n`, String(v))
-const ponFecha = (T, d, v) => emitir(T, `c.${d}.iso`, String(v ?? '').trim())
-const ponSalida = (T, d, v) => emitir(T, `c.${d}.salida`, String(v ?? '').trim())
-const ponCerrado = (T, v) => emitir(T, 't.cerrado', v ? 1 : 0)
-
-/* El nombre y las rondas se escribían al crear el torneo y no había dónde
-   cambiarlos nunca más. Viajan como hechos: el grupo entero ve el cambio.
-
-   Los dos IGNORAN la entrada ilegible en vez de normalizarla. Un nombre
-   vacío borraría el del grupo, y un número ilegible colapsaría el torneo a
-   una ronda escondiendo los días ya jugados. No emitir es lo correcto:
-   quien teclea pasa por el vacío antes de llegar a lo que quiere. */
-function ponNombre (T, v) {
-  const n = String(v ?? '').trim()
-  if (n) emitir(T, 't.n', n)
-}
-function ponDias (T, v) {
-  const s = String(v ?? '').trim()
-  if (!/^\d+$/.test(s)) return
-  emitir(T, 't.dias', acotaDias(s))
-  acotarDia(T)
-}
-
-const enteroO = (v, def) => { const n = parseInt(v, 10); return Number.isFinite(n) ? n : def }
-const ponPresOn = (T, v) => emitir(T, 't.pres.on', v ? 1 : 0)
-/* El tipo de juego del torneo. Presiones enciende su pestaña; cualquier
-   otro la apaga -y si es uno del registro, enciende la suya-. La lista se
-   arma desde el registro: un juego nuevo allá aparece aquí solo. */
-/* Primero los juegos de apuesta, con Hoyo por hoyo a la cabeza porque es
-   el que juegan siempre y con el que nace el torneo. Stableford y
-   presiones van después: uno usa la Tabla y el otro su propia pestaña. */
-const JUEGOS_DEL_TORNEO = [
-  ...Object.entries(JUEGOS).filter(([, j]) => j.alta).map(([k, j]) => [k, j.nombre]),
-  ['stableford', 'Stableford'], ['presiones', 'Presiones']]
-function ponFormato (T, v) {
-  const f = JUEGOS_DEL_TORNEO.some(([k]) => k === v) ? v : 'match'
-  emitir(T, 't.formato', f)
-  emitir(T, 't.pres.on', f === 'presiones' ? 1 : 0)
-}
-const ponPresIda = (T, v) => emitir(T, 't.pres.ida', Math.max(0, enteroO(v, 5)))
-const ponPresVuelta = (T, v) => emitir(T, 't.pres.vuelta', Math.max(0, enteroO(v, 5)))
-const ponPresBono = (T, v) => emitir(T, 't.pres.bono', Math.max(0, enteroO(v, 10)))
-const ponPresAl = (T, v) => emitir(T, 't.pres.al', Math.max(1, enteroO(v, 2)))
-const ponPresCarry = (T, v) => emitir(T, 't.pres.carry', v ? 1 : 0)
-const ponPresMatch = (T, v) => emitir(T, 't.pres.match', v === 'suma' ? 'suma' : 'mayoria')
-const ponPresInd = (T, v) => emitir(T, 't.pres.ind', v ? 1 : 0)
-const ponPresModo = (T, v) => emitir(T, 't.pres.modo', MODOS_PRESIONES.some(([k]) => k === v) ? v : 'ind')
-
-/* Lo que se le puede ajustar al juego elegido. Vive en el TORNEO, no en
-   una apuesta -hay un solo juego por torneo-, y por eso se lee y se
-   escribe con el aid sintético del primer grupo: cfgDe lo manda a
-   `t.j.<k>`, que sí cabe en 16 caracteres. */
-function camposDelJuego (T) {
-  const juego = JUEGOS[formato(T)]
-  if (!juego || !juego.cfg.length) return ''
-  const aid = formato(T) + '-0'
-  const campos = juego.cfg.map(c => {
-    const valor = cfgDe(T, aid, c.k, c.def)
-    const control = c.opciones
-      ? `<select data-cambio="setCfgJuego" data-k="${esc(c.k)}">${c.opciones.map(o =>
-          `<option value="${esc(o.v)}"${String(o.v) === String(valor) ? ' selected' : ''}>${esc(o.et)}</option>`).join('')}</select>`
-      : `<input value="${esc(valor)}" inputmode="numeric" data-cambio="setCfgJuego" data-k="${esc(c.k)}">`
-    return `<label class="cfg-juego"><span>${esc(c.et)}</span>${control}</label>`
-  }).join('')
-  return `<p class="guia">Así se juega ${esc(juego.nombre)} en todo el torneo. Su pestaña lleva la cuenta.</p>${campos}`
-}
-
-/* `base` entra como argumento y no se lee de `location` aquí dentro:
-   en Node no existe, y la prueba que pinta esta vista reventaría. */
-function vistaAjustes (T, S, base = '') {
-  const d = T.d || 0
-  /* Los campos que este teléfono ya conoce. Antes aquí había una
-     cuadrícula de 36 casillas que se llenaba a mano hoyo por hoyo, con el
-     teléfono en una mano y la tarjeta en la otra. Un campo se teclea una
-     vez -o se fotografía- y desde entonces se elige de la lista. */
-  const biblioteca = camposConocidos(S)
-
-  /* El día está "vacío" si nadie ha emitido su par: entonces conviene
-     copiar la ficha del día 1 en vez de teclear 36 números otra vez. */
-  const vacio = d > 0 && diaSinFicha(T, d)
-
-  /* La salida. Sin esto la app es una puerta de un solo sentido: creado el
-     primer torneo, ninguna pestaña de la barra vuelve a la lista donde
-     viven "Torneo nuevo" y "Unirme a uno", y quien ya tenía uno no podía
-     crear otro nunca más. Lo encontró Paulino en su teléfono el 14-sep. */
-  return `<h2>El torneo</h2>
-    <input value="${esc(nombre(T))}" placeholder="nombre del torneo" data-cambio="setNombreTorneo">
-    <label class="cfg-juego"><span>Cuántas rondas</span>
-      <input value="${esc(dias(T))}" inputmode="numeric" data-cambio="setDiasTorneo"></label>
-    <p class="guia">Los dos los ve todo el grupo. Acortar las rondas no borra lo anotado: esos días vuelven si las alargas otra vez.</p>
-    <h2>Mis torneos</h2>
-    <button class="btn sec" data-accion="irVista" data-vista="inicio">Ver todos mis torneos</button>
-    ${torneoCerrado(T)
-      ? `<button class="btn sec" data-accion="reabrirTorneo">Reabrir el torneo</button>
-         <p class="guia">Está terminado: no sincroniza y vive en "Terminados".</p>`
-      : `<button class="btn sec" data-accion="cerrarTorneo">Cerrar el torneo</button>
-         <p class="guia">Lo marca como terminado para todo el grupo y deja de sincronizar. Se guarda y se puede reabrir.</p>`}
-    <button class="btn sec" data-accion="quitarDeAqui">Quitar de este teléfono</button>
-    <p class="guia">Solo de este teléfono. Los datos siguen en el servidor y en los demás; si te reenvían la liga, vuelve.</p>
-    <h2>Día ${d + 1} de ${esc(dias(T))}</h2>
-    <p class="guia">Editas la ficha del día activo. Cambia de día tocando el nombre del torneo arriba.</p>
-    ${vacio ? `<button class="btn sec" data-accion="copiarFicha">Copiar la ficha del día 1</button>` : ''}
-    <h2>Fecha</h2>
-    <input value="${esc(fecha(T, d))}" placeholder="2026-09-12" inputmode="numeric" data-cambio="setFecha">
-    <h2>Salida</h2>
-    <input value="${esc(salida(T, d))}" placeholder="9:00 · por el 6" data-cambio="setSalida">
-    ${bloqueFoto(T, S)}
-    <h2>El campo</h2>
-    <input value="${esc(campo(T, d))}" placeholder="nombre del campo"
-      data-cambio="setCampo">
-    <select data-cambio="usarCampo">
-      <option value="">Elegir uno de mis campos…</option>
-      ${biblioteca.map(f => `<option value="${esc(f.n)}">${esc(f.n)}${f.porCotejar ? ' · por cotejar' : ''}</option>`).join('')}
-    </select>
-    <p class="guia">${fichaCompleta(T, d)
-      ? 'Este día ya tiene sus 18 pares y sus 18 índices. Elegir otro campo los reemplaza.'
-      : 'Elige uno y sus 18 pares y sus 18 índices entran a este día. La lista crece sola: cada campo que juegues o fotografíes se queda en ella.'}</p>
-    ${biblioteca.some(f => f.porCotejar)
-      ? '<p class="guia">Los que dicen «por cotejar» no salieron de la tarjeta de papel sino de una base de datos de golf. El par suele estar bien; el índice de dificultad es el que baila, y de él dependen las ventajas. Si van a jugar uno, fotografía su tarjeta en la casa club y la corriges para siempre.</p>'
-      : ''}
-    <h2>Tipo de juego</h2>
-    <select data-cambio="setFormato">${JUEGOS_DEL_TORNEO.map(([k, et]) => `<option value="${k}"${formato(T) === k ? ' selected' : ''}>${et}</option>`).join('')}</select>
-    <p class="guia">Presiones enciende su pestaña; Stableford usa la Tabla; los demás abren la suya.</p>
-    ${camposDelJuego(T)}
-    ${presOn(T) ? `<h2>Presiones</h2>
-    <label class="casilla"><input type="checkbox"${presInd(T) ? ' checked' : ''} data-cambio="setPresInd"> Individuales: uno contra uno con cada quien</label>
-    <label class="cfg-juego"><span>Y además, por equipos</span>
-      <select data-cambio="setPresModo">${MODOS_PRESIONES.map(([k, et]) =>
-        `<option value="${k}"${presModo(T) === k ? ' selected' : ''}>${k === 'ind' ? 'Ninguna' : et}</option>`).join('')}</select></label>
-    <p class="guia">Las dos cosas pueden correr a la vez: uno contra uno con cada quien y, encima, el partido del foursome. Parejas es de cuatro; Mudo y Yo-Yo son de tres, para cuando falta el cuarto. En las tres, el hoyo se decide con las dos bolas del equipo.</p>
-    <div class="pres-ajustes">
-      <label>Ida $ <input value="${esc(presIda(T))}" inputmode="numeric" data-cambio="setPresIda"></label>
-      <label>Vuelta $ <input value="${esc(presVuelta(T))}" inputmode="numeric" data-cambio="setPresVuelta"></label>
-      <label>Bono $ <input value="${esc(presBono(T))}" inputmode="numeric" data-cambio="setPresBono"></label>
-      <label>Presión al ir <input value="${esc(presAl(T))}" inputmode="numeric" data-cambio="setPresAl"> abajo</label>
-    </div>
-    <label class="casilla"><input type="checkbox"${presCarry(T) ? ' checked' : ''} data-cambio="setPresCarry"> Carry: si la salida de la ida cierra en cero, la vuelta vale ida + vuelta + bono</label>
-    <label class="casilla">El bono es para
-      <select data-cambio="setPresMatch">
-        <option value="mayoria"${presMatch(T) === 'mayoria' ? ' selected' : ''}>quien junte más apuestas</option>
-        <option value="suma"${presMatch(T) === 'suma' ? ' selected' : ''}>el signo de la suma de las dos salidas</option>
-      </select></label>` : ''}
-    <h2>Este teléfono</h2>
-    <div class="fila"><div class="quien"><span class="nom">${esc(T.yo ? (jugadores(T).find(j => j.id === T.yo)?.n ?? '—') : (T.yo === '' ? 'Solo miro' : 'Sin decir'))}</span></div>
-      <div class="acciones"><button data-accion="cambiarYo">Cambiar</button></div></div>
-    ${bloqueClaveIa(S)}
-    <h2>Esta app</h2>
-    <p class="guia">Versión ${esc(VERSION)}. Si publicamos algo nuevo, la app te avisa arriba.</p>
-    <h2>Invitar</h2>
-    <p class="guia" style="word-break:break-all">${esc(ligaDe(T, base))}</p>
-    <button class="btn" data-accion="compartirLiga">Compartir la liga</button>
-    ${T.codigo ? `<p class="guia">O dicta el código: <b>${esc(T.codigo)}</b></p>` : ''}`
 }
 
 
