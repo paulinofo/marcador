@@ -127,6 +127,10 @@ h2{font-size:12px;font-family:var(--mono);letter-spacing:.12em;text-transform:up
    lista— y el número cabe justo, con sitio para el signo y dos cifras. */
 .fila input.slide{margin:0;width:66px;padding:10px 8px;text-align:center;
   font-family:var(--mono);font-size:16px}
+/* La ✕ separada del número: son dos toques muy distintos -cambiar un
+   golpe y borrar a alguien- y estaban a cinco píxeles. */
+.fila .acciones button.quitar{margin-left:9px;background:transparent;
+  border:1px solid var(--verde-linea);color:var(--cal)}
 
 /* ── Controles ──────────────────────────────────────────────── */
 input,select,textarea{background:var(--verde);border:1px solid var(--verde-linea);border-radius:8px;
@@ -1280,7 +1284,7 @@ function vistaSliding (S) {
       <div class="acciones">
         <input class="slide" value="${esc(signo(g.sliding))}" inputmode="text"
           data-cambio="setSliding" data-quien="${esc(g.n)}" aria-label="sliding de ${esc(g.n)}">
-        <button data-accion="quitaSliding" data-quien="${esc(g.n)}" aria-label="quitar a ${esc(g.n)}">✕</button>
+        <button class="quitar" data-accion="quitaSliding" data-quien="${esc(g.n)}" aria-label="quitar a ${esc(g.n)}">✕</button>
       </div>
     </div>`).join('')
   return `<div class="hoja">
@@ -2732,8 +2736,8 @@ function vistaDias (T) {
    HTML y no lo suelta: Paulino publicó cinco veces y siguió viendo la
    versión vieja. Con esto la app se entera sola y ofrece pasar a la nueva,
    en vez de que cada quien tenga que adivinar cómo forzar a su iOS. */
-const VERSION = '2026-09-16·e625ec8'
-const VERSION_DEL_ARMADO = '2026-09-16·e625ec8'
+const VERSION = '2026-09-16·fce5c4b'
+const VERSION_DEL_ARMADO = '2026-09-16·fce5c4b'
 
 /* El nombre de la constante es el ancla que se busca en el HTML servido.
    Se escribe partido para que esta línea no se encuentre a sí misma. */
@@ -4355,17 +4359,30 @@ function marcarOnces (T, aid, h, jid, v) {
    se sabe al menos si el fallo es de la app o de algo que le metió el
    navegador por encima. Un `Script error.` sin sitio es siempre lo
    segundo: la app es un solo archivo y no carga nada de fuera. */
+/* Un «Script error.» pelado -sin archivo, sin renglón, sin objeto de
+   error- es la forma en que el navegador tapa un fallo que NO viene del
+   documento. Y no puede ser de la app: es un solo archivo, sin nada
+   cargado de fuera, y los fallos de un script propio llegan siempre con
+   su sitio. Viene de algo que el navegador le metió por encima -un
+   bloqueador de anuncios, una extensión, la barra del propio Safari-.
+
+   Devuelve null en ese caso, y entonces no se pinta el aviso: una barra
+   roja en mitad de la ronda por algo que no es de la app, que nadie puede
+   arreglar y que no impide anotar, asusta sin servir de nada. Lo de la app
+   sí se pinta, y ahora con su archivo y su renglón. */
 function detalleDelFallo (e) {
-  const partes = []
   const err = e && e.error
+  const donde = e && e.filename ? String(e.filename).replace(/^.*\//, '') : ''
+  const ajeno = !donde && !err && (!e || !e.message || e.message === 'Script error.')
+  if (ajeno) return null
+
+  const partes = []
   if (err && err.message) partes.push((err.name ? err.name + ': ' : '') + err.message)
   else if (e && e.message) partes.push(e.message)
-  const donde = e && e.filename ? String(e.filename).replace(/^.*\//, '') : ''
   if (donde) partes.push(donde + ':' + (e.lineno || 0) + ':' + (e.colno || 0))
-  else if (partes[0] === 'Script error.') partes.push('viene de fuera de la app')
-  if (err && err.stack) {
+  if (err && err.stack && !donde) {
     const linea = String(err.stack).split('\n').find(x => /\d/.test(x))
-    if (linea && !donde) partes.push(linea.trim().slice(0, 80))
+    if (linea) partes.push(linea.trim().slice(0, 80))
   }
   return partes.join(' · ') || 'sin detalle'
 }
@@ -4685,7 +4702,17 @@ const ACCIONES = {
     recordarGente(S, d.quien, deSliding(s))
     salvar()
   },
-  quitaSliding: d => { olvidarGente(S, d.quien); salvar() },
+  /* Borrar de la lista pregunta: la ✕ está pegada al recuadro del número,
+     que es lo que uno toca de verdad, y con veinticinco renglones en una
+     pantalla de teléfono el dedo se equivoca. Quitar a alguien se
+     recuerda, así que no vuelve solo y hay que escribirlo otra vez. */
+  quitaSliding: d => {
+    const seguro = typeof confirm !== 'function' ||
+      confirm(`¿Quitar a ${d.quien} de tu lista de sliding?\n\nSe puede volver a dar de alta, pero hay que escribirlo otra vez.`)
+    if (!seguro) return
+    olvidarGente(S, d.quien)
+    salvar()
+  },
   altaSliding: () => {
     const nom = String(document.getElementById('slidingNom').value || '').trim()
     if (!nom) { avisar('Ponle un nombre'); return }
@@ -4833,7 +4860,10 @@ function avisar (mensaje) {
 }
 
 if (typeof window !== 'undefined') {
-  window.addEventListener('error', e => avisar('Algo falló: ' + detalleDelFallo(e)))
+  window.addEventListener('error', e => {
+    const q = detalleDelFallo(e)
+    if (q) avisar('Algo falló: ' + q)
+  })
   window.addEventListener('unhandledrejection', e => avisar('Algo falló: ' + ((e.reason && e.reason.message) || e.reason)))
 }
 
