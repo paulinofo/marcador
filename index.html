@@ -62,7 +62,12 @@ button{cursor:pointer;border:none;background:none;color:inherit}
 .chip.aviso{color:var(--laton);border-color:var(--laton)}
 
 /* ── Cuerpo ─────────────────────────────────────────────────── */
-.hoja{padding:16px}
+/* Las pantallas sin cabecera -el asistente, la lista de torneos, unirse,
+   Sliding suelta- llevan ellas mismas el hueco del reloj y de la isla del
+   iPhone: con la cabecera lo pone la cabecera, aquí no hay nadie más. */
+.hoja{padding:calc(var(--safe-t) + 16px) 16px 16px}
+/* Bajo la cabecera del torneo el hueco del reloj ya lo puso ella. */
+.cabecera ~ .hoja,.hoja.en-pestana{padding-top:16px}
 h1{font-size:30px;font-weight:800;letter-spacing:-.02em;margin:0 0 6px}
 h2{font-size:12px;font-family:var(--mono);letter-spacing:.12em;text-transform:uppercase;
   color:var(--cal);font-weight:600;margin:24px 0 8px}
@@ -72,7 +77,7 @@ h2{font-size:12px;font-family:var(--mono);letter-spacing:.12em;text-transform:up
 .enlace{color:var(--laton);text-decoration:underline;padding:0;font-size:14px}
 
 /* ── Paso de hoyo ───────────────────────────────────────────── */
-.paso{background:var(--tarjeta);border-radius:var(--r);padding:14px 12px;margin:0 0 10px;
+.paso{background:var(--tarjeta);border-radius:var(--r);padding:11px 12px;margin:0 0 8px;
   display:grid;grid-template-columns:52px 1fr 52px;align-items:center;gap:10px;
   color:var(--tinta)}
 .paso button{width:46px;height:46px;border-radius:8px;background:var(--verde);color:var(--tarjeta);
@@ -87,7 +92,7 @@ h2{font-size:12px;font-family:var(--mono);letter-spacing:.12em;text-transform:up
 
 /* ── Tarjeta de jugador ─────────────────────────────────────── */
 .jug{background:var(--tarjeta);color:var(--tinta);border-radius:var(--r);
-  padding:12px 14px;margin:0 0 8px;display:block}
+  padding:10px 12px;margin:0 0 7px;display:block}
 .jug-fila{display:flex;align-items:center;gap:10px}
 .jug .quien{flex:1 1 auto;min-width:0}
 .jug .nom{font-weight:700;font-size:18px;display:block;
@@ -105,7 +110,7 @@ h2{font-size:12px;font-family:var(--mono);letter-spacing:.12em;text-transform:up
   display:grid;place-items:center;font-family:var(--mono);font-size:28px;font-weight:700;padding:0}
 .jug .pasos .marca.vacio{color:#B9AF97;font-size:21px;font-weight:600}
 .jug .marca.vacio{color:var(--tarjeta-linea)}
-.chips{display:flex;gap:6px;margin-top:10px}
+.chips{display:flex;gap:6px;margin-top:8px}
 .chip-pen{font-family:var(--mono);font-size:11px;letter-spacing:.04em;border:1px solid var(--tarjeta-linea);
   border-radius:999px;padding:6px 10px;color:var(--tinta-suave);white-space:nowrap;min-height:30px}
 .chip-pen.on{border-color:var(--bandera);color:var(--bandera);font-weight:700}
@@ -207,16 +212,16 @@ nav button.on{color:var(--laton)}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 
 .cabecera{position:sticky;top:0;z-index:30;background:var(--verde);
-  padding:calc(var(--safe-t) + 11px) 14px 10px;border-bottom:1px solid var(--verde-linea)}
+  padding:calc(var(--safe-t) + 8px) 14px 8px;border-bottom:1px solid var(--verde-linea)}
 .cabecera .marca{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
 .cabecera .titulo-btn{background:transparent;border:0;padding:0;text-align:left;min-width:0;flex:1}
 .cabecera .titulo{display:block;color:var(--tarjeta);font-size:18px;font-weight:800;
   letter-spacing:-.02em;line-height:1.15;text-transform:uppercase}
 .cabecera .marca-der{display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex:none}
 .cabecera .quien-soy{font-family:var(--mono);font-size:11px;letter-spacing:.1em;
-  text-transform:uppercase;color:var(--laton);margin-top:5px;text-align:right;
+  text-transform:uppercase;color:var(--laton);margin-top:3px;text-align:right;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.cabecera .fila-sub{display:flex;align-items:center;gap:6px;width:100%;margin-top:6px;
+.cabecera .fila-sub{display:flex;align-items:center;gap:6px;width:100%;margin-top:4px;
   background:transparent;border:0;padding:0;min-width:0}
 .cabecera .sub{font-family:var(--mono);font-size:11px;letter-spacing:.06em;color:var(--laton);
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;text-align:left}
@@ -371,6 +376,7 @@ td.dudoso input{border-color:var(--bandera);color:var(--bandera);font-weight:700
    y un toque la salta. Nunca depende del guion para desaparecer. */
 #intro{position:fixed;inset:0;z-index:100;display:flex;flex-direction:column;
   align-items:center;justify-content:center;gap:14px;
+  padding:var(--safe-t) 0 var(--safe-b);
   background:var(--verde-hondo);
   animation:intro-sale .45s ease 2.55s forwards}
 #intro b{font-size:31px;letter-spacing:-.02em}
@@ -1342,8 +1348,8 @@ function vistaSliding (S) {
         <button class="quitar" data-accion="quitaSliding" data-quien="${esc(g.n)}" aria-label="quitar a ${esc(g.n)}">✕</button>
       </div>
     </div>`).join('')
-  return `<div class="hoja">
-    <h1>Golf Sliding</h1>
+  return `<div class="hoja${suelta ? '' : ' en-pestana'}">
+    ${suelta ? '<h1>Golf Sliding</h1>' : '<h2>Golf Sliding</h2>'}
     <p class="guia">Tus amigos y lo que juegas con cada uno. El número es lo que esa persona <b>da</b>: <b>+7</b> da siete, <b>−3</b> recibe tres, y entre esos dos se dan diez. Vive solo en este teléfono y no lo ve nadie más del grupo.</p>
 
     <h2>Dar de alta uno nuevo</h2>
@@ -2815,8 +2821,8 @@ function vistaDias (T) {
    HTML y no lo suelta: Paulino publicó cinco veces y siguió viendo la
    versión vieja. Con esto la app se entera sola y ofrece pasar a la nueva,
    en vez de que cada quien tenga que adivinar cómo forzar a su iOS. */
-const VERSION = '2026-09-16·618a77b'
-const VERSION_DEL_ARMADO = '2026-09-16·618a77b'
+const VERSION = '2026-09-16·c8499bb'
+const VERSION_DEL_ARMADO = '2026-09-16·c8499bb'
 
 /* El nombre de la constante es el ancla que se busca en el HTML servido.
    Se escribe partido para que esta línea no se encuentre a sí misma. */
@@ -3678,7 +3684,7 @@ function vistaRoster (T, S) {
      siguiente. */
   const filas = jug.map(j => `<div class="fila">
       <div class="quien"><span class="nom">${esc(j.n)}</span>
-        <div class="tenue">sliding ${esc(aSliding(j.i) > 0 ? '+' + aSliding(j.i) : aSliding(j.i))} · ${esc(comoSeLee(aSliding(j.i)))} · grupo ${esc(grupo(T, d, j.id) + 1)}</div>
+        <div class="tenue">sliding ${esc(aSliding(j.i) > 0 ? '+' + aSliding(j.i) : aSliding(j.i))} · grupo ${esc(grupo(T, d, j.id) + 1)}</div>
         <input class="corto" value="${esc(cortoEscrito(T, j.id))}"
           placeholder="${esc(cortoAuto(j.n))}" data-cambio="setCorto" data-jid="${esc(j.id)}"
           aria-label="nombre corto"></div>
