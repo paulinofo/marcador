@@ -2732,8 +2732,8 @@ function vistaDias (T) {
    HTML y no lo suelta: Paulino publicó cinco veces y siguió viendo la
    versión vieja. Con esto la app se entera sola y ofrece pasar a la nueva,
    en vez de que cada quien tenga que adivinar cómo forzar a su iOS. */
-const VERSION = '2026-09-16·815cb5e'
-const VERSION_DEL_ARMADO = '2026-09-16·815cb5e'
+const VERSION = '2026-09-16·e625ec8'
+const VERSION_DEL_ARMADO = '2026-09-16·e625ec8'
 
 /* El nombre de la constante es el ancla que se busca en el HTML servido.
    Se escribe partido para que esta línea no se encuentre a sí misma. */
@@ -4349,6 +4349,28 @@ function marcarOnces (T, aid, h, jid, v) {
   emitir(T, llaveOnces(aid, jid), despues)
 }
 
+/* Safari tapa el mensaje de los fallos que no vienen del propio documento
+   y deja un escueto «Script error.», que no sirve para nada desde el campo
+   —que es donde se descubren—. El sitio y el renglón SÍ llegan, y con eso
+   se sabe al menos si el fallo es de la app o de algo que le metió el
+   navegador por encima. Un `Script error.` sin sitio es siempre lo
+   segundo: la app es un solo archivo y no carga nada de fuera. */
+function detalleDelFallo (e) {
+  const partes = []
+  const err = e && e.error
+  if (err && err.message) partes.push((err.name ? err.name + ': ' : '') + err.message)
+  else if (e && e.message) partes.push(e.message)
+  const donde = e && e.filename ? String(e.filename).replace(/^.*\//, '') : ''
+  if (donde) partes.push(donde + ':' + (e.lineno || 0) + ':' + (e.colno || 0))
+  else if (partes[0] === 'Script error.') partes.push('viene de fuera de la app')
+  if (err && err.stack) {
+    const linea = String(err.stack).split('\n').find(x => /\d/.test(x))
+    if (linea && !donde) partes.push(linea.trim().slice(0, 80))
+  }
+  return partes.join(' · ') || 'sin detalle'
+}
+
+
 
 
 
@@ -4811,7 +4833,7 @@ function avisar (mensaje) {
 }
 
 if (typeof window !== 'undefined') {
-  window.addEventListener('error', e => avisar('Algo falló: ' + (e.message || e.error)))
+  window.addEventListener('error', e => avisar('Algo falló: ' + detalleDelFallo(e)))
   window.addEventListener('unhandledrejection', e => avisar('Algo falló: ' + ((e.reason && e.reason.message) || e.reason)))
 }
 
