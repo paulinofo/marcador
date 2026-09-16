@@ -605,9 +605,12 @@ const presModo = (T) => String(T.h['t.pres.modo'] ?? 'ind')
 /* Un hecho de t.pres.* mal formado (texto, vacío, NaN) no debe tumbar el
    cálculo: cae al valor por omisión en vez de propagar NaN. */
 const enteroDeHecho = (v, def) => { const n = parseInt(v, 10); return Number.isFinite(n) ? n : def }
-const presIda = (T) => enteroDeHecho(T.h['t.pres.ida'], 5)
-const presVuelta = (T) => enteroDeHecho(T.h['t.pres.vuelta'], 5)
-const presBono = (T) => enteroDeHecho(T.h['t.pres.bono'], 10)
+/* 50-50-100: lo que juegan de verdad, dicho por Paulino el 15-sep-2026.
+   Estaba en 5-5-10, que era el ejemplo de la app de Santa Fe, y obligaba a
+   teclear los tres números en cada torneo nuevo. */
+const presIda = (T) => enteroDeHecho(T.h['t.pres.ida'], 50)
+const presVuelta = (T) => enteroDeHecho(T.h['t.pres.vuelta'], 50)
+const presBono = (T) => enteroDeHecho(T.h['t.pres.bono'], 100)
 const presAl = (T) => enteroDeHecho(T.h['t.pres.al'], 2)
 
 /* Interruptores de Teezr, apagados por omisión (spec, "Interruptores"). */
@@ -713,6 +716,15 @@ const ladoDe = (T, aid, jid) => {
   const v = T.h[llaveLado(aid, jid)]
   return v === null || v === undefined ? null : (v ? 1 : 0)
 }
+
+/* Las unidades que se marcan a mano: el sandy y el oyes. Van por DÍA y por
+   jugador, en una máscara de 18 bits como la de Onces, en vez de un hecho
+   por hoyo: así la llave mide once letras -`u.<día>.s.<jid5>`- y le sobra
+   sitio en las dieciséis que el servidor tolera, aunque el torneo llegue a
+   nueve rondas. */
+const llaveUni = (d, cual, jid) => `u.${d}.${cual === 'o' ? 'o' : 's'}.${jidCorto(jid)}`
+const mascaraUni = (T, d, cual, jid) => T.h[llaveUni(d, cual, jid)] ?? 0
+const marcaUni = (T, d, cual, jid, h) => ((mascaraUni(T, d, cual, jid) >> h) & 1) === 1
 const mascaraOnces = (T, aid, jid) => T.h[llaveOnces(aid, jid)] ?? 0
 const marcaOnces = (T, aid, h, jid) => ((mascaraOnces(T, aid, jid) >> h) & 1) === 1
 
@@ -2353,6 +2365,82 @@ function evaluarChicago (T, A, hasta = HOYOS - 1) {
 
 
 
+/* Unidades —«la basura» en la app de Santa Fe—: lo que se cobra aparte del
+   match, por lo que pasa en cada hoyo. Se paga la DIFERENCIA de unidades
+   contra cada rival del grupo, que es como se ha pagado siempre.
+
+   Lo que vale una unidad, copiado de `unidadesRonda` de maestro-santafe:
+
+     · birdie          1     sale solo del score
+     · eagle o mejor   2     sale solo del score
+     · sandy           1     se marca a mano, y solo cuenta con par o mejor
+     · oyes            1     se marca a mano; es del más cercano en un par 3
+
+   El sandy exige par o mejor porque salir de la trampa y hacer bogey no es
+   un sandy. El oyes se cuenta donde esté marcado aunque el par diga otra
+   cosa: la marca la puso alguien con la bola delante, y una ficha de campo
+   equivocada no debe borrarle su unidad. La pantalla solo lo ofrece en los
+   par 3, que es donde se juega. */
+const VALOR_UNIDAD = 25
+function unidadesDelHoyo (T, d, jid, h) {
+  const g = golpe(T, d, jid, h)
+  if (g === null) return null
+  const p = par(T, d, h)
+  const dif = g - p
+  const b = dif === -1 ? 1 : (dif <= -2 ? 2 : 0)
+  const s = marcaUni(T, d, 's', jid, h) && g <= p ? 1 : 0
+  const o = marcaUni(T, d, 'o', jid, h) ? 1 : 0
+  return { b, s, o, total: b + s + o }
+}
+function unidadesDeRonda (T, d, jid, hasta = HOYOS - 1) {
+  const q = { b: 0, s: 0, o: 0, total: 0 }
+  for (let h = 0; h <= Math.min(hasta, HOYOS - 1); h++) {
+    const u = unidadesDelHoyo(T, d, jid, h)
+    if (!u) continue
+    q.b += u.b; q.s += u.s; q.o += u.o; q.total += u.total
+  }
+  return q
+}
+function evaluarUnidades (T, A, hasta = HOYOS - 1) {
+  const p = participantes(T, A)
+  const monto = Math.max(0, Math.round(Number(cfgDe(T, A.id, 'monto', VALOR_UNIDAD)) || 0))
+  const tope = Math.min(hasta, HOYOS - 1)
+  const cuentas = p.map(jid => unidadesDeRonda(T, A.d, jid, tope))
+
+  const lineas = []
+  for (let i = 0; i < p.length; i++) {
+    for (let j = i + 1; j < p.length; j++) {
+      const dif = cuentas[i].total - cuentas[j].total
+      if (!dif || !monto) continue
+      const cuanto = Math.abs(dif) * monto
+      if (dif > 0) lineas.push({ de: p[j], a: p[i], monto: cuanto, motivo: 'Unidades' })
+      else lineas.push({ de: p[i], a: p[j], monto: cuanto, motivo: 'Unidades' })
+    }
+  }
+
+  const porHoyo = Array.from({ length: HOYOS }, (_, h) => {
+    const fila = p.map(jid => (h <= tope ? (unidadesDelHoyo(T, A.d, jid, h) || { total: null }).total : null))
+    return fila.some(x => x !== null && x !== 0) ? fila : null
+  })
+  return {
+    lineas,
+    vivo: {
+      forma: 'puntos',
+      titulo: 'Unidades',
+      /* Solo de quien lleva algo: cuatro renglones de ceros no dicen nada
+         y tapan el que sí importa. */
+      pie: cuentas.map(q => (q.total
+        ? [q.b ? `${q.b} de score` : '', q.s ? `${q.s} sandy` : '', q.o ? `${q.o} oyes` : ''].filter(Boolean).join(' y ')
+        : null)),
+      jugadores: p,
+      porHoyo,
+      totales: cuentas.map(q => q.total)
+    }
+  }
+}
+
+
+
 
 
 
@@ -2543,6 +2631,7 @@ function evaluarPresiones (T, A, hasta) {
 
 
 
+
 /* Un renglón por juego: cómo se llama, con cuántos se juega, si tiene
    bandos y qué se le puede configurar. La pantalla de alta se dibuja sola
    desde aquí: añadir un juego nuevo es añadir un renglón. */
@@ -2641,6 +2730,19 @@ const JUEGOS = {
     cfg: [{ k: 'monto', et: 'Monto por punto', def: 20 }, { k: 'cuota', et: 'Cuota base', def: 39 }],
     cuenta: 'bruto contra la cuota',
     evaluar: evaluarChicago
+  },
+  unidades: {
+    nombre: 'Unidades',
+    etiqueta: 'Unidades',
+    min: 2,
+    max: 5,
+    lados: false,
+    alta: true,
+    /* Sin HCP: una unidad es lo que pasó en el hoyo -un birdie, un sandy,
+       un oyes-, y eso no se reparte por hándicap. */
+    cfg: [{ k: 'monto', et: 'Valor de la unidad', def: VALOR_UNIDAD }],
+    cuenta: 'birdies, sandies y oyeses',
+    evaluar: evaluarUnidades
   }
 }
 
@@ -2826,6 +2928,30 @@ function chipsOnces (T, d, jid, h) {
   }).join('')
 }
 
+/* Las unidades que no salen del score: el sandy y el oyes. El chip vive
+   aquí, en Hoy, porque es donde está el dedo cuando pasa —nadie se va a
+   otra pestaña a apuntar que salvó el par desde la trampa—.
+
+   El oyes solo se ofrece en los par 3, que es donde se juega; el sandy, en
+   cualquier hoyo. Los dos aparecen solo si el grupo está jugando unidades:
+   si no, serían dos botones que no hacen nada. */
+function chipsUnidades (T, d, jid, h) {
+  const juegos = apuestasDelDia(T, d).filter(A => A.tipo === 'unidades' && participantes(T, A).includes(jid))
+  if (!juegos.length) return ''
+  const sandy = marcaUni(T, d, 's', jid, h)
+  const oyes = marcaUni(T, d, 'o', jid, h)
+  const g = golpe(T, d, jid, h)
+  /* Un sandy marcado que no llega a par se pinta apagado con su aviso: la
+     marca sigue puesta -el jugador la puso- pero no cuenta, y así se ve
+     por qué la unidad no aparece en la cuenta. */
+  const sandyVale = sandy && g !== null && g <= par(T, d, h)
+  const etSandy = sandy && !sandyVale ? '🏖 sandy · sin par' : '🏖 sandy'
+  const chip = (accion, et, on) =>
+    `<button class="chip-pen${on ? ' on' : ''}" data-accion="${accion}" data-jid="${esc(jid)}">${esc(et)}</button>`
+  return chip('marcaSandy', etSandy, sandyVale) +
+    (par(T, d, h) === 3 ? chip('marcaOyes', '🎯 oyes', oyes) : '')
+}
+
 /* El bloque de Santa Fe: por jugador, puntos de este hoyo y los que lleva
    en la ronda. El chip del hoyo cuenta la historia de un vistazo: rojo con
    cero, verde con tres o más. */
@@ -2889,7 +3015,7 @@ function vistaHoy (T) {
         </div>
         <span class="pts-lado">${esc(String(r.pts))}p</span>
       </div>
-      <div class="chips">${chipsCastigo(T, d, j.id, h)}${chipsOnces(T, d, j.id, h)}</div>
+      <div class="chips">${chipsCastigo(T, d, j.id, h)}${chipsOnces(T, d, j.id, h)}${chipsUnidades(T, d, j.id, h)}</div>
     </div>`
   }).join('')
 
@@ -3182,8 +3308,8 @@ function vistaDias (T) {
    HTML y no lo suelta: Paulino publicó cinco veces y siguió viendo la
    versión vieja. Con esto la app se entera sola y ofrece pasar a la nueva,
    en vez de que cada quien tenga que adivinar cómo forzar a su iOS. */
-const VERSION = '2026-09-15·b0a122a'
-const VERSION_DEL_ARMADO = '2026-09-15·b0a122a'
+const VERSION = '2026-09-16·122dea0'
+const VERSION_DEL_ARMADO = '2026-09-16·122dea0'
 
 /* El nombre de la constante es el ancla que se busca en el HTML servido.
    Se escribe partido para que esta línea no se encuentre a sí misma. */
@@ -3700,8 +3826,8 @@ function tablaDePuntos (T, A, vivo) {
       ${vivo.jugadores.map(j => filaDeGolpes(T, A, j)).join('')}
     </table></div>
     <h2>${esc(vivo.titulo || 'Puntos')}</h2><div class="rejilla"><table><tr>${cab}</tr>${filas}</table></div>
-    ${vivo.pie
-      ? `<p class="guia">${vivo.pie.map((t, i) => `${esc(corto(T, vivo.jugadores[i]))} ${esc(t)}`).join(' · ')}</p>`
+    ${(vivo.pie || []).some(Boolean)
+      ? `<p class="guia">${vivo.pie.map((t, i) => (t ? `${esc(corto(T, vivo.jugadores[i]))} ${esc(t)}` : null)).filter(Boolean).join(' · ')}</p>`
       : ''}`
 }
 
@@ -4091,6 +4217,14 @@ const ponLado = (T, aid, jid, lado) => emitir(T, llaveLado(aid, jid), lado ? 1 :
    el precio del límite de 16 caracteres de la llave, y se paga en
    granularidad de fusión -dos teléfonos marcando para el mismo jugador a
    la vez se pisan-, que es aceptable: cada quien marca los suyos. */
+/* Marcar o desmarcar una unidad de las que no salen del score: el sandy
+   -salir de la trampa y salvar el par- y el oyes -la bola más cercana en
+   un par 3-. */
+function marcarUnidad (T, d, cual, jid, h, v) {
+  const antes = mascaraUni(T, d, cual, jid)
+  const despues = v ? (antes | (1 << h)) : (antes & ~(1 << h))
+  if (despues !== antes) emitir(T, llaveUni(d, cual, jid), despues)
+}
 function marcarOnces (T, aid, h, jid, v) {
   const antes = mascaraOnces(T, aid, jid)
   const despues = v ? (antes | (1 << h)) : (antes & ~(1 << h))
@@ -4427,6 +4561,28 @@ const ACCIONES = {
     for (const g of leidos) recordarGente(S, g.n, deSliding(g.sliding))
     avisar(`Cargué ${leidos.length} de tu lista`)
     salvar()
+  },
+  /* El sandy se marca hoyo por hoyo, en Hoy. Solo cuenta con par o mejor,
+     pero la marca se respeta aunque el golpe todavía no esté anotado: se
+     marca al salir de la trampa, no al firmar la tarjeta. */
+  marcaSandy: d => {
+    const t = T()
+    const dia = t.d || 0, h = t.hoyo || 0
+    marcarUnidad(t, dia, 's', d.jid, h, !marcaUni(t, dia, 's', d.jid, h))
+    salvar(); programar()
+  },
+  /* El oyes es de UNO: al marcárselo a alguien se le quita a los demás del
+     grupo. Sin esto, dos toques distraídos pagan dos oyeses en un hoyo
+     donde solo hubo una bola más cerca. */
+  marcaOyes: d => {
+    const t = T()
+    const dia = t.d || 0, h = t.hoyo || 0
+    const puesto = marcaUni(t, dia, 'o', d.jid, h)
+    for (const otro of (gruposDe(t, dia).find(x => x.includes(d.jid)) || [])) {
+      if (otro !== d.jid) marcarUnidad(t, dia, 'o', otro, h, false)
+    }
+    marcarUnidad(t, dia, 'o', d.jid, h, !puesto)
+    salvar(); programar()
   },
   setPresOn: (d, el) => { ponPresOn(T(), el.checked); salvar(); programar() },
   setPresIda: (d, el) => { ponPresIda(T(), el.value); salvar(); programar() },
