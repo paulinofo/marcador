@@ -184,7 +184,12 @@ tr.par td{color:var(--tinta-suave);font-family:var(--mono);font-size:12px}
 .nom-col{max-width:128px;overflow:hidden;text-overflow:ellipsis}
 .rejilla input{background:#fff;border:1px solid var(--tarjeta-linea);color:var(--tinta);
   padding:8px;margin:0;text-align:center}
-.bloque{margin-top:10px}
+/* Los bloques de Hoy —presiones, el juego en turno, unidades— van más
+   apretados que la Tarjeta y la Tabla: ahí se mira un número por renglón,
+   no una cuadrícula de 18 hoyos, y con el alto de aquéllas los tres juntos
+   empujaban los botones fuera de la pantalla. */
+.bloque{margin-top:8px;padding:7px 10px}
+.bloque th,.bloque td{padding:4px 5px}
 .bloque th:first-child{text-transform:uppercase}
 .pt-chip{display:inline-block;min-width:24px;padding:2px 6px;border-radius:6px;font-weight:700;
   background:var(--tarjeta-linea);color:var(--tinta)}
@@ -748,6 +753,13 @@ const presIda = (T) => enteroDeHecho(T.h['t.pres.ida'], 50)
 const presVuelta = (T) => enteroDeHecho(T.h['t.pres.vuelta'], 50)
 const presBono = (T) => enteroDeHecho(T.h['t.pres.bono'], 100)
 const presAl = (T) => enteroDeHecho(T.h['t.pres.al'], 2)
+/* El partido por equipos lleva su propio umbral, y nace más alto: ahí el
+   hoyo se decide con dos bolas —la mejor y la peor—, así que vale de −2 a
+   +2 y con el 2 de las individuales la presión nacía en el primer hoyo
+   ganado limpio. Dictado por Paulino el 16-sep-2026: equipos a 3, uno
+   contra uno a 2. Los dos corren a la vez, así que un solo número no
+   alcanzaba. */
+const presAlEq = (T) => enteroDeHecho(T.h['t.pres.al.eq'], 3)
 
 /* Interruptores de Teezr, apagados por omisión (spec, "Interruptores"). */
 const presCarry = (T) => enteroDeHecho(T.h['t.pres.carry'], 0) !== 0
@@ -2291,8 +2303,8 @@ function presionesMatch (T, d, a, b, hasta = 17) {
    arranca en el hoyo siguiente desde cero; todas las abiertas se mueven a
    la vez; y al cerrar, cada una con marcador distinto de cero paga su
    monto entero, no la diferencia. */
-function escaleraPresiones (T, resultadoDe, hasta = 17) {
-  const al = Math.max(1, presAl(T))
+function escaleraPresiones (T, resultadoDe, hasta = 17, umbral = presAl(T)) {
+  const al = Math.max(1, umbral)
   const apuestas = []
   const porNueve = []
   for (const [ini, fin, nom] of NUEVES) {
@@ -2576,12 +2588,12 @@ function evaluarPresionesEquipos (T, A, modo, hasta = HOYOS - 1) {
   const lineas = []
   const detalle = []
   for (const pt of partidos) {
-    const m = escaleraPresiones(T, resultadoDosBolas(pt.bolasA, pt.bolasB), hasta)
+    const m = escaleraPresiones(T, resultadoDosBolas(pt.bolasA, pt.bolasB), hasta, presAlEq(T))
     const q = dineroDeEscalera(T, m)
     if (q.capturado) lineas.push(...lineasDePartido(pt.realesA, pt.realesB, q.total))
     detalle.push({ ...pt, m, q })
   }
-  return { lineas, vivo: { forma: 'presiones-equipos', modo, partidos: detalle, al: Math.max(1, presAl(T)) } }
+  return { lineas, vivo: { forma: 'presiones-equipos', modo, partidos: detalle, al: Math.max(1, presAlEq(T)) } }
 }
 
 
@@ -2849,8 +2861,8 @@ function vistaDias (T) {
    HTML y no lo suelta: Paulino publicó cinco veces y siguió viendo la
    versión vieja. Con esto la app se entera sola y ofrece pasar a la nueva,
    en vez de que cada quien tenga que adivinar cómo forzar a su iOS. */
-const VERSION = '2026-09-16·563b0b1'
-const VERSION_DEL_ARMADO = '2026-09-16·563b0b1'
+const VERSION = '2026-09-16·9b4f2ff'
+const VERSION_DEL_ARMADO = '2026-09-16·9b4f2ff'
 
 /* El nombre de la constante es el ancla que se busca en el HTML servido.
    Se escribe partido para que esta línea no se encuentre a sí misma. */
@@ -2920,6 +2932,7 @@ const ponPresIda = (T, v) => emitir(T, 't.pres.ida', Math.max(0, enteroO(v, 5)))
 const ponPresVuelta = (T, v) => emitir(T, 't.pres.vuelta', Math.max(0, enteroO(v, 5)))
 const ponPresBono = (T, v) => emitir(T, 't.pres.bono', Math.max(0, enteroO(v, 10)))
 const ponPresAl = (T, v) => emitir(T, 't.pres.al', Math.max(1, enteroO(v, 2)))
+const ponPresAlEq = (T, v) => emitir(T, 't.pres.al.eq', Math.max(1, enteroO(v, 3)))
 const ponPresCarry = (T, v) => emitir(T, 't.pres.carry', v ? 1 : 0)
 const ponPresMatch = (T, v) => emitir(T, 't.pres.match', v === 'suma' ? 'suma' : 'mayoria')
 const ponPresInd = (T, v) => emitir(T, 't.pres.ind', v ? 1 : 0)
@@ -2977,6 +2990,7 @@ function ajustesDePresiones (T) {
       <label>Vuelta $ <input value="${esc(presVuelta(T))}" inputmode="numeric" data-cambio="setPresVuelta"></label>
       <label>Bono $ <input value="${esc(presBono(T))}" inputmode="numeric" data-cambio="setPresBono"></label>
       <label>Presión al ir <input value="${esc(presAl(T))}" inputmode="numeric" data-cambio="setPresAl"> abajo</label>
+      ${presModo(T) === 'ind' ? '' : `<label>Por equipos, al ir <input value="${esc(presAlEq(T))}" inputmode="numeric" data-cambio="setPresAlEq"> abajo</label>`}
     </div>
     <label class="casilla"><input type="checkbox"${presCarry(T) ? ' checked' : ''} data-cambio="setPresCarry"> Carry: si la salida de la ida cierra en cero, la vuelta vale ida + vuelta + bono</label>
     <label class="casilla">El bono es para
@@ -3528,16 +3542,21 @@ function bloqueDelJuego (T, d, h, visibles) {
    chips con los que se marcan. */
 function bloqueUnidadesHoy (T, d, h, visibles) {
   if (!uniOn(T) || !visibles.length) return ''
-  const filas = visibles.map(j => {
+  const cuentas = visibles.map(j => {
     const q = unidadesDeRonda(T, d, j.id, h)
     const de = [q.b ? `${q.b} de score` : '', q.s ? `${q.s} sandy` : '', q.o ? `${q.o} oyes` : '']
       .filter(Boolean).join(' · ')
-    return `<tr><td>${esc(j.c)}</td>
-      <td><span class="pt-chip${q.total ? ' bien' : ''}">${esc(String(q.total))}</span></td>
-      <td class="tenue">${esc(de)}</td></tr>`
-  }).join('')
+    return { j, q, de }
+  })
+  /* Mientras nadie lleva nada, la columna del detalle va vacía en los tres o
+     cuatro renglones y lo único que hace es empujar el número a media tabla.
+     Vuelve sola con la primera unidad que alguien marca. */
+  const conDetalle = cuentas.some(c => c.de)
+  const filas = cuentas.map(({ j, q, de }) => `<tr><td>${esc(j.c)}</td>
+      <td><span class="pt-chip${q.total ? ' bien' : ''}">${esc(String(q.total))}</span></td>${conDetalle ? `
+      <td class="tenue">${esc(de)}</td>` : ''}</tr>`).join('')
   return `<div class="rejilla bloque"><table>
-    <tr><th colspan="3">UNIDADES · ${esc(String(uniMonto(T)))} CADA UNA</th></tr>${filas}</table></div>`
+    <tr><th colspan="${conDetalle ? 3 : 2}">UNIDADES · ${esc(String(uniMonto(T)))} CADA UNA</th></tr>${filas}</table></div>`
 }
 
 /* Las apuestas vivas del nueve en curso contra cada rival de mi grupo,
@@ -3599,9 +3618,9 @@ function vistaHoy (T) {
       <button data-accion="hoyoMas" aria-label="hoyo siguiente">›</button>
     </div>
     ${filas || '<p class="guia">Agrega jugadores en la pestaña Grupos.</p>'}
+    ${filas ? bloquePresiones(T, d, h) : ''}
     ${filas ? bloqueDelJuego(T, d, h, visibles) : ''}
     ${filas ? bloqueUnidadesHoy(T, d, h, visibles) : ''}
-    ${filas ? bloquePresiones(T, d, h) : ''}
     ${filas ? '<p class="guia">Toca el guion para anotar el par, ajusta con − y +, y toca el número para borrar el hoyo.</p>' : ''}
     ${T.yo && miGrupo(T, d) ? `<p class="guia"><button class="enlace" data-accion="verTodos">${T.todos ? 'Ver solo mi grupo' : 'Ver a todos'}</button></p>` : ''}`
 }
@@ -5034,6 +5053,7 @@ const ACCIONES = {
   setPresVuelta: (d, el) => { ponPresVuelta(T(), el.value); salvar(); programar() },
   setPresBono: (d, el) => { ponPresBono(T(), el.value); salvar(); programar() },
   setPresAl: (d, el) => { ponPresAl(T(), el.value); salvar(); programar() },
+  setPresAlEq: (d, el) => { ponPresAlEq(T(), el.value); salvar(); programar() },
   setPresCarry: (d, el) => { ponPresCarry(T(), el.checked); salvar(); programar() },
   setPresMatch: (d, el) => { ponPresMatch(T(), el.value); salvar(); programar() },
   setPresModo: (d, el) => { ponPresModo(T(), el.value); salvar(); programar() },
