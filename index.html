@@ -2760,8 +2760,8 @@ function vistaDias (T) {
    HTML y no lo suelta: Paulino publicó cinco veces y siguió viendo la
    versión vieja. Con esto la app se entera sola y ofrece pasar a la nueva,
    en vez de que cada quien tenga que adivinar cómo forzar a su iOS. */
-const VERSION = '2026-09-16·d78c51e'
-const VERSION_DEL_ARMADO = '2026-09-16·d78c51e'
+const VERSION = '2026-09-16·2eaefdc'
+const VERSION_DEL_ARMADO = '2026-09-16·2eaefdc'
 
 /* El nombre de la constante es el ancla que se busca en el HTML servido.
    Se escribe partido para que esta línea no se encuentre a sí misma. */
@@ -3255,6 +3255,7 @@ function saldosDe (libro, jid) {
 
 
 
+
 /* Un hoyo vacío arranca en el par: en el campo casi nadie teclea un
    número desde cero, tocan +/- a partir de lo esperado. */
 function cambiaGolpe (T, jid, delta) {
@@ -3376,6 +3377,37 @@ function bloqueStableford (T, d, h, visibles) {
     <tr><th colspan="3">STABLEFORD · HOYO ${h + 1} · RONDA</th></tr>${filas}</table></div>`
 }
 
+/* Lo que enseña Hoy debajo de los golpes es EL JUEGO QUE SE ESTÁ
+   JUGANDO, no el Stableford. El Stableford es uno más de la lista desde
+   que hay juegos de dinero, y quien elige Skins en el tee del 1 quiere ver
+   sus skins, no una tabla de puntos que nadie apuntó.
+
+   De los juegos de dinero se enseña lo único que se mira antes de pegarle:
+   cuánto va ganando o perdiendo cada quien EN ESE JUEGO, hasta el hoyo
+   activo. Las presiones llevan su propio bloque justo debajo. */
+function bloqueDelJuego (T, d, h, visibles) {
+  const tipo = formato(T)
+  if (tipo === 'stableford') return bloqueStableford(T, d, h, visibles)
+  const juego = JUEGOS[tipo]
+  if (!juego || !juego.alta) return ''
+  const A = apuestasDelDia(T, d).find(x => x.tipo === tipo && participantes(T, x).includes(T.yo))
+  if (!A) return ''
+  const r = juego.evaluar(T, A, h)
+  const dinero = new Map()
+  for (const l of (r.lineas || [])) {
+    dinero.set(l.a, (dinero.get(l.a) || 0) + l.monto)
+    dinero.set(l.de, (dinero.get(l.de) || 0) - l.monto)
+  }
+  const filas = visibles.map(j => {
+    const v = dinero.get(j.id) || 0
+    const clase = v > 0 ? ' bien' : (v < 0 ? ' mal' : '')
+    return `<tr><td>${esc(j.c)}</td>
+      <td colspan="2"><span class="pt-chip${clase}">${esc(v > 0 ? '+' + v : String(v))}</span></td></tr>`
+  }).join('')
+  return `<div class="rejilla bloque"><table>
+    <tr><th colspan="3">${esc(juego.nombre.toUpperCase())} · HASTA EL ${h + 1}</th></tr>${filas}</table></div>`
+}
+
 /* Las apuestas vivas del nueve en curso contra cada rival de mi grupo,
    hasta el hoyo activo: lo que en Santa Fe se miraba antes de pegarle. */
 function bloquePresiones (T, d, h) {
@@ -3435,7 +3467,7 @@ function vistaHoy (T) {
       <button data-accion="hoyoMas" aria-label="hoyo siguiente">›</button>
     </div>
     ${filas || '<p class="guia">Agrega jugadores en la pestaña Grupos.</p>'}
-    ${filas ? bloqueStableford(T, d, h, visibles) : ''}
+    ${filas ? bloqueDelJuego(T, d, h, visibles) : ''}
     ${filas ? bloquePresiones(T, d, h) : ''}
     ${filas ? '<p class="guia">Toca el guion para anotar el par, ajusta con − y +, y toca el número para borrar el hoyo.</p>' : ''}
     ${T.yo && miGrupo(T, d) ? `<p class="guia"><button class="enlace" data-accion="verTodos">${T.todos ? 'Ver solo mi grupo' : 'Ver a todos'}</button></p>` : ''}`
@@ -3662,6 +3694,8 @@ function vistaQuien (T) {
 
 
 
+
+
 const conSigno = (v) => (v > 0 ? '+' + v : String(v))
 const claseSigno = (v) => (v > 0 ? 'arr' : (v < 0 ? 'aba' : ''))
 const sumaGolpes = (T, d, jid, de, a) => {
@@ -3760,6 +3794,22 @@ function tablaDeEscalera (m, ida, vuelta) {
   return filasP
 }
 
+/* Quién va con quién. Es el mismo bando que usa Hoyo por hoyo -se guarda
+   en el torneo, no en la apuesta-, así que marcarlo aquí lo marca allá. */
+function chipsDeBandos (T, A) {
+  /* Sin guardia de tamaño: solo se llama en la modalidad de parejas, y esa
+     modalidad ya exige un grupo de cuatro para siquiera jugarse
+     (`modoCabe`). Una guardia que ninguna prueba puede disparar es una
+     guardia que nadie sabe si funciona. */
+  const p = participantes(T, A)
+  const chips = p.map(j => {
+    const lado = ladoVisible(T, A, j)
+    return `<button class="lado-chip${lado === 0 ? ' on' : ''}" data-accion="setLadoJuego" data-aid="${esc(A.id)}" data-jid="${esc(j)}">${esc(corto(T, j))} · ${lado === 0 ? 1 : 2}</button>`
+  }).join('')
+  return `<h2>Las parejas</h2><div class="chips">${chips}</div>
+    <p class="guia">Toca a alguien para cambiarlo de pareja.${bandosCuadran(T, A) ? '' : ' Ahora mismo no están dos y dos, así que se repartió por la mitad.'}</p>`
+}
+
 /* Las modalidades por equipos: en vez de elegir rival, se ven los partidos
    que se están jugando en la mesa. En Mudo y en Yo-Yo son tres —cada quien
    contra los otros dos por turnos— y tú sales en los tres. */
@@ -3800,7 +3850,13 @@ function vistaPresionesEquipos (T, d, yo, modo) {
   }).join('')
 
   const torcidos = partidos.some(pt => pt.cuadran === false)
+  /* Las parejas se marcan AQUÍ. Antes solo se podían marcar en la pestaña
+     del juego, y esa pestaña no existe si el torneo juega unidades o
+     Stableford: se podía elegir «parejas 2 contra 2» en Ajustes y no tener
+     dónde decir quién va con quién. */
+  const bandos = modo === 'parejas' ? chipsDeBandos(T, A) : ''
   return `<h2>Presiones · ${esc(nombre)}</h2>
+    ${bandos}
     <p class="guia">El hoyo se decide con las dos bolas del equipo: la mejor contra la mejor y la peor contra la peor. Cada comparación vale un punto, así que un hoyo va de −2 a +2 y las presiones se abren más rápido.</p>
     ${torcidos ? '<p class="guia">Los bandos no están marcados dos y dos, así que se partió el grupo por la mitad. Se cambian tocando a cada quien en la pestaña del juego.</p>' : ''}
     ${bloques}
