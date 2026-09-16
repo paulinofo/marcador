@@ -364,9 +364,40 @@ td.dudoso input{border-color:var(--bandera);color:var(--bandera);font-weight:700
 .version-nueva{display:block;width:100%;background:var(--laton);color:var(--verde-hondo);
   border:0;padding:12px 14px;font-size:15px;font-weight:700;text-align:center;
   padding-top:calc(var(--safe-t) + 12px)}
+
+/* ── La entrada ─────────────────────────────────────────────────────
+   Tres segundos de portada al abrir. Vive en el HTML y se va sola con
+   una animación: el guion solo la retira del documento cuando termina,
+   y un toque la salta. Nunca depende del guion para desaparecer. */
+#intro{position:fixed;inset:0;z-index:100;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:14px;
+  background:var(--verde-hondo);
+  animation:intro-sale .45s ease 2.55s forwards}
+#intro b{font-size:31px;letter-spacing:-.02em}
+#intro span{font-family:var(--mono);font-size:12px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--cal)}
+#intro svg{filter:drop-shadow(0 10px 26px rgba(0,0,0,.45))}
+@keyframes intro-sale{to{opacity:0;visibility:hidden}}
+@media (prefers-reduced-motion:reduce){#intro{animation-duration:.01s}}
 </style>
 </head>
 <body>
+<!-- La entrada. Se pinta ANTES de que el navegador parsee los 240 KB del
+     guion, así que tapa el momento en blanco del arranque, y se quita SOLA
+     con una animación de CSS: si el guion nunca llegara a correr, esto no
+     puede dejar a nadie encerrado detrás de una portada. -->
+<div id="intro" aria-hidden="true">
+  <svg viewBox="0 0 180 180" width="104" height="104">
+    <rect width="180" height="180" rx="30" fill="#04272F"/>
+    <ellipse cx="90" cy="150" rx="78" ry="26" fill="#92B8BE" opacity=".22"/>
+    <ellipse cx="108" cy="139" rx="15" ry="5.5" fill="#04272F"/>
+    <rect x="106.2" y="44" width="3.6" height="96" rx="1.8" fill="#F4EFE3"/>
+    <path d="M106 46 L58 62 L106 78 Z" fill="#C9A227"/>
+    <circle cx="55" cy="134" r="12" fill="#F4EFE3"/>
+  </svg>
+  <b>Golf Poli</b>
+  <span>el marcador de siempre</span>
+</div>
 <p id="aviso" role="alert" hidden></p>
 <div id="app"></div>
 <script type="module">/* La lista de Paulino: con cuántos golpes juega cada uno de su círculo.
@@ -2784,8 +2815,8 @@ function vistaDias (T) {
    HTML y no lo suelta: Paulino publicó cinco veces y siguió viendo la
    versión vieja. Con esto la app se entera sola y ofrece pasar a la nueva,
    en vez de que cada quien tenga que adivinar cómo forzar a su iOS. */
-const VERSION = '2026-09-16·ffd745a'
-const VERSION_DEL_ARMADO = '2026-09-16·ffd745a'
+const VERSION = '2026-09-16·618a77b'
+const VERSION_DEL_ARMADO = '2026-09-16·618a77b'
 
 /* El nombre de la constante es el ancla que se busca en el HTML servido.
    Se escribe partido para que esta línea no se encuentre a sí misma. */
@@ -5120,6 +5151,21 @@ async function sincronizar () {
      Cuando la cola queda vacía, el ciclo muere de verdad; lo reencienden
      reabrirTorneo y abrirTorneo. */
   if (!cerrado || t.pend.length) programar()
+}
+
+/* La portada se quita sola por CSS; esto solo la saca del documento
+   cuando termina, para que no quede un elemento fijo encima de la app, y
+   la salta si alguien toca antes de los tres segundos. */
+function cierraIntro () {
+  const nodo = typeof document !== 'undefined' && document.getElementById('intro')
+  if (!nodo) return
+  if (nodo.remove) nodo.remove()
+  else if (nodo.parentNode) nodo.parentNode.removeChild(nodo)
+}
+if (typeof document !== 'undefined' && document.getElementById('intro')) {
+  const intro = document.getElementById('intro')
+  if (intro.addEventListener) intro.addEventListener('click', cierraIntro)
+  if (typeof setTimeout === 'function') setTimeout(cierraIntro, 3000)
 }
 
 if (T()) saltarAHoy(T())
