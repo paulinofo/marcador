@@ -618,7 +618,15 @@ const dias = (T) => acotaDias(T.h['t.dias'])
 const nombre = (T) => T.h['t.n'] ?? 'Torneo'
 /* Hoyo por hoyo es lo que juegan de verdad: el torneo nace en match play
    y el Stableford es una opción más, no el punto de partida. */
-const formato = (T) => String(T.h['t.formato'] ?? 'match')
+const formato = (T) => {
+  const f = String(T.h['t.formato'] ?? 'match')
+  /* Unidades fue un tipo de juego durante unas horas del 15-sep-2026 y
+     ahora es un interruptor que corre JUNTO al juego, como las presiones.
+     Un torneo de aquellos lee 'match' aquí, y su interruptor de unidades
+     se enciende solo (ver `uniOn`): así no se queda sin juego de dinero ni
+     pierde la basura que ya llevaba apuntada. */
+  return f === 'unidades' ? 'match' : f
+}
 const campo = (T, d) => T.h[`c.${d}.n`] ?? ''
 const fecha = (T, d) => T.h[`c.${d}.iso`] ?? ''
 const salida = (T, d) => T.h[`c.${d}.salida`] ?? ''
@@ -706,6 +714,12 @@ const presOn = (T) => (T.h['t.pres.on'] ?? (formato(T) === 'presiones' ? 1 : 0))
 /* La modalidad de presiones del torneo: individuales (uno contra uno,
    como siempre), parejas 2v2, Mudo o Yo-Yo. Viaja como hecho: el grupo
    entero juega la misma. */
+/* Las unidades -«la basura»- se juegan ENCIMA de lo que sea que se esté
+   jugando: birdies, sandies y oyeses se cobran igual jugando Hoyo por
+   hoyo que Skins. Por eso es un interruptor y no un tipo de juego: como
+   tipo de juego, encenderlas obligaba a renunciar al match, y los chips
+   del sandy y del oyes no salían en Hoy si no lo hacías. */
+const uniOn = (T) => (T.h['t.uni.on'] ?? (T.h['t.formato'] === 'unidades' ? 1 : 0)) !== 0
 const presModo = (T) => String(T.h['t.pres.modo'] ?? 'ind')
 
 /* A veces se juegan las individuales y el partido por equipos a la vez
@@ -724,6 +738,7 @@ const enteroDeHecho = (v, def) => { const n = parseInt(v, 10); return Number.isF
 /* 50-50-100: lo que juegan de verdad, dicho por Paulino el 15-sep-2026.
    Estaba en 5-5-10, que era el ejemplo de la app de Santa Fe, y obligaba a
    teclear los tres números en cada torneo nuevo. */
+const uniMonto = (T) => Math.max(0, enteroDeHecho(T.h['t.uni.monto'], 25))
 const presIda = (T) => enteroDeHecho(T.h['t.pres.ida'], 50)
 const presVuelta = (T) => enteroDeHecho(T.h['t.pres.vuelta'], 50)
 const presBono = (T) => enteroDeHecho(T.h['t.pres.bono'], 100)
@@ -2142,7 +2157,13 @@ function unidadesDeRonda (T, d, jid, hasta = HOYOS - 1) {
 }
 function evaluarUnidades (T, A, hasta = HOYOS - 1) {
   const p = participantes(T, A)
-  const monto = Math.max(0, Math.round(Number(cfgDe(T, A.id, 'monto', VALOR_UNIDAD)) || 0))
+  /* La sintetizada -la del interruptor- cobra lo que diga `t.uni.monto`;
+     una dada de alta a mano, lo suyo. `t.j.monto` es del juego elegido y
+     aquí no pinta nada: se jugaría Skins a 50 y las unidades a 50 sin que
+     nadie lo hubiera pedido. */
+  const monto = String(A.id).startsWith('uni-')
+    ? uniMonto(T)
+    : Math.max(0, Math.round(Number(cfgDe(T, A.id, 'monto', VALOR_UNIDAD)) || 0))
   const tope = Math.min(hasta, HOYOS - 1)
   const cuentas = p.map(jid => unidadesDeRonda(T, A.d, jid, tope))
 
@@ -2722,7 +2743,9 @@ const JUEGOS = {
     min: 2,
     max: 5,
     lados: false,
-    alta: true,
+    /* Como presiones: no se elige como tipo de juego ni se da de alta,
+       se enciende con su interruptor y corre encima de lo que se juegue. */
+    alta: false,
     /* Sin HCP: una unidad es lo que pasó en el hoyo -un birdie, un sandy,
        un oyes-, y eso no se reparte por hándicap. */
     cfg: [{ k: 'monto', et: 'Valor de la unidad', def: VALOR_UNIDAD }],
@@ -2821,8 +2844,8 @@ function vistaDias (T) {
    HTML y no lo suelta: Paulino publicó cinco veces y siguió viendo la
    versión vieja. Con esto la app se entera sola y ofrece pasar a la nueva,
    en vez de que cada quien tenga que adivinar cómo forzar a su iOS. */
-const VERSION = '2026-09-16·c8499bb'
-const VERSION_DEL_ARMADO = '2026-09-16·c8499bb'
+const VERSION = '2026-09-16·7b21d32'
+const VERSION_DEL_ARMADO = '2026-09-16·7b21d32'
 
 /* El nombre de la constante es el ancla que se busca en el HTML servido.
    Se escribe partido para que esta línea no se encuentre a sí misma. */
@@ -2895,6 +2918,8 @@ const ponPresAl = (T, v) => emitir(T, 't.pres.al', Math.max(1, enteroO(v, 2)))
 const ponPresCarry = (T, v) => emitir(T, 't.pres.carry', v ? 1 : 0)
 const ponPresMatch = (T, v) => emitir(T, 't.pres.match', v === 'suma' ? 'suma' : 'mayoria')
 const ponPresInd = (T, v) => emitir(T, 't.pres.ind', v ? 1 : 0)
+const ponUniOn = (T, v) => emitir(T, 't.uni.on', v ? 1 : 0)
+const ponUniMonto = (T, v) => emitir(T, 't.uni.monto', Math.max(0, enteroO(v, 25)))
 const ponPresModo = (T, v) => emitir(T, 't.pres.modo', MODOS_PRESIONES.some(([k]) => k === v) ? v : 'ind')
 
 /* Lo que se le puede ajustar al juego elegido. Vive en el TORNEO, no en
@@ -2918,6 +2943,19 @@ function camposDelJuego (T) {
 
 /* `base` entra como argumento y no se lee de `location` aquí dentro:
    en Node no existe, y la prueba que pinta esta vista reventaría. */
+/* Las unidades, con su casilla y su monto. Van encima de lo que se esté
+   jugando -no en vez de-, así que viven aquí y no en el selector del tipo
+   de juego. Los chips del sandy y del oyes salen en Hoy en cuanto esto se
+   enciende. */
+function bloqueUnidades (T) {
+  return `<label class="casilla"><input type="checkbox"${uniOn(T) ? ' checked' : ''} data-cambio="setUniOn"> Se juegan unidades</label>
+    ${uniOn(T)
+      ? `<label class="cfg-juego"><span>Vale la unidad</span>
+          <input value="${esc(uniMonto(T))}" inputmode="numeric" data-cambio="setUniMonto"></label>
+         <p class="guia">Birdie 1, eagle o mejor 2, sandy 1 con par o mejor, y el oyes 1 para el más cercano en los par 3. Se paga la diferencia contra cada rival del grupo. El sandy y el oyes se marcan en Hoy, con los chips de cada jugador.</p>`
+      : '<p class="guia">Los birdies, los sandies y los oyeses, encima de lo que se esté jugando.</p>'}`
+}
+
 /* El bloque de presiones: su casilla, la modalidad y las cantidades. Lo
    usan Ajustes y la última pregunta del asistente, y tienen que ser el
    mismo para que lo que se elige al empezar sea lo que se ve después. */
@@ -2998,6 +3036,8 @@ function vistaAjustes (T, S, base = '') {
     <p class="guia">Presiones enciende su pestaña; Stableford usa la Tabla; los demás abren la suya.</p>
     ${camposDelJuego(T)}
     ${ajustesDePresiones(T)}
+    <h2>Unidades</h2>
+    ${bloqueUnidades(T)}
     <h2>Este teléfono</h2>
     <div class="fila"><div class="quien"><span class="nom">${esc(T.yo ? (jugadores(T).find(j => j.id === T.yo)?.n ?? '—') : (T.yo === '' ? 'Solo miro' : 'Sin decir'))}</span></div>
       <div class="acciones"><button data-accion="cambiarYo">Cambiar</button></div></div>
@@ -3157,6 +3197,8 @@ function paso6 (T, S) {
     ${camposDelJuego(T)}
     <h2>Presiones</h2>
     ${ajustesDePresiones(T)}
+    <h2>Unidades</h2>
+    ${bloqueUnidades(T)}
     <button class="btn" data-accion="asisListo">Empezar a anotar</button>`
 }
 function vistaAsistente (S, T) {
@@ -3246,9 +3288,11 @@ function ciclaPenal (T, jid, penal) {
 function apuestasDelDia (T, d) {
   const juego = formato(T)
   const presiones = presOn(T)
+  const unidades = uniOn(T)
   const sinteticas = []
   gruposDe(T, d).forEach((g, i) => {
     if (presiones && g.length >= 2) sinteticas.push(apuestaPresiones(d, i))
+    if (unidades && g.length >= 2) sinteticas.push({ id: `uni-${i}`, tipo: 'unidades', d, grupo: i })
     if (cabeEnGrupo(juego, g.length)) sinteticas.push({ id: `${juego}-${i}`, tipo: juego, d, grupo: i })
   })
   return sinteticas.concat(apuestas(T, d))
@@ -3306,6 +3350,7 @@ function saldosDe (libro, jid) {
   }
   return fuera
 }
+
 
 
 
@@ -3405,8 +3450,7 @@ function chipsOnces (T, d, jid, h) {
    cualquier hoyo. Los dos aparecen solo si el grupo está jugando unidades:
    si no, serían dos botones que no hacen nada. */
 function chipsUnidades (T, d, jid, h) {
-  const juegos = apuestasDelDia(T, d).filter(A => A.tipo === 'unidades' && participantes(T, A).includes(jid))
-  if (!juegos.length) return ''
+  if (!uniOn(T)) return ''
   const sandy = marcaUni(T, d, 's', jid, h)
   const oyes = marcaUni(T, d, 'o', jid, h)
   const g = golpe(T, d, jid, h)
@@ -3469,6 +3513,23 @@ function bloqueDelJuego (T, d, h, visibles) {
     <tr><th colspan="3">${esc(juego.nombre.toUpperCase())} · HASTA EL ${h + 1}</th></tr>${filas}</table></div>`
 }
 
+/* Las unidades que lleva cada quien. Ya no tienen pestaña -son un
+   interruptor, no un juego- así que su cuenta vive aquí, debajo de los
+   chips con los que se marcan. */
+function bloqueUnidadesHoy (T, d, h, visibles) {
+  if (!uniOn(T) || !visibles.length) return ''
+  const filas = visibles.map(j => {
+    const q = unidadesDeRonda(T, d, j.id, h)
+    const de = [q.b ? `${q.b} de score` : '', q.s ? `${q.s} sandy` : '', q.o ? `${q.o} oyes` : '']
+      .filter(Boolean).join(' · ')
+    return `<tr><td>${esc(j.c)}</td>
+      <td><span class="pt-chip${q.total ? ' bien' : ''}">${esc(String(q.total))}</span></td>
+      <td class="tenue">${esc(de)}</td></tr>`
+  }).join('')
+  return `<div class="rejilla bloque"><table>
+    <tr><th colspan="3">UNIDADES · ${esc(String(uniMonto(T)))} CADA UNA</th></tr>${filas}</table></div>`
+}
+
 /* Las apuestas vivas del nueve en curso contra cada rival de mi grupo,
    hasta el hoyo activo: lo que en Santa Fe se miraba antes de pegarle. */
 function bloquePresiones (T, d, h) {
@@ -3529,6 +3590,7 @@ function vistaHoy (T) {
     </div>
     ${filas || '<p class="guia">Agrega jugadores en la pestaña Grupos.</p>'}
     ${filas ? bloqueDelJuego(T, d, h, visibles) : ''}
+    ${filas ? bloqueUnidadesHoy(T, d, h, visibles) : ''}
     ${filas ? bloquePresiones(T, d, h) : ''}
     ${filas ? '<p class="guia">Toca el guion para anotar el par, ajusta con − y +, y toca el número para borrar el hoyo.</p>' : ''}
     ${T.yo && miGrupo(T, d) ? `<p class="guia"><button class="enlace" data-accion="verTodos">${T.todos ? 'Ver solo mi grupo' : 'Ver a todos'}</button></p>` : ''}`
@@ -4954,6 +5016,8 @@ const ACCIONES = {
   setPresMatch: (d, el) => { ponPresMatch(T(), el.value); salvar(); programar() },
   setPresModo: (d, el) => { ponPresModo(T(), el.value); salvar(); programar() },
   setPresInd: (d, el) => { ponPresInd(T(), el.checked); salvar(); programar() },
+  setUniOn: (d, el) => { ponUniOn(T(), el.checked); salvar(); programar() },
+  setUniMonto: (d, el) => { ponUniMonto(T(), el.value); salvar(); programar() },
   unirmeConLigaPegada: () => {
     const v = document.getElementById('ligaPegada').value.trim()
     const hash = v.includes('#') ? v.slice(v.indexOf('#')) : v
