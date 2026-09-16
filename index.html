@@ -136,6 +136,8 @@ h2{font-size:12px;font-family:var(--mono);letter-spacing:.12em;text-transform:up
 
 /* La ✕ separada del número: son dos toques muy distintos -cambiar un
    golpe y borrar a alguien- y estaban a cinco píxeles. */
+/* La ✕ separada del número: son dos toques muy distintos -cambiar un
+   golpe y borrar a alguien- y estaban a cinco píxeles. */
 /* Los amigos que se pueden tocar en el asistente: en dos columnas para
    que veinticinco nombres quepan sin volverse un muro. */
 .chips-amigos{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin:0 0 10px}
@@ -2758,8 +2760,8 @@ function vistaDias (T) {
    HTML y no lo suelta: Paulino publicó cinco veces y siguió viendo la
    versión vieja. Con esto la app se entera sola y ofrece pasar a la nueva,
    en vez de que cada quien tenga que adivinar cómo forzar a su iOS. */
-const VERSION = '2026-09-16·94a2cbf'
-const VERSION_DEL_ARMADO = '2026-09-16·94a2cbf'
+const VERSION = '2026-09-16·d78c51e'
+const VERSION_DEL_ARMADO = '2026-09-16·d78c51e'
 
 /* El nombre de la constante es el ancla que se busca en el HTML servido.
    Se escribe partido para que esta línea no se encuentre a sí misma. */
@@ -3046,20 +3048,23 @@ function paso4 (T, S) {
   const amigos = listaSliding(S)
   const libreta = amigos.map(g => `<option value="${esc(g.n)}"></option>`).join('')
   const puestos = new Set(jids.map(j => (j ? nomJug(T, j) : '')).filter(Boolean))
-  /* Y tocables: en el tee nadie quiere teclear cuatro nombres. Cada toque
-     cae en la primera casilla vacía, con su ventaja a la vista para no
-     equivocarse de Francisco. */
-  const chips = amigos.map(g => `<button class="chip-pen${puestos.has(g.n) ? ' on' : ''}"
-      data-accion="poneAmigo" data-nombre="${esc(g.n)}"><span class="quien">${esc(g.n)}</span><span class="tenue">${esc(signo(g.sliding))}</span></button>`).join('')
+  /* Un desplegable y no veinticinco botones: la lista entera puesta en la
+     pantalla es un muro que hay que recorrer, y lo que se busca es un
+     nombre concreto. Cada elección cae en la primera casilla vacía, con su
+     ventaja al lado para no equivocarse de Francisco. */
+  const opciones = amigos.map(g =>
+    `<option value="${esc(g.n)}"${puestos.has(g.n) ? ' disabled' : ''}>${esc(g.n)} · ${esc(signo(g.sliding))}</option>`).join('')
   /* Quien se unió por la liga pudo agregar gente desde su teléfono. El
      asistente no los toca -no son suyos-, pero callarlo haría que el
      usuario los volviera a escribir aquí y quedaran por duplicado. */
   const ajenos = jugadores(T).filter(j => !jids.includes(j.id))
   return `<h2>¿Cómo se llaman?</h2>
-    <p class="guia">El primero eres tú: así la app sabe de quién es la tarjeta en este teléfono. Escribe y te los propone, o tócalos de tu lista.</p>
+    <p class="guia">El primero eres tú: así la app sabe de quién es la tarjeta en este teléfono. Escribe y te los propone, o tómalos de tu lista de abajo.</p>
     ${filas}
     <datalist id="laLibreta">${libreta}</datalist>
-    ${chips ? `<p class="guia">O tócalos de tu lista de Golf Sliding:</p><div class="chips chips-amigos">${chips}</div>` : ''}
+    ${opciones ? `<select data-cambio="eligeAmigo">
+      <option value="">Tomar uno de mi lista…</option>${opciones}
+    </select>` : ''}
     ${ajenos.length
       ? `<p class="guia">En este torneo ya están ${esc(ajenos.map(j => j.n).join(', '))}, que agregaron desde otro teléfono. No hace falta repetirlos: se suman a los que pongas aquí.</p>`
       : ''}
@@ -4569,13 +4574,17 @@ const ACCIONES = {
     const dd = Math.max(1, parseInt(document.getElementById('asisDias').value, 10) || 1)
     await arrancaTorneo(nom, dd, 'torneo')
   },
-  /* Un toque en un amigo lo pone en la primera casilla vacía. No pasa por
-     el estado ni repinta: si repintara, borraría los nombres que ya están
-     escritos en las otras casillas y que todavía no son hechos. */
-  poneAmigo: d => {
+  /* Elegir a un amigo del desplegable lo pone en la primera casilla vacía.
+     No pasa por el estado ni repinta: si repintara, borraría los nombres
+     que ya están escritos en las otras casillas y que todavía no son
+     hechos. */
+  eligeAmigo: (d, el) => {
+    const nombre = String(el.value || '').trim()
+    el.value = ''          // el desplegable vuelve a su sitio para el siguiente
+    if (!nombre) return
     for (let i = 0; i < cuantosDe(S); i++) {
-      const el = document.getElementById('asisNom' + i)
-      if (el && !String(el.value || '').trim()) { el.value = d.nombre; return }
+      const caja = document.getElementById('asisNom' + i)
+      if (caja && !String(caja.value || '').trim()) { caja.value = nombre; avisar(''); return }
     }
     avisar('Ya están llenas las casillas. Borra una para cambiarla.')
   },
