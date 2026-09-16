@@ -602,6 +602,16 @@ const presOn = (T) => (T.h['t.pres.on'] ?? (formato(T) === 'presiones' ? 1 : 0))
    entero juega la misma. */
 const presModo = (T) => String(T.h['t.pres.modo'] ?? 'ind')
 
+/* A veces se juegan las individuales y el partido por equipos a la vez
+   -uno contra uno con cada quien, y encima el 2 contra 2 del foursome-,
+   así que son dos cosas independientes y no una lista de opciones.
+
+   Sigue el mismo patrón que `presOn` con el tipo de juego: por omisión las
+   individuales están encendidas si no hay modalidad por equipos elegida, y
+   apagadas si la hay -que es como se comportaba cuando la modalidad era
+   excluyente-. El interruptor explícito manda sobre las dos cosas. */
+const presInd = (T) => (T.h['t.pres.ind'] ?? (presModo(T) === 'ind' ? 1 : 0)) !== 0
+
 /* Un hecho de t.pres.* mal formado (texto, vacío, NaN) no debe tumbar el
    cálculo: cae al valor por omisión en vez de propagar NaN. */
 const enteroDeHecho = (v, def) => { const n = parseInt(v, 10); return Number.isFinite(n) ? n : def }
@@ -2598,12 +2608,18 @@ const apuestaPresiones = (d, grupo) => ({ id: idPresiones(grupo), tipo: 'presion
    cada duelo se convierte en una línea. */
 function evaluarPresiones (T, A, hasta) {
   const p = participantes(T, A)
-  /* Las modalidades por equipos tienen su propio motor. Si la elegida no
-     cabe en este grupo -parejas con tres, Mudo con cuatro- se juega el
-     uno contra uno de siempre en vez de dejar al grupo sin presiones. */
+  /* Las dos cosas pueden correr a la vez: el uno contra uno con cada quien
+     y, encima, el partido por equipos. Si la modalidad por equipos elegida
+     no cabe en este grupo -parejas con tres, Mudo con cuatro- se juegan
+     las individuales solas en vez de dejar al grupo sin presiones. */
   const modo = presModo(T)
-  if (modo !== 'ind' && modoCabe(modo, p.length)) return evaluarPresionesEquipos(T, A, modo, hasta)
-  const lineas = []
+  const conEquipos = modo !== 'ind' && modoCabe(modo, p.length)
+  const equipos = conEquipos ? evaluarPresionesEquipos(T, A, modo, hasta) : null
+  /* Sin partido por equipos SIEMPRE se juegan las individuales, aunque
+     estén apagadas: si no, un torneo con «parejas» elegido y un grupo de
+     tres se quedaría sin presiones y sin decir por qué. */
+  if (!presInd(T) && equipos) return equipos
+  const lineas = equipos ? [...equipos.lineas] : []
   const pares = []
   for (let i = 0; i < p.length; i++) {
     for (let j = i + 1; j < p.length; j++) {
@@ -2615,7 +2631,12 @@ function evaluarPresiones (T, A, hasta) {
       else lineas.push({ de: p[i], a: p[j], monto, motivo: 'Presiones' })
     }
   }
-  return { lineas, vivo: { forma: 'presiones', pares } }
+  return {
+    lineas,
+    vivo: equipos
+      ? { forma: 'presiones', pares, equipos: equipos.vivo }
+      : { forma: 'presiones', pares }
+  }
 }
 
 /* `nombre` es cómo se llama el juego y se lee entero en la cabecera y en
@@ -3308,8 +3329,8 @@ function vistaDias (T) {
    HTML y no lo suelta: Paulino publicó cinco veces y siguió viendo la
    versión vieja. Con esto la app se entera sola y ofrece pasar a la nueva,
    en vez de que cada quien tenga que adivinar cómo forzar a su iOS. */
-const VERSION = '2026-09-16·122dea0'
-const VERSION_DEL_ARMADO = '2026-09-16·122dea0'
+const VERSION = '2026-09-16·cef9161'
+const VERSION_DEL_ARMADO = '2026-09-16·cef9161'
 
 /* El nombre de la constante es el ancla que se busca en el HTML servido.
    Se escribe partido para que esta línea no se encuentre a sí misma. */
@@ -3377,6 +3398,7 @@ const ponPresBono = (T, v) => emitir(T, 't.pres.bono', Math.max(0, enteroO(v, 10
 const ponPresAl = (T, v) => emitir(T, 't.pres.al', Math.max(1, enteroO(v, 2)))
 const ponPresCarry = (T, v) => emitir(T, 't.pres.carry', v ? 1 : 0)
 const ponPresMatch = (T, v) => emitir(T, 't.pres.match', v === 'suma' ? 'suma' : 'mayoria')
+const ponPresInd = (T, v) => emitir(T, 't.pres.ind', v ? 1 : 0)
 const ponPresModo = (T, v) => emitir(T, 't.pres.modo', MODOS_PRESIONES.some(([k]) => k === v) ? v : 'ind')
 
 /* Lo que se le puede ajustar al juego elegido. Vive en el TORNEO, no en
@@ -3456,10 +3478,11 @@ function vistaAjustes (T, S, base = '') {
     <p class="guia">Presiones enciende su pestaña; Stableford usa la Tabla; los demás abren la suya.</p>
     ${camposDelJuego(T)}
     ${presOn(T) ? `<h2>Presiones</h2>
-    <label class="cfg-juego"><span>Modalidad</span>
+    <label class="casilla"><input type="checkbox"${presInd(T) ? ' checked' : ''} data-cambio="setPresInd"> Individuales: uno contra uno con cada quien</label>
+    <label class="cfg-juego"><span>Y además, por equipos</span>
       <select data-cambio="setPresModo">${MODOS_PRESIONES.map(([k, et]) =>
-        `<option value="${k}"${presModo(T) === k ? ' selected' : ''}>${et}</option>`).join('')}</select></label>
-    <p class="guia">Individuales es todos contra todos, uno contra uno. Parejas es de cuatro; Mudo y Yo-Yo son de tres, y son la forma de jugar presiones cuando falta el cuarto. En las tres, el hoyo se decide con las dos bolas del equipo.</p>
+        `<option value="${k}"${presModo(T) === k ? ' selected' : ''}>${k === 'ind' ? 'Ninguna' : et}</option>`).join('')}</select></label>
+    <p class="guia">Las dos cosas pueden correr a la vez: uno contra uno con cada quien y, encima, el partido del foursome. Parejas es de cuatro; Mudo y Yo-Yo son de tres, para cuando falta el cuarto. En las tres, el hoyo se decide con las dos bolas del equipo.</p>
     <div class="pres-ajustes">
       <label>Ida $ <input value="${esc(presIda(T))}" inputmode="numeric" data-cambio="setPresIda"></label>
       <label>Vuelta $ <input value="${esc(presVuelta(T))}" inputmode="numeric" data-cambio="setPresVuelta"></label>
@@ -3661,7 +3684,11 @@ function vistaPresiones (T) {
   const rivales = g ? g.filter(id => id !== yo) : []
   if (!rivales.length) return '<h2>Presiones</h2><p class="guia">No hay rivales en tu grupo.</p>'
   const modo = presModo(T)
-  if (modo !== 'ind' && modoCabe(modo, g.length)) return vistaPresionesEquipos(T, d, yo, modo)
+  const conEquipos = modo !== 'ind' && modoCabe(modo, g.length)
+  /* Las dos a la vez: primero el uno contra uno, que es lo que se mira de
+     reojo en el tee, y debajo el partido del foursome. */
+  const bloqueEquipos = conEquipos ? vistaPresionesEquipos(T, d, yo, modo) : ''
+  if (conEquipos && !presInd(T)) return bloqueEquipos
   const rival = rivales.includes(T.rival) ? T.rival : rivales[0]
   const nomR = corto(T, rival)
 
@@ -3706,6 +3733,7 @@ function vistaPresiones (T) {
     </table></div>
     <p class="veredicto ${claseSigno(dinero)}">${veredicto}</p>
     <p class="guia">Ida ${esc(ida)} · vuelta ${esc(vuelta)} por apuesta; ${terceroTxt}. Presión automática al ir abajo.</p>
+    ${bloqueEquipos}
     ${dias(T) > 1 ? acumulado(T, yo) : ''}`
 }
 
@@ -4592,6 +4620,7 @@ const ACCIONES = {
   setPresCarry: (d, el) => { ponPresCarry(T(), el.checked); salvar(); programar() },
   setPresMatch: (d, el) => { ponPresMatch(T(), el.value); salvar(); programar() },
   setPresModo: (d, el) => { ponPresModo(T(), el.value); salvar(); programar() },
+  setPresInd: (d, el) => { ponPresInd(T(), el.checked); salvar(); programar() },
   unirmeConLigaPegada: () => {
     const v = document.getElementById('ligaPegada').value.trim()
     const hash = v.includes('#') ? v.slice(v.indexOf('#')) : v
