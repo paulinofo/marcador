@@ -346,7 +346,47 @@ td.dudoso input{border-color:var(--bandera);color:var(--bandera);font-weight:700
 <body>
 <p id="aviso" role="alert" hidden></p>
 <div id="app"></div>
-<script type="module">const LLAVE = 'golf.v1'
+<script type="module">/* La lista de Paulino: con cuántos golpes juega cada uno de su círculo.
+   Viene DENTRO del armado, como los campos de fábrica, para que esté
+   puesta en cualquier teléfono suyo sin volver a teclearla ni pegarla.
+
+   El número es el sliding, en su signo: lo que esa persona DA. +7 da
+   siete, −3 recibe tres, y entre esos dos se dan diez. El motor usa lo
+   contrario -el hándicap de golf-, y el cambio de signo sigue viviendo en
+   un solo sitio, en `ui/sliding.js`.
+
+   La tomó de su nota del teléfono el 15-sep-2026. Lo que el teléfono sepa
+   de alguien pisa a esta lista, y quitar a uno de aquí se recuerda: no
+   vuelve a aparecer al día siguiente. */
+const AMIGOS_DE_FABRICA = [
+  { n: 'Paulino Fernandez Mora', sliding: -12 },
+  { n: 'Juan Pablo Fer', sliding: 10 },
+  { n: 'Dario Mora', sliding: -18 },
+  { n: 'Francisco', sliding: -1 },
+  { n: 'Enrique Ponzanelli', sliding: 1 },
+  { n: 'Eduardo Dommit', sliding: 3 },
+  { n: 'Francisco Cuevas', sliding: -3 },
+  { n: 'Chango', sliding: 1 },
+  { n: 'Javier Gordillo', sliding: 7 },
+  { n: 'Ponza', sliding: -2 },
+  { n: 'Carlos Alvarez Figueroa', sliding: -10 },
+  { n: 'Víctor Reyes', sliding: 4 },
+  { n: 'Ramón', sliding: -3 },
+  { n: 'René Ortiz', sliding: 5 },
+  { n: 'Mau Medina', sliding: -11 },
+  { n: 'Emilio Uriarte', sliding: -11 },
+  { n: 'Paco Morales', sliding: -2 },
+  { n: 'Mau Otero', sliding: 11 },
+  { n: 'Jorge Salomé', sliding: 6 },
+  { n: 'Salomón Díaz', sliding: 1 },
+  { n: 'Pepe Garrido', sliding: 1 },
+  { n: 'David Flores', sliding: 6 },
+  { n: 'Javier Hory', sliding: -1 },
+  { n: 'Paco Sánchez', sliding: 12 },
+  { n: 'Jorge Martínez (bro)', sliding: 7 }
+].map(a => Object.freeze(a))
+
+const LLAVE = 'golf.v1'
 
 /* Sin prototipo: es el único mapa del proyecto que recibe llaves de afuera
    (el tid de una liga o de un código) sin pasar por un selector. Con un
@@ -430,10 +470,16 @@ function quitarTorneo (S, tid) {
    ventaja de la última vez. */
 function indiceDeGente (S, nombre) {
   const g = (S.gente || []).find(x => x.n === nombre)
-  return g ? g.i : 0
+  if (g) return g.fuera ? 0 : g.i
+  const a = AMIGOS_DE_FABRICA.find(x => x.n === nombre)
+  return a ? -a.sliding : 0
 }
+
+/* Quitar a alguien de la lista. Si venía de fábrica, se apunta que se
+   quitó: si no, volvería a aparecer en cuanto se repinte la pantalla. */
 function olvidarGente (S, nombre) {
   S.gente = (S.gente || []).filter(g => g.n !== nombre)
+  if (AMIGOS_DE_FABRICA.some(a => a.n === nombre)) S.gente.push({ n: nombre, fuera: true })
 }
 function recordarGente (S, nombre, idx) {
   const i = S.gente.findIndex(g => g.n === nombre)
@@ -1160,6 +1206,7 @@ function usaCampo (T, d, ficha) {
 
 
 
+
 /* Golf Sliding: con cuántos golpes juega cada uno de los suyos. Es lo que
    Paulino lleva apuntado de años en una nota del teléfono, y lo que evita
    volver a teclear las mismas ventajas cada sábado. Vive solo en este
@@ -1205,11 +1252,21 @@ function leeLinea (linea) {
 function leeLista (texto) {
   return String(texto ?? '').split(/\r?\n/).map(leeLinea).filter(Boolean)
 }
+
+/* Los de fábrica primero; lo que este teléfono sepa de alguien lo pisa, y
+   a quien se quitó no se le hace volver al día siguiente. */
 function listaSliding (S) {
-  return (S.gente || [])
-    .filter(g => g && g.n)
-    .map(g => ({ n: g.n, sliding: aSliding(g.i) }))
-    .sort((a, b) => b.sliding - a.sliding || a.n.localeCompare(b.n, 'es'))
+  const por = new Map()
+  for (const a of AMIGOS_DE_FABRICA) por.set(a.n, { n: a.n, sliding: a.sliding })
+  for (const g of (S.gente || [])) {
+    if (!g || !g.n) continue
+    if (g.fuera) por.delete(g.n)
+    else por.set(g.n, { n: g.n, sliding: aSliding(g.i) })
+  }
+  /* Por nombre, de la A a la Z: la lista se usa para BUSCAR a alguien
+     -«¿con cuánto juego con Ramón?»-, y por nombre se encuentra de un
+     vistazo. Ordenada por golpes había que recorrerla entera. */
+  return [...por.values()].sort((a, b) => a.n.localeCompare(b.n, 'es'))
 }
 function vistaSliding (S) {
   const lista = listaSliding(S)
@@ -1240,7 +1297,7 @@ function vistaSliding (S) {
 
     <h2>Mis amigos ${lista.length ? `<span class="tenue">${lista.length}</span>` : ''}</h2>
     ${lista.length
-      ? `<p class="guia">Del que más da al que más recibe. Toca el número para cambiarlo.</p>${filas}`
+      ? `<p class="guia">Por orden alfabético. Toca el número para cambiarlo.</p>${filas}`
       : '<p class="guia">Todavía no hay nadie en tu lista. Da de alta al primero aquí arriba, o pega la lista entera aquí abajo si ya la tienes escrita en una nota.</p>'}
 
     <h2>Pegar la lista entera</h2>
@@ -2675,8 +2732,8 @@ function vistaDias (T) {
    HTML y no lo suelta: Paulino publicó cinco veces y siguió viendo la
    versión vieja. Con esto la app se entera sola y ofrece pasar a la nueva,
    en vez de que cada quien tenga que adivinar cómo forzar a su iOS. */
-const VERSION = '2026-09-16·48e408f'
-const VERSION_DEL_ARMADO = '2026-09-16·48e408f'
+const VERSION = '2026-09-16·815cb5e'
+const VERSION_DEL_ARMADO = '2026-09-16·815cb5e'
 
 /* El nombre de la constante es el ancla que se busca en el HTML servido.
    Se escribe partido para que esta línea no se encuentre a sí misma. */
