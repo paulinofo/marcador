@@ -2675,8 +2675,8 @@ function vistaDias (T) {
    HTML y no lo suelta: Paulino publicó cinco veces y siguió viendo la
    versión vieja. Con esto la app se entera sola y ofrece pasar a la nueva,
    en vez de que cada quien tenga que adivinar cómo forzar a su iOS. */
-const VERSION = '2026-09-16·10bff2f'
-const VERSION_DEL_ARMADO = '2026-09-16·10bff2f'
+const VERSION = '2026-09-16·48e408f'
+const VERSION_DEL_ARMADO = '2026-09-16·48e408f'
 
 /* El nombre de la constante es el ancla que se busca en el HTML servido.
    Se escribe partido para que esta línea no se encuentre a sí misma. */
@@ -2775,7 +2775,7 @@ function camposDelJuego (T) {
 /* El bloque de presiones: su casilla, la modalidad y las cantidades. Lo
    usan Ajustes y la última pregunta del asistente, y tienen que ser el
    mismo para que lo que se elige al empezar sea lo que se ve después. */
-function bloquePresiones (T) {
+function ajustesDePresiones (T) {
   return `<label class="casilla"><input type="checkbox"${presOn(T) ? ' checked' : ''} data-cambio="setPresOn"> Se juegan presiones</label>
     ${presOn(T) ? `<h2>Presiones</h2>
     <label class="casilla"><input type="checkbox"${presInd(T) ? ' checked' : ''} data-cambio="setPresInd"> Individuales: uno contra uno con cada quien</label>
@@ -2851,7 +2851,7 @@ function vistaAjustes (T, S, base = '') {
     <select data-cambio="setFormato">${JUEGOS_DEL_TORNEO.map(([k, et]) => `<option value="${k}"${formato(T) === k ? ' selected' : ''}>${et}</option>`).join('')}</select>
     <p class="guia">Presiones enciende su pestaña; Stableford usa la Tabla; los demás abren la suya.</p>
     ${camposDelJuego(T)}
-    ${bloquePresiones(T)}
+    ${ajustesDePresiones(T)}
     <h2>Este teléfono</h2>
     <div class="fila"><div class="quien"><span class="nom">${esc(T.yo ? (jugadores(T).find(j => j.id === T.yo)?.n ?? '—') : (T.yo === '' ? 'Solo miro' : 'Sin decir'))}</span></div>
       <div class="acciones"><button data-accion="cambiarYo">Cambiar</button></div></div>
@@ -2994,7 +2994,7 @@ function paso6 (T, S) {
     <p class="guia">Stableford no es una apuesta: es la Tabla de puntos. Los demás llevan su cuenta de dinero y abren su propia pestaña.</p>
     ${camposDelJuego(T)}
     <h2>Presiones</h2>
-    ${bloquePresiones(T)}
+    ${ajustesDePresiones(T)}
     <button class="btn" data-accion="asisListo">Empezar a anotar</button>`
 }
 function vistaAsistente (S, T) {
